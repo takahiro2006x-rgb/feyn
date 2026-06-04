@@ -25,19 +25,19 @@ let currentSubject = '物理';
 let currentEmoji   = '⚡';
 
 const SUBJECT_COLORS = {
-  '物理': { color: '#3B82F6', dark: '#1D4ED8' },
-  '数学': { color: '#8B5CF6', dark: '#6D28D9' },
-  '英語': { color: '#F97316', dark: '#C2410C' },
-  '化学': { color: '#10B981', dark: '#047857' },
-  '生物': { color: '#84CC16', dark: '#4D7C0F' },
-  '国語': { color: '#EF4444', dark: '#B91C1C' },
-  '歴史': { color: '#B45309', dark: '#78350F' },
+  '物理': { color: '#3B82F6', dark: '#1D4ED8', hair: '#1A1A2E', iris: ['#4F8EF7', '#1A3FAA'] },
+  '数学': { color: '#8B5CF6', dark: '#6D28D9', hair: '#2D1248', iris: ['#C084FC', '#7C3AED'] },
+  '英語': { color: '#F97316', dark: '#C2410C', hair: '#3B1A08', iris: ['#FB923C', '#EA580C'] },
+  '化学': { color: '#10B981', dark: '#047857', hair: '#072B1F', iris: ['#34D399', '#059669'] },
+  '生物': { color: '#84CC16', dark: '#4D7C0F', hair: '#1A2B08', iris: ['#A3E635', '#65A30D'] },
+  '国語': { color: '#EF4444', dark: '#B91C1C', hair: '#2E0A0A', iris: ['#F87171', '#DC2626'] },
+  '歴史': { color: '#B45309', dark: '#78350F', hair: '#2E1A08', iris: ['#FBBF24', '#D97706'] },
 };
 
 
 // ===== 科目カラー適用 =====
 function applySubjectColor(subject) {
-  const c = SUBJECT_COLORS[subject] || { color: '#58CC02', dark: '#46A302' };
+  const c = SUBJECT_COLORS[subject] || { color: '#58CC02', dark: '#46A302', hair: '#1A1A2E', iris: ['#4F8EF7', '#1A3FAA'] };
   document.documentElement.style.setProperty('--subject-color',      c.color);
   document.documentElement.style.setProperty('--subject-color-dark', c.dark);
 
@@ -46,6 +46,23 @@ function applySubjectColor(subject) {
   if (tie) {
     tie.setAttribute('fill',    c.color);
     tieTip.setAttribute('fill', c.dark);
+  }
+
+  const hairColor = c.hair || '#1A1A2E';
+  ['feynHairBase', 'feynHair1', 'feynHair2', 'feynHair3', 'feynHair4'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('fill', hairColor);
+  });
+
+  if (c.iris) {
+    const stops = [
+      ['irisL1', c.iris[0]], ['irisL2', c.iris[1]],
+      ['irisR1', c.iris[0]], ['irisR2', c.iris[1]],
+    ];
+    stops.forEach(([id, color]) => {
+      const el = document.getElementById(id);
+      if (el) el.setAttribute('stop-color', color);
+    });
   }
 }
 

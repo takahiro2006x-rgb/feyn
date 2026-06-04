@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feyn - ファインマン学習法AIアプリ</title>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green:       #58CC02;
+      --green-dark:  #46A302;
+      --blue:        #1CB0F6;
+      --blue-dark:   #0891CC;
+      --yellow:      #FFC200;
+      --text:        #3C3C3C;
+      --subtext:     #AFAFAF;
+      --bg:          #F0F4F8;
+      --card:        #FFFFFF;
+      --border:      #E5E5E5;
+    }
+
+    body {
+      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* ===== ナビ ===== */
+    nav {
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
+      padding: 0 48px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: 2px;
+    }
+
+    .nav-actions { display: flex; gap: 12px; align-items: center; }
+
+    .btn-outline {
+      padding: 10px 22px;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      font-family: inherit;
+      color: var(--subtext);
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .btn-outline:hover { border-color: var(--green); color: var(--green); }
+
+    .btn-primary {
+      padding: 10px 22px;
+      background: var(--green);
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 800;
+      font-family: inherit;
+      color: white;
+      text-decoration: none;
+      box-shadow: 0 4px 0 var(--green-dark);
+      transition: all 0.1s;
+      display: inline-block;
+    }
+    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+    .btn-primary-lg {
+      padding: 18px 40px;
+      background: var(--green);
+      border: none;
+      border-radius: 16px;
+      font-size: 20px;
+      font-weight: 800;
+      font-family: inherit;
+      color: white;
+      text-decoration: none;
+      box-shadow: 0 6px 0 var(--green-dark);
+      transition: all 0.1s;
+      display: inline-block;
+    }
+    .btn-primary-lg:hover  { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 8px 0 var(--green-dark); }
+    .btn-primary-lg:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--green-dark); }
+
+    /* ===== ヒーロー ===== */
+    .hero {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 32px 64px;
+      display: flex;
+      align-items: center;
+      gap: 64px;
+    }
+
+    .hero-text { flex: 1; }
+
+    .hero-badge {
+      display: inline-block;
+      background: color-mix(in srgb, var(--green) 12%, transparent);
+      color: var(--green);
+      border: 2px solid color-mix(in srgb, var(--green) 30%, transparent);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-size: 52px;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .hero h1 span { color: var(--green); }
+
+    .hero p {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--subtext);
+      line-height: 1.8;
+      margin-bottom: 36px;
+      max-width: 460px;
+    }
+
+    .hero-actions { display: flex; gap: 16px; align-items: center; }
+
+    .hero-sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    .hero-char {
+      flex-shrink: 0;
+      animation: float 3.5s ease-in-out infinite;
+      filter: drop-shadow(0 16px 32px rgba(88,204,2,0.2));
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-12px); }
+    }
+
+    /* ===== 特徴セクション ===== */
+    .features {
+      background: var(--card);
+      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      padding: 80px 32px;
+    }
+
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+
+    .section-label {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 48px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 24px;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 0 var(--border);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 0 var(--border);
+    }
+
+    .feature-icon {
+      font-size: 40px;
+      line-height: 1;
+    }
+
+    .feature-card h3 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .feature-card p {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--subtext);
+      line-height: 1.8;
+    }
+
+    /* ===== ステップセクション ===== */
+    .howto {
+      padding: 80px 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 40px;
+      left: calc(16.666% + 24px);
+      right: calc(16.666% + 24px);
+      height: 3px;
+      background: var(--border);
+      border-radius: 99px;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 14px;
+    }
+
+    .step-num {
+      width: 64px;
+      height: 64px;
+      background: var(--green);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 800;
+      box-shadow: 0 4px 0 var(--green-dark);
+      position: relative;
+      z-index: 1;
+    }
+
+    .step h3 {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .step p {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--subtext);
+      line-height: 1.7;
+    }
+
+    /* ===== CTA ===== */
+    .cta {
+      background: var(--green);
+      padding: 80px 32px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .cta h2 {
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+    }
+
+    .cta p {
+      font-size: 16px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .btn-white {
+      padding: 18px 48px;
+      background: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 20px;
+      font-weight: 800;
+      font-family: inherit;
+      color: var(--green);
+      text-decoration: none;
+      box-shadow: 0 6px 0 var(--green-dark);
+      transition: all 0.1s;
+      display: inline-block;
+    }
+    .btn-white:hover  { filter: brightness(0.97); transform: translateY(-2px); box-shadow: 0 8px 0 var(--green-dark); }
+    .btn-white:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--green-dark); }
+
+    /* ===== フッター ===== */
+    footer {
+      background: var(--card);
+      border-top: 2px solid var(--border);
+      padding: 32px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-logo {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: 2px;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    /* ===== レスポンシブ ===== */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .hero { flex-direction: column; padding: 48px 20px; gap: 32px; text-align: center; }
+      .hero h1 { font-size: 36px; }
+      .hero p { font-size: 15px; }
+      .hero-actions { justify-content: center; flex-wrap: wrap; }
+      .hero-char svg { width: 160px; height: 185px; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+      .steps::before { display: none; }
+      footer { flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ナビ -->
+  <nav>
+    <div class="nav-logo">🎓 Feyn</div>
+    <div class="nav-actions">
+      <a href="/login" class="btn-outline">ログイン</a>
+      <a href="/login" class="btn-primary">無料で始める</a>
+    </div>
+  </nav>
+
+  <!-- ヒーロー -->
+  <section class="hero">
+    <div class="hero-text">
+      <div class="hero-badge">✨ AIファインマン学習法</div>
+      <h1>Feynに教えると、<br><span>本当に</span>わかる。</h1>
+      <p>AIキャラ「Feyn」に教えることで、ファインマン学習法を体験。自分の言葉で説明する力が、本物の理解を生む。</p>
+      <div class="hero-actions">
+        <a href="/login" class="btn-primary-lg">今すぐ始める →</a>
+        <span class="hero-sub">無料・登録1分</span>
+      </div>
+    </div>
+
+    <div class="hero-char">
+      <svg width="220" height="253" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="lp-face" cx="45%" cy="40%" r="55%">
+            <stop offset="0%" stop-color="#FFE0B8"/>
+            <stop offset="100%" stop-color="#FFCB94"/>
+          </radialGradient>
+          <radialGradient id="lp-iris-l" cx="60%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="#4F8EF7"/>
+            <stop offset="100%" stop-color="#1A3FAA"/>
+          </radialGradient>
+          <radialGradient id="lp-iris-r" cx="60%" cy="35%" r="60%">
+            <stop offset="0%" stop-color="#4F8EF7"/>
+            <stop offset="100%" stop-color="#1A3FAA"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="100" cy="82" rx="70" ry="64" fill="#1A1A2E"/>
+        <ellipse cx="32" cy="104" rx="12" ry="14" fill="#FFCB94"/>
+        <ellipse cx="168" cy="104" rx="12" ry="14" fill="#FFCB94"/>
+        <ellipse cx="100" cy="108" rx="62" ry="68" fill="url(#lp-face)"/>
+        <ellipse cx="58" cy="126" rx="16" ry="10" fill="#FFB3C6" opacity="0.55"/>
+        <ellipse cx="142" cy="126" rx="16" ry="10" fill="#FFB3C6" opacity="0.55"/>
+        <path d="M 62 74 Q 76 69 90 74" fill="none" stroke="#3D2B1F" stroke-width="3.5" stroke-linecap="round"/>
+        <path d="M 110 74 Q 124 69 138 74" fill="none" stroke="#3D2B1F" stroke-width="3.5" stroke-linecap="round"/>
+        <rect x="53" y="82" width="42" height="30" rx="10" fill="rgba(200,230,255,0.18)" stroke="#1A1A2E" stroke-width="3.5"/>
+        <rect x="105" y="82" width="42" height="30" rx="10" fill="rgba(200,230,255,0.18)" stroke="#1A1A2E" stroke-width="3.5"/>
+        <line x1="95" y1="97" x2="105" y2="97" stroke="#1A1A2E" stroke-width="3"/>
+        <line x1="53" y1="95" x2="36" y2="93" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
+        <line x1="147" y1="95" x2="164" y2="93" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
+        <ellipse cx="74" cy="97" rx="16" ry="14" fill="white"/>
+        <circle cx="74" cy="98" r="10" fill="url(#lp-iris-l)"/>
+        <circle cx="74" cy="98" r="6" fill="#0A0A1A"/>
+        <circle cx="78" cy="93" r="4" fill="white"/>
+        <circle cx="69" cy="103" r="2" fill="white" opacity="0.75"/>
+        <ellipse cx="126" cy="97" rx="16" ry="14" fill="white"/>
+        <circle cx="126" cy="98" r="10" fill="url(#lp-iris-r)"/>
+        <circle cx="126" cy="98" r="6" fill="#0A0A1A"/>
+        <circle cx="130" cy="93" r="4" fill="white"/>
+        <circle cx="121" cy="103" r="2" fill="white" opacity="0.75"/>
+        <path d="M 100 118 Q 96 124 100 126 Q 104 124 100 118" fill="none" stroke="#D4956A" stroke-width="2" stroke-linecap="round"/>
+        <path d="M 80 136 Q 100 154 120 136" fill="none" stroke="#C07A50" stroke-width="2.8" stroke-linecap="round"/>
+        <path d="M 34 100 Q 36 52 62 44 Q 64 74 56 100 Z" fill="#1A1A2E"/>
+        <path d="M 62 44 Q 78 26 100 34 Q 94 64 80 90 Z" fill="#1A1A2E"/>
+        <path d="M 100 34 Q 122 26 138 44 Q 118 64 110 88 Z" fill="#1A1A2E"/>
+        <path d="M 138 44 Q 164 54 166 100 Q 148 76 140 56 Z" fill="#1A1A2E"/>
+        <rect x="84" y="170" width="32" height="22" rx="10" fill="#FFCB94"/>
+        <path d="M 36 192 Q 68 176 100 180 Q 132 176 164 192 L 174 230 L 26 230 Z" fill="white"/>
+        <path d="M 36 192 Q 60 180 78 182 L 68 230 L 26 230 Z" fill="#E8ECF0"/>
+        <path d="M 164 192 Q 140 180 122 182 L 132 230 L 174 230 Z" fill="#E8ECF0"/>
+        <path d="M 100 178 L 84 198 L 100 194 L 116 198 Z" fill="#F8FAFC"/>
+        <path d="M 100 195 L 92 218 L 100 224 L 108 218 Z" fill="#58CC02"/>
+        <path d="M 92 218 L 100 224 L 108 218 L 100 230 Z" fill="#3EA801"/>
+      </svg>
+    </div>
+  </section>
+
+  <!-- 特徴 -->
+  <section class="features">
+    <div class="section-inner">
+      <div class="section-label">Features</div>
+      <div class="section-title">Feynの3つの特徴</div>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🧠</div>
+          <h3>ファインマン学習法</h3>
+          <p>「説明できれば理解している」。AIキャラ Feyn に教えることで、本当にわかっているかが試される。受け身の暗記とはまったく違う学習体験。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <h3>7科目・5試験種別に対応</h3>
+          <p>物理・数学・英語・化学・生物・国語・歴史の7科目。中学受験から大学試験まで対応。科目ごとにネクタイの色が変わるFeynが手強く問い返す。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>講師ダッシュボード</h3>
+          <p>先生アカウントなら、生徒一人ひとりの科目別クリア回数・学習状況をリアルタイムで確認。塾・学校での導入に最適。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 使い方 -->
+  <section class="howto">
+    <div class="section-label">How it works</div>
+    <div class="section-title">使い方は3ステップ</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>科目を選ぶ</h3>
+        <p>7科目から学習したい科目を選択。試験種別（大学受験・定期テストなど）も設定できる。</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Feynの質問に答える</h3>
+        <p>Feynが「なんで？」「それってどういうこと？」と鋭く問い返してくる。</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>納得させてクリア！</h3>
+        <p>Feynが「なるほど！」と言ったらクリア。XPゲージと紙吹雪で達成感が得られる。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <h2>さあ、Feynに教えよう</h2>
+    <p>無料・登録1分ではじめられます</p>
+    <a href="/login" class="btn-white">今すぐ始める →</a>
+  </section>
+
+  <!-- フッター -->
+  <footer>
+    <div class="footer-logo">🎓 Feyn</div>
+    <div class="footer-copy">© 2026 Feyn — ファインマン学習法AIアプリ</div>
+  </footer>
+
+</body>
+</html>

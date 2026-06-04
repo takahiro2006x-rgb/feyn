@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feyn - 講師ダッシュボード</title>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:          #F0F4F8;
+      --card:        #FFFFFF;
+      --border:      #E5E5E5;
+      --text:        #3C3C3C;
+      --subtext:     #AFAFAF;
+      --green:       #58CC02;
+      --green-dark:  #46A302;
+      --blue:        #1CB0F6;
+      --blue-dark:   #0891CC;
+      --yellow:      #FFC200;
+      --yellow-dark: #D4A200;
+    }
+
+    body {
+      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ===== ヘッダー ===== */
+    .header {
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-logo {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: 2px;
+    }
+
+    .header-divider {
+      width: 2px;
+      height: 24px;
+      background: var(--border);
+    }
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-user {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--subtext);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn:hover { border-color: var(--green); color: var(--green); }
+    .btn-danger:hover { border-color: #FF4B4B; color: #FF4B4B; background: rgba(255,75,75,0.06); }
+
+    /* ===== コンテンツ ===== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ===== サマリーカード ===== */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .summary-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .summary-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .summary-value {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .summary-value.green  { color: var(--green); }
+    .summary-value.blue   { color: var(--blue); }
+    .summary-value.yellow { color: var(--yellow); }
+
+    .summary-sub {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    /* ===== テーブルセクション ===== */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .student-count {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--subtext);
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 99px;
+      padding: 4px 12px;
+    }
+
+    .table-wrap {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--bg);
+      border-bottom: 2px solid var(--border);
+    }
+
+    th {
+      padding: 14px 16px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    th:first-child { text-align: left; }
+
+    tbody tr {
+      border-bottom: 2px solid var(--bg);
+      transition: background 0.1s;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg); }
+
+    td {
+      padding: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text);
+    }
+
+    td:first-child { text-align: left; }
+
+    .td-name {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .td-name-main {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .td-name-email {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    .count-badge {
+      display: inline-block;
+      min-width: 32px;
+      padding: 4px 8px;
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 800;
+      background: var(--bg);
+      color: var(--subtext);
+      border: 2px solid var(--border);
+    }
+
+    .count-badge.lv1 { background: #f0fce8; color: #46A302; border-color: #b7eea0; }
+    .count-badge.lv2 { background: #d4f5b0; color: #3a8c00; border-color: #7dd950; }
+    .count-badge.lv3 { background: #58CC02; color: white;   border-color: #46A302; box-shadow: 0 2px 0 #46A302; }
+
+    .count-badge.total {
+      background: var(--green);
+      color: white;
+      border-color: var(--green-dark);
+      box-shadow: 0 3px 0 var(--green-dark);
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable:hover { color: var(--green); }
+    th.sort-asc::after  { content: ' ▲'; color: var(--green); }
+    th.sort-desc::after { content: ' ▼'; color: var(--green); }
+
+    .td-date {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    /* ===== 空状態 ===== */
+    .empty-state {
+      padding: 64px 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .empty-emoji { font-size: 48px; }
+
+    .empty-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .empty-desc {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    /* ===== ローディング ===== */
+    .loading {
+      padding: 64px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+
+    /* ===== リセットボタン ===== */
+    .reset-pass-btn {
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--subtext);
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .reset-pass-btn:hover { border-color: #FF4B4B; color: #FF4B4B; background: rgba(255,75,75,0.06); }
+
+    /* ===== モーダル ===== */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--text); }
+    .modal-desc  { font-size: 14px; font-weight: 700; color: var(--subtext); line-height: 1.6; }
+
+    .temp-pass {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--green);
+      text-align: center;
+      letter-spacing: 3px;
+    }
+
+    .modal-close {
+      padding: 12px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 0 var(--green-dark);
+      transition: all 0.1s;
+    }
+
+    .modal-close:hover { filter: brightness(1.08); }
+
+    /* ===== レスポンシブ ===== */
+    @media (max-width: 768px) {
+      .summary { grid-template-columns: 1fr; }
+      .header  { padding: 0 16px; }
+      .container { padding: 16px; }
+      th, td { padding: 10px 8px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-logo">🎓 Feyn</div>
+    <div class="header-divider"></div>
+    <div class="header-title">📊 講師ダッシュボード</div>
+    <div class="header-right">
+      <span class="header-user" id="headerUser"></span>
+      <a href="/" class="btn">← アプリへ戻る</a>
+      <button class="btn btn-danger" id="logoutBtn">🚪 ログアウト</button>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- サマリーカード -->
+    <div class="summary" id="summary">
+      <div class="loading">読み込み中...</div>
+    </div>
+
+    <!-- 生徒テーブル -->
+    <div class="section-header">
+      <div class="section-title">生徒一覧</div>
+      <div class="student-count" id="studentCount">—</div>
+    </div>
+    <div class="table-wrap" id="tableWrap">
+      <div class="loading">読み込み中...</div>
+    </div>
+
+  </div>
+
+  <script>
+    const SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史'];
+    const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
+
+    let allStudents = [];
+    let sortKey     = 'total';
+    let sortDir     = 'desc';
+
+    function formatDate(str) {
+      if (!str) return '—';
+      return str.slice(0, 10);
+    }
+
+    function countBadgeClass(cnt) {
+      if (cnt >= 5) return 'lv3';
+      if (cnt >= 2) return 'lv2';
+      if (cnt >= 1) return 'lv1';
+      return '';
+    }
+
+    function renderSummary(summary) {
+      document.getElementById('summary').innerHTML = `
+        <div class="summary-card">
+          <div class="summary-label">👥 登録生徒数</div>
+          <div class="summary-value green">${summary.total_students}</div>
+          <div class="summary-sub">人</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">🏆 総クリア数</div>
+          <div class="summary-value blue">${summary.total_clears}</div>
+          <div class="summary-sub">回</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">📚 最多クリア科目</div>
+          <div class="summary-value yellow">${summary.total_clears > 0 ? SUBJECT_EMOJIS[summary.top_subject] : '—'}</div>
+          <div class="summary-sub">${summary.total_clears > 0 ? summary.top_subject : 'まだデータなし'}</div>
+        </div>
+      `;
+    }
+
+    function sortStudents(students) {
+      return [...students].sort((a, b) => {
+        let va, vb;
+        if (sortKey === 'total') {
+          va = a.total; vb = b.total;
+        } else if (sortKey === 'name') {
+          va = a.name; vb = b.name;
+        } else if (sortKey === 'last_active') {
+          va = a.last_active || ''; vb = b.last_active || '';
+        } else if (SUBJECTS.includes(sortKey)) {
+          va = a.subjects[sortKey] || 0; vb = b.subjects[sortKey] || 0;
+        } else {
+          va = a.created_at; vb = b.created_at;
+        }
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    function renderTable(students) {
+      document.getElementById('studentCount').textContent = `${students.length}人`;
+
+      if (students.length === 0) {
+        document.getElementById('tableWrap').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">🎓</div>
+            <div class="empty-title">まだ生徒が登録されていません</div>
+            <div class="empty-desc">生徒がアカウントを作ると、ここに表示されます</div>
+          </div>
+        `;
+        return;
+      }
+
+      const sorted = sortStudents(students);
+
+      function thClass(key) {
+        if (sortKey !== key) return 'sortable';
+        return `sortable sort-${sortDir}`;
+      }
+
+      const headerCells = SUBJECTS.map(s =>
+        `<th class="${thClass(s)}" data-key="${s}">${SUBJECT_EMOJIS[s]} ${s}</th>`
+      ).join('');
+
+      const rows = sorted.map(s => {
+        const subjectCells = SUBJECTS.map(subj => {
+          const cnt = s.subjects[subj] || 0;
+          const cls = countBadgeClass(cnt);
+          return `<td><span class="count-badge ${cls}">${cnt > 0 ? cnt + '回' : '—'}</span></td>`;
+        }).join('');
+
+        return `
+          <tr>
+            <td>
+              <div class="td-name">
+                <div class="td-name-main">${escHtml(s.name)}</div>
+                <div class="td-name-email">${escHtml(s.email)}</div>
+              </div>
+            </td>
+            ${subjectCells}
+            <td><span class="count-badge ${s.total > 0 ? 'total' : ''}">${s.total > 0 ? s.total + '回' : '0'}</span></td>
+            <td class="td-date">${s.last_active ? '🟢 ' + formatDate(s.last_active) : '未学習'}</td>
+            <td class="td-date">${formatDate(s.created_at)}</td>
+            <td><button class="reset-pass-btn" data-id="${s.id}" data-name="${escHtml(s.name)}">🔑 リセット</button></td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('tableWrap').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th class="${thClass('name')}" data-key="name">生徒名</th>
+              ${headerCells}
+              <th class="${thClass('total')}" data-key="total">合計</th>
+              <th class="${thClass('last_active')}" data-key="last_active">最終学習</th>
+              <th class="${thClass('created_at')}" data-key="created_at">登録日</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      document.querySelectorAll('.reset-pass-btn').forEach(btn => {
+        btn.addEventListener('click', () => showResetModal(btn.dataset.id, btn.dataset.name));
+      });
+
+      document.querySelectorAll('th.sortable').forEach(th => {
+        th.addEventListener('click', () => {
+          const key = th.dataset.key;
+          if (sortKey === key) {
+            sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+          } else {
+            sortKey = key;
+            sortDir = 'desc';
+          }
+          renderTable(allStudents);
+        });
+      });
+    }
+
+    function escHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    async function init() {
+      try {
+        const meRes = await fetch('/api/me');
+        if (!meRes.ok) { window.location.href = '/login'; return; }
+        const me = await meRes.json();
+        document.getElementById('headerUser').textContent = me.name;
+
+        const res = await fetch('/api/dashboard');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (res.status === 403) { window.location.href = '/'; return; }
+
+        const data = await res.json();
+        allStudents = data.students;
+        renderSummary(data.summary);
+        renderTable(allStudents);
+      } catch (e) {
+        document.getElementById('tableWrap').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">⚠️</div>
+            <div class="empty-title">読み込みに失敗しました</div>
+            <div class="empty-desc">ページを再読み込みしてください</div>
+          </div>
+        `;
+      }
+    }
+
+    function showResetModal(studentId, studentName) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `
+        <div class="modal">
+          <div class="modal-title">🔑 パスワードリセット</div>
+          <div class="modal-desc" id="modalDesc">${escHtml(studentName)} さんのパスワードをリセットしますか？</div>
+          <div style="display:flex;gap:8px;">
+            <button class="modal-close" style="background:#AFAFAF;box-shadow:0 4px 0 #888;" id="modalCancel">キャンセル</button>
+            <button class="modal-close" id="modalConfirm">リセットする</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      document.getElementById('modalCancel').addEventListener('click', () => overlay.remove());
+
+      document.getElementById('modalConfirm').addEventListener('click', async () => {
+        document.getElementById('modalConfirm').disabled = true;
+        document.getElementById('modalConfirm').textContent = '処理中...';
+
+        const res  = await fetch('/api/dashboard/reset-password', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: parseInt(studentId) }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          document.getElementById('modalDesc').textContent = data.error || 'エラーが発生しました';
+          document.getElementById('modalConfirm').style.display = 'none';
+          return;
+        }
+
+        overlay.querySelector('.modal').innerHTML = `
+          <div class="modal-title">✅ リセット完了</div>
+          <div class="modal-desc">${escHtml(studentName)} さんの仮パスワードです。本人に伝えてください。</div>
+          <div class="temp-pass">${data.temp_password}</div>
+          <div class="modal-desc" style="font-size:12px;">次回ログイン後にパスワードを変更するよう伝えてください</div>
+          <button class="modal-close" id="modalDone">閉じる</button>
+        `;
+        document.getElementById('modalDone').addEventListener('click', () => overlay.remove());
+      });
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login';
+    });
+
+    init();
+  </script>
+</body>
+</html>

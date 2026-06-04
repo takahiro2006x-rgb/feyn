@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feyn - ファインマン学習アプリ</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ===== サイドバー ===== -->
+    <aside class="sidebar">
+      <div class="logo">🎓 Feyn</div>
+
+      <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
+
+      <p class="section-label">科目を選ぼう</p>
+      <nav class="subject-list">
+        <div class="subject active" data-subject="物理" data-emoji="⚡">⚡ 物理</div>
+        <div class="subject" data-subject="数学" data-emoji="📐">📐 数学</div>
+        <div class="subject" data-subject="英語" data-emoji="🌍">🌍 英語</div>
+        <div class="subject" data-subject="化学" data-emoji="⚗️">⚗️ 化学</div>
+        <div class="subject" data-subject="生物" data-emoji="🌿">🌿 生物</div>
+        <div class="subject" data-subject="国語" data-emoji="📖">📖 国語</div>
+        <div class="subject" data-subject="歴史" data-emoji="🏛️">🏛️ 歴史</div>
+      </nav>
+
+      <p class="section-label">設定</p>
+      <div class="settings">
+        <label>ニックネーム</label>
+        <input type="text" id="teacherName" value="" />
+        <label>試験種別</label>
+        <select id="difficulty">
+          <option>大学受験</option>
+          <option>高校受験</option>
+          <option>中学受験</option>
+          <option>定期テスト</option>
+          <option>大学試験</option>
+        </select>
+      </div>
+
+      <button class="reset-btn">🔄 やり直す</button>
+
+      <div class="user-info">
+        <div id="userDisplay" class="user-name-display"></div>
+        <button class="logout-btn" id="securityBtn" style="display:none">🔐 秘密の質問を設定</button>
+        <button class="logout-btn" id="logoutBtn">🚪 ログアウト</button>
+      </div>
+
+      <!-- 秘密の質問設定モーダル -->
+      <div id="securityModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200; align-items:center; justify-content:center;">
+        <div style="background:var(--card); border:2px solid var(--card-border); border-radius:20px; padding:28px; width:320px; display:flex; flex-direction:column; gap:14px; box-shadow:0 8px 32px rgba(0,0,0,0.15);">
+          <div style="font-size:16px; font-weight:800; color:var(--text);">🔐 秘密の質問を設定</div>
+          <div style="font-size:13px; font-weight:700; color:var(--subtext);">パスワードを忘れたときに使います</div>
+          <select id="sqSelect" style="padding:10px; border-radius:10px; border:2px solid var(--card-border); background:var(--input-bg); color:var(--text); font-family:inherit; font-weight:700; font-size:13px; outline:none;">
+            <option value="">-- 質問を選んでください --</option>
+            <option>小学校の名前は？</option>
+            <option>初めて飼ったペットの名前は？</option>
+            <option>好きな食べ物は？</option>
+            <option>生まれた市区町村は？</option>
+            <option>母親の旧姓は？</option>
+          </select>
+          <input type="text" id="sqAnswer" placeholder="答え" style="padding:10px; border-radius:10px; border:2px solid var(--card-border); background:var(--input-bg); color:var(--text); font-family:inherit; font-weight:700; font-size:13px; outline:none;">
+          <div id="sqError" style="font-size:12px; font-weight:700; color:#FF4B4B; min-height:16px;"></div>
+          <button id="sqSave" style="padding:12px; background:#58CC02; color:white; border:none; border-radius:12px; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:0 4px 0 #46A302;">保存する</button>
+          <button id="sqClose" style="padding:8px; background:none; border:2px solid var(--card-border); border-radius:10px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; color:var(--subtext);">キャンセル</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== キャラクターパネル ===== -->
+    <div class="character-panel">
+
+      <div class="status-bar">
+        <div class="status-item">🔥 <strong>5</strong></div>
+        <div class="status-item">💎 <strong>320</strong></div>
+        <div class="status-item">❤️ <strong>5</strong></div>
+      </div>
+
+      <div class="subject-badge" id="subjectBadge">⚡ 物理</div>
+
+      <!-- Feyn キャラクター -->
+      <div class="char-illustration">
+        <svg width="200" height="230" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="face-grad" cx="45%" cy="40%" r="55%">
+              <stop offset="0%" stop-color="#FFE0B8"/>
+              <stop offset="100%" stop-color="#FFCB94"/>
+            </radialGradient>
+            <radialGradient id="iris-l" cx="60%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#4F8EF7"/>
+              <stop offset="100%" stop-color="#1A3FAA"/>
+            </radialGradient>
+            <radialGradient id="iris-r" cx="60%" cy="35%" r="60%">
+              <stop offset="0%" stop-color="#4F8EF7"/>
+              <stop offset="100%" stop-color="#1A3FAA"/>
+            </radialGradient>
+          </defs>
+
+          <ellipse cx="100" cy="82" rx="70" ry="64" fill="#1A1A2E"/>
+          <ellipse cx="32" cy="104" rx="12" ry="14" fill="#FFCB94"/>
+          <ellipse cx="168" cy="104" rx="12" ry="14" fill="#FFCB94"/>
+          <ellipse cx="100" cy="108" rx="62" ry="68" fill="url(#face-grad)"/>
+          <ellipse cx="58" cy="126" rx="16" ry="10" fill="#FFB3C6" opacity="0.55"/>
+          <ellipse cx="142" cy="126" rx="16" ry="10" fill="#FFB3C6" opacity="0.55"/>
+          <path d="M 62 74 Q 76 69 90 74" fill="none" stroke="#3D2B1F" stroke-width="3.5" stroke-linecap="round"/>
+          <path d="M 110 74 Q 124 69 138 74" fill="none" stroke="#3D2B1F" stroke-width="3.5" stroke-linecap="round"/>
+          <rect x="53" y="82" width="42" height="30" rx="10" fill="rgba(200,230,255,0.18)" stroke="#1A1A2E" stroke-width="3.5"/>
+          <rect x="105" y="82" width="42" height="30" rx="10" fill="rgba(200,230,255,0.18)" stroke="#1A1A2E" stroke-width="3.5"/>
+          <line x1="95" y1="97" x2="105" y2="97" stroke="#1A1A2E" stroke-width="3"/>
+          <line x1="53" y1="95" x2="36" y2="93" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
+          <line x1="147" y1="95" x2="164" y2="93" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
+          <ellipse cx="74" cy="97" rx="16" ry="14" fill="white"/>
+          <circle cx="74" cy="98" r="10" fill="url(#iris-l)"/>
+          <circle cx="74" cy="98" r="6" fill="#0A0A1A"/>
+          <circle cx="78" cy="93" r="4" fill="white"/>
+          <circle cx="69" cy="103" r="2" fill="white" opacity="0.75"/>
+          <ellipse cx="126" cy="97" rx="16" ry="14" fill="white"/>
+          <circle cx="126" cy="98" r="10" fill="url(#iris-r)"/>
+          <circle cx="126" cy="98" r="6" fill="#0A0A1A"/>
+          <circle cx="130" cy="93" r="4" fill="white"/>
+          <circle cx="121" cy="103" r="2" fill="white" opacity="0.75"/>
+          <path d="M 100 118 Q 96 124 100 126 Q 104 124 100 118" fill="none" stroke="#D4956A" stroke-width="2" stroke-linecap="round"/>
+          <path id="feynMouth" d="M 84 140 Q 100 152 116 140" fill="none" stroke="#C07A50" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M 34 100 Q 36 52 62 44 Q 64 74 56 100 Z" fill="#1A1A2E"/>
+          <path d="M 62 44 Q 78 26 100 34 Q 94 64 80 90 Z" fill="#1A1A2E"/>
+          <path d="M 100 34 Q 122 26 138 44 Q 118 64 110 88 Z" fill="#1A1A2E"/>
+          <path d="M 138 44 Q 164 54 166 100 Q 148 76 140 56 Z" fill="#1A1A2E"/>
+          <rect x="84" y="170" width="32" height="22" rx="10" fill="#FFCB94"/>
+          <path d="M 36 192 Q 68 176 100 180 Q 132 176 164 192 L 174 230 L 26 230 Z" fill="white"/>
+          <path d="M 36 192 Q 60 180 78 182 L 68 230 L 26 230 Z" fill="#E8ECF0"/>
+          <path d="M 164 192 Q 140 180 122 182 L 132 230 L 174 230 Z" fill="#E8ECF0"/>
+          <path d="M 100 178 L 84 198 L 100 194 L 116 198 Z" fill="#F8FAFC"/>
+          <path id="feynTie"     d="M 100 195 L 92 218 L 100 224 L 108 218 Z" fill="#58CC02"/>
+          <path id="feynTieTip"  d="M 92 218 L 100 224 L 108 218 L 100 230 Z" fill="#3EA801"/>
+        </svg>
+      </div>
+
+      <div class="char-name">Feyn</div>
+      <div class="char-role" id="charRole">物理担当のライバル</div>
+
+      <div class="xp-area">
+        <div class="xp-label">
+          <span>💡 納得度</span>
+          <span class="xp-percent">0%</span>
+        </div>
+        <div class="xp-bar">
+          <div class="xp-fill" style="width: 0%;"></div>
+        </div>
+        <div class="xp-stars">
+          <span class="star">⭐</span>
+          <span class="star">⭐</span>
+          <span class="star">⭐</span>
+          <span class="star">⭐</span>
+        </div>
+      </div>
+
+      <div class="stats-display" id="statsDisplay"></div>
+
+    </div>
+
+    <!-- ===== チャットパネル ===== -->
+    <main class="chat-main">
+      <div class="messages" id="messages"></div>
+
+      <div class="input-area">
+        <textarea placeholder="Feynに解説を入力してください..."></textarea>
+        <button class="send-btn">🚀 送信</button>
+      </div>
+    </main>
+  </div>
+
+  <canvas id="confettiCanvas"></canvas>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feyn - ログイン</title>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      background: #F0F4F8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: white;
+      border: 2px solid #E5E5E5;
+      border-radius: 24px;
+      padding: 48px 40px;
+      width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    }
+
+    .logo  { font-size: 36px; font-weight: 800; color: #58CC02; letter-spacing: 3px; }
+    .title { font-size: 20px; font-weight: 800; color: #3C3C3C; }
+
+    .desc {
+      font-size: 14px; color: #AFAFAF; text-align: center;
+      font-weight: 700; line-height: 1.6;
+    }
+
+    .field {
+      width: 100%; display: flex; flex-direction: column; gap: 6px;
+    }
+
+    .field label { font-size: 13px; font-weight: 700; color: #AFAFAF; }
+
+    .field input,
+    .field select {
+      width: 100%; padding: 12px 16px;
+      border-radius: 12px; border: 2px solid #E5E5E5;
+      background: #F0F4F8; color: #3C3C3C;
+      font-size: 16px; font-family: inherit; font-weight: 700;
+      outline: none; transition: border-color 0.2s;
+    }
+
+    .field input:focus,
+    .field select:focus { border-color: #58CC02; }
+
+    .pass-wrap { position: relative; }
+    .pass-wrap input { padding-right: 44px; }
+    .eye-btn {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; cursor: pointer;
+      font-size: 18px; line-height: 1; opacity: 0.4; transition: opacity 0.2s; padding: 2px;
+    }
+    .eye-btn:hover { opacity: 0.9; }
+
+    .question-box {
+      width: 100%; padding: 12px 16px;
+      background: #F0F4F8; border: 2px solid #E5E5E5; border-radius: 12px;
+      font-size: 14px; font-weight: 700; color: #58CC02; line-height: 1.5;
+    }
+
+    .error {
+      color: #FF4B4B; font-size: 13px; font-weight: 700;
+      text-align: center; min-height: 20px;
+    }
+
+    .success {
+      color: #58CC02; font-size: 13px; font-weight: 700;
+      text-align: center; min-height: 20px;
+    }
+
+    .submit-btn {
+      width: 100%; padding: 16px;
+      background: #58CC02; color: white; border: none; border-radius: 14px;
+      font-size: 18px; font-weight: 800; font-family: inherit; cursor: pointer;
+      box-shadow: 0 6px 0 #46A302; transition: all 0.1s; margin-top: 4px;
+    }
+    .submit-btn:hover  { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 8px 0 #46A302; }
+    .submit-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #46A302; }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: 0 6px 0 #46A302; }
+
+    .toggle { font-size: 13px; font-weight: 700; color: #AFAFAF; text-align: center; }
+    .toggle-link { color: #58CC02; cursor: pointer; text-decoration: underline; }
+
+    .link-btn {
+      background: none; border: none; font-family: inherit;
+      font-size: 13px; font-weight: 700; color: #AFAFAF;
+      cursor: pointer; text-decoration: underline; padding: 0;
+      transition: color 0.2s;
+    }
+    .link-btn:hover { color: #58CC02; }
+
+    @media (max-width: 440px) {
+      .card { width: 90%; padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">🎓 Feyn</div>
+    <div class="title" id="formTitle">ログイン</div>
+    <div class="desc" id="formDesc">Feynにわかるように教えよう！</div>
+
+    <!-- メールアドレス -->
+    <div class="field" id="emailField">
+      <label>メールアドレス</label>
+      <input type="email" id="emailInput" placeholder="example@email.com" autocomplete="email">
+    </div>
+
+    <!-- ニックネーム（新規登録のみ） -->
+    <div class="field" id="nameField" style="display:none">
+      <label>ニックネーム（Feynが呼ぶ名前）</label>
+      <input type="text" id="nameInput" placeholder="例: たかひろ" maxlength="20" autocomplete="nickname">
+    </div>
+
+    <!-- パスワード（ログイン・新規登録） -->
+    <div class="field" id="passwordField">
+      <label>パスワード</label>
+      <div class="pass-wrap">
+        <input type="password" id="passwordInput" placeholder="4文字以上" autocomplete="current-password">
+        <button type="button" class="eye-btn" id="eyeBtn">👁</button>
+      </div>
+    </div>
+
+    <!-- 先生コード（新規登録のみ） -->
+    <div class="field" id="teacherCodeField" style="display:none">
+      <label>先生コード（任意）</label>
+      <input type="text" id="teacherCodeInput" placeholder="先生の場合のみ入力" autocomplete="off">
+    </div>
+
+    <!-- 秘密の質問（新規登録のみ） -->
+    <div class="field" id="securityQuestionField" style="display:none">
+      <label>秘密の質問</label>
+      <select id="securityQuestionSelect">
+        <option value="">-- 選んでください --</option>
+        <option>小学校の名前は？</option>
+        <option>初めて飼ったペットの名前は？</option>
+        <option>好きな食べ物は？</option>
+        <option>生まれた市区町村は？</option>
+        <option>母親の旧姓は？</option>
+      </select>
+    </div>
+
+    <!-- 秘密の質問の答え（新規登録のみ） -->
+    <div class="field" id="securityAnswerField" style="display:none">
+      <label>答え</label>
+      <input type="text" id="securityAnswerInput" placeholder="パスワードリセット時に使います" autocomplete="off">
+    </div>
+
+    <!-- 質問表示（パスワードリセット step2） -->
+    <div class="field" id="questionDisplayField" style="display:none">
+      <label>あなたの秘密の質問</label>
+      <div class="question-box" id="questionDisplay"></div>
+    </div>
+
+    <!-- 答え入力（パスワードリセット step2） -->
+    <div class="field" id="forgotAnswerField" style="display:none">
+      <label>答え</label>
+      <input type="text" id="forgotAnswerInput" placeholder="登録時の答えを入力" autocomplete="off">
+    </div>
+
+    <!-- 新しいパスワード（パスワードリセット step2） -->
+    <div class="field" id="newPasswordField" style="display:none">
+      <label>新しいパスワード</label>
+      <input type="password" id="newPasswordInput" placeholder="4文字以上" autocomplete="new-password">
+    </div>
+
+    <div class="error"   id="errorMsg"></div>
+    <div class="success" id="successMsg" style="display:none"></div>
+
+    <button class="submit-btn" id="submitBtn">ログイン</button>
+
+    <!-- 「ログインに戻る」（パスワードリセット時） -->
+    <button class="link-btn" id="backBtn" style="display:none">← ログインに戻る</button>
+
+    <!-- ログイン ↔ 新規登録 トグル -->
+    <div class="toggle" id="toggleArea">
+      <span id="toggleDesc">アカウントがない？</span>
+      <span class="toggle-link" id="toggleLink">新規登録はこちら</span>
+    </div>
+
+    <!-- パスワードを忘れた（ログイン時のみ） -->
+    <button class="link-btn" id="forgotBtn">パスワードを忘れた方はこちら</button>
+  </div>
+
+  <script>
+    // mode: 'login' | 'signup' | 'forgot1' | 'forgot2'
+    let mode        = 'login';
+    let forgotEmail = '';
+
+    const els = {
+      title:                document.getElementById('formTitle'),
+      desc:                 document.getElementById('formDesc'),
+      submitBtn:            document.getElementById('submitBtn'),
+      errorMsg:             document.getElementById('errorMsg'),
+      successMsg:           document.getElementById('successMsg'),
+      emailField:           document.getElementById('emailField'),
+      emailInput:           document.getElementById('emailInput'),
+      nameField:            document.getElementById('nameField'),
+      nameInput:            document.getElementById('nameInput'),
+      passwordField:        document.getElementById('passwordField'),
+      passwordInput:        document.getElementById('passwordInput'),
+      eyeBtn:               document.getElementById('eyeBtn'),
+      teacherCodeField:     document.getElementById('teacherCodeField'),
+      teacherCodeInput:     document.getElementById('teacherCodeInput'),
+      securityQuestionField: document.getElementById('securityQuestionField'),
+      securityQuestionSelect: document.getElementById('securityQuestionSelect'),
+      securityAnswerField:  document.getElementById('securityAnswerField'),
+      securityAnswerInput:  document.getElementById('securityAnswerInput'),
+      questionDisplayField: document.getElementById('questionDisplayField'),
+      questionDisplay:      document.getElementById('questionDisplay'),
+      forgotAnswerField:    document.getElementById('forgotAnswerField'),
+      forgotAnswerInput:    document.getElementById('forgotAnswerInput'),
+      newPasswordField:     document.getElementById('newPasswordField'),
+      newPasswordInput:     document.getElementById('newPasswordInput'),
+      backBtn:              document.getElementById('backBtn'),
+      toggleArea:           document.getElementById('toggleArea'),
+      toggleDesc:           document.getElementById('toggleDesc'),
+      toggleLink:           document.getElementById('toggleLink'),
+      forgotBtn:            document.getElementById('forgotBtn'),
+    };
+
+    function show(el) { el.style.display = 'flex'; }
+    function hide(el) { el.style.display = 'none'; }
+    function clearMsgs() {
+      els.errorMsg.textContent = '';
+      els.successMsg.style.display = 'none';
+      els.successMsg.textContent   = '';
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      clearMsgs();
+
+      const isLogin   = mode === 'login';
+      const isSignup  = mode === 'signup';
+      const isForgot1 = mode === 'forgot1';
+      const isForgot2 = mode === 'forgot2';
+
+      // email: login, signup, forgot1
+      els.emailField.style.display  = (isLogin || isSignup || isForgot1) ? 'flex' : 'none';
+      // password: login, signup
+      els.passwordField.style.display = (isLogin || isSignup) ? 'flex' : 'none';
+      // signup-only
+      els.nameField.style.display            = isSignup ? 'flex' : 'none';
+      els.teacherCodeField.style.display     = isSignup ? 'flex' : 'none';
+      els.securityQuestionField.style.display = isSignup ? 'flex' : 'none';
+      els.securityAnswerField.style.display  = isSignup ? 'flex' : 'none';
+      // forgot2-only
+      els.questionDisplayField.style.display = isForgot2 ? 'flex' : 'none';
+      els.forgotAnswerField.style.display    = isForgot2 ? 'flex' : 'none';
+      els.newPasswordField.style.display     = isForgot2 ? 'flex' : 'none';
+      // nav
+      els.backBtn.style.display    = (isForgot1 || isForgot2) ? 'block' : 'none';
+      els.toggleArea.style.display = (isLogin || isSignup)    ? 'block' : 'none';
+      els.forgotBtn.style.display  = isLogin                   ? 'block' : 'none';
+
+      // titles
+      const titles   = { login: 'ログイン', signup: '新規登録', forgot1: 'パスワードをリセット', forgot2: 'パスワードをリセット' };
+      const descs    = { login: 'Feynにわかるように教えよう！', signup: 'アカウントを作って学習を始めよう', forgot1: '登録したメールアドレスを入力してください', forgot2: '秘密の質問に答えて新しいパスワードを設定してください' };
+      const btnTexts = { login: 'ログイン', signup: 'アカウントを作る', forgot1: '次へ', forgot2: 'リセットする' };
+      els.title.textContent     = titles[mode];
+      els.desc.textContent      = descs[mode];
+      els.submitBtn.textContent = btnTexts[mode];
+
+      els.passwordInput.setAttribute('autocomplete', isSignup ? 'new-password' : 'current-password');
+
+      if (isLogin) {
+        els.toggleDesc.textContent = 'アカウントがない？';
+        els.toggleLink.textContent = '新規登録はこちら';
+      } else if (isSignup) {
+        els.toggleDesc.textContent = 'すでにアカウントがある？';
+        els.toggleLink.textContent = 'ログインはこちら';
+      }
+    }
+
+    // ===== パスワード表示/非表示 =====
+    els.eyeBtn.addEventListener('click', () => {
+      const hidden = els.passwordInput.type === 'password';
+      els.passwordInput.type  = hidden ? 'text' : 'password';
+      els.eyeBtn.style.opacity = hidden ? '0.9' : '0.4';
+    });
+
+    // ===== トグル（ログイン ↔ 新規登録） =====
+    els.toggleLink.addEventListener('click', () => {
+      setMode(mode === 'login' ? 'signup' : 'login');
+    });
+
+    // ===== パスワードを忘れた =====
+    els.forgotBtn.addEventListener('click', () => setMode('forgot1'));
+    els.backBtn.addEventListener('click', () => setMode('login'));
+
+    // ===== 送信処理 =====
+    async function submit() {
+      clearMsgs();
+      els.submitBtn.disabled = true;
+
+      try {
+        if (mode === 'login')   await doLogin();
+        if (mode === 'signup')  await doSignup();
+        if (mode === 'forgot1') await doForgot1();
+        if (mode === 'forgot2') await doForgot2();
+      } finally {
+        els.submitBtn.disabled = false;
+      }
+    }
+
+    async function doLogin() {
+      const email    = els.emailInput.value.trim();
+      const password = els.passwordInput.value;
+      if (!email || !password) { els.errorMsg.textContent = 'メールアドレスとパスワードを入力してください'; return; }
+
+      const res  = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const data = await res.json();
+      if (!res.ok) { els.errorMsg.textContent = data.error || 'エラーが発生しました'; return; }
+      window.location.href = '/';
+    }
+
+    async function doSignup() {
+      const email           = els.emailInput.value.trim();
+      const name            = els.nameInput.value.trim();
+      const password        = els.passwordInput.value;
+      const teacher_code    = els.teacherCodeInput.value.trim();
+      const security_question = els.securityQuestionSelect.value;
+      const security_answer   = els.securityAnswerInput.value.trim();
+
+      if (!email || !name || !password)        { els.errorMsg.textContent = 'すべての項目を入力してください'; return; }
+      if (!security_question)                   { els.errorMsg.textContent = '秘密の質問を選んでください'; return; }
+      if (!security_answer)                     { els.errorMsg.textContent = '秘密の質問の答えを入力してください'; return; }
+
+      const res  = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name, password, teacher_code, security_question, security_answer }) });
+      const data = await res.json();
+      if (!res.ok) { els.errorMsg.textContent = data.error || 'エラーが発生しました'; return; }
+      window.location.href = '/';
+    }
+
+    async function doForgot1() {
+      const email = els.emailInput.value.trim();
+      if (!email) { els.errorMsg.textContent = 'メールアドレスを入力してください'; return; }
+
+      const res  = await fetch('/api/security-question', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      const data = await res.json();
+      if (!res.ok) { els.errorMsg.textContent = data.error || 'エラーが発生しました'; return; }
+
+      forgotEmail = email;
+      els.questionDisplay.textContent = data.question;
+      setMode('forgot2');
+    }
+
+    async function doForgot2() {
+      const answer       = els.forgotAnswerInput.value.trim();
+      const new_password = els.newPasswordInput.value;
+      if (!answer)        { els.errorMsg.textContent = '答えを入力してください'; return; }
+      if (!new_password)  { els.errorMsg.textContent = '新しいパスワードを入力してください'; return; }
+
+      const res  = await fetch('/api/reset-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: forgotEmail, answer, new_password }) });
+      const data = await res.json();
+      if (!res.ok) { els.errorMsg.textContent = data.error || 'エラーが発生しました'; return; }
+
+      els.successMsg.textContent   = 'パスワードをリセットしました！';
+      els.successMsg.style.display = 'block';
+      setTimeout(() => setMode('login'), 1500);
+    }
+
+    // ===== Enterキー =====
+    els.submitBtn.addEventListener('click', submit);
+    els.emailInput.addEventListener('keydown',    (e) => { if (e.key === 'Enter') { mode === 'signup' ? els.nameInput.focus() : (mode === 'forgot1' ? submit() : els.passwordInput.focus()); } });
+    els.nameInput.addEventListener('keydown',     (e) => { if (e.key === 'Enter') els.passwordInput.focus(); });
+    els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+    els.forgotAnswerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') els.newPasswordInput.focus(); });
+    els.newPasswordInput.addEventListener('keydown',  (e) => { if (e.key === 'Enter') submit(); });
+  </script>
+</body>
+</html>

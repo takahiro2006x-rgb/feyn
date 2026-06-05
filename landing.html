@@ -352,6 +352,55 @@
       color: var(--subtext);
     }
 
+    /* ===== 科目セクション ===== */
+    .subjects-section {
+      padding: 80px 32px;
+      text-align: center;
+    }
+
+    .subject-tags {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .subject-tag {
+      padding: 14px 28px;
+      background: var(--c);
+      color: white;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 800;
+      box-shadow: 0 5px 0 var(--cd);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: default;
+    }
+
+    .subject-tag:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 0 var(--cd);
+    }
+
+    .exam-tags {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .exam-tag {
+      padding: 8px 20px;
+      border: 2px solid var(--border);
+      border-radius: 99px;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--subtext);
+      background: var(--card);
+    }
+
     /* ===== レスポンシブ ===== */
     @media (max-width: 768px) {
       nav { padding: 0 20px; }
@@ -490,6 +539,30 @@
         <div class="step-num">3</div>
         <h3>納得させてクリア！</h3>
         <p>Feynが「なるほど！」と言ったらクリア。XPゲージと紙吹雪で達成感が得られる。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 科目 -->
+  <section class="subjects-section">
+    <div class="section-inner">
+      <div class="section-label">Subjects</div>
+      <div class="section-title">7科目に対応</div>
+      <div class="subject-tags">
+        <div class="subject-tag" style="--c:#3B82F6;--cd:#1D4ED8">⚡ 物理</div>
+        <div class="subject-tag" style="--c:#8B5CF6;--cd:#6D28D9">📐 数学</div>
+        <div class="subject-tag" style="--c:#F97316;--cd:#C2410C">🌍 英語</div>
+        <div class="subject-tag" style="--c:#10B981;--cd:#047857">⚗️ 化学</div>
+        <div class="subject-tag" style="--c:#84CC16;--cd:#4D7C0F">🌿 生物</div>
+        <div class="subject-tag" style="--c:#EF4444;--cd:#B91C1C">📖 国語</div>
+        <div class="subject-tag" style="--c:#B45309;--cd:#78350F">🏛️ 歴史</div>
+      </div>
+      <div class="exam-tags">
+        <span class="exam-tag">中学受験</span>
+        <span class="exam-tag">高校受験</span>
+        <span class="exam-tag">大学受験</span>
+        <span class="exam-tag">定期テスト</span>
+        <span class="exam-tag">大学試験</span>
       </div>
     </div>
   </section>

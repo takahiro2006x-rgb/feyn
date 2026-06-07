@@ -8,7 +8,7 @@ import os
 import time
 import random
 import string
-from datetime import date
+from datetime import date, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -339,6 +339,39 @@ def me():
         'role':                session.get('user_role', 'student'),
         'has_security_question': bool(user and user['security_question']),
     })
+
+
+# ========================================
+# ストリーク取得
+# ========================================
+@app.route('/api/streak')
+def streak():
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT DISTINCT date(completed_at) as day FROM session_logs WHERE user_id = ? ORDER BY day DESC",
+            (session['user_id'],)
+        ).fetchall()
+
+    if not rows:
+        return jsonify({'streak': 0})
+
+    today = date.today()
+    days = [date.fromisoformat(row['day']) for row in rows]
+
+    if days[0] < today - timedelta(days=1):
+        return jsonify({'streak': 0})
+
+    count = 1
+    for i in range(1, len(days)):
+        if days[i] == days[i - 1] - timedelta(days=1):
+            count += 1
+        else:
+            break
+
+    return jsonify({'streak': count})
 
 
 # ========================================

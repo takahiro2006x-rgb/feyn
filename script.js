@@ -331,7 +331,7 @@ async function sendMessage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ subject: currentSubject, difficulty: diffSelect.value }),
-      }).catch(() => {});
+      }).then(() => fetchStreak()).catch(() => {});
     } else {
       setExpression('normal');
       addMessage('feyn', data.reply);
@@ -420,6 +420,17 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 
+// ===== ストリーク =====
+async function fetchStreak() {
+  try {
+    const res = await fetch('/api/streak');
+    const data = await res.json();
+    const el = document.querySelector('.status-item strong');
+    if (el) el.textContent = data.streak ?? 0;
+  } catch (e) {}
+}
+
+
 // ===== 起動 =====
 applySubjectColor(currentSubject);
 
@@ -445,6 +456,7 @@ async function init() {
     }
 
     updateStatsDisplay();
+    fetchStreak();
     startSession();
   } catch (e) {
     window.location.href = '/login';

@@ -401,6 +401,46 @@
       background: var(--card);
     }
 
+    /* ===== FAQ ===== */
+    .faq-section {
+      background: var(--card);
+      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      padding: 80px 32px;
+    }
+
+    .faq-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .faq-q {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .faq-a {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--subtext);
+      line-height: 1.8;
+    }
+
     /* ===== レスポンシブ ===== */
     @media (max-width: 768px) {
       nav { padding: 0 20px; }
@@ -563,6 +603,32 @@
         <span class="exam-tag">大学受験</span>
         <span class="exam-tag">定期テスト</span>
         <span class="exam-tag">大学試験</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq-section">
+    <div class="section-inner">
+      <div class="section-label">FAQ</div>
+      <div class="section-title">よくある質問</div>
+      <div class="faq-list">
+        <div class="faq-item">
+          <div class="faq-q">💬 無料で使えますか？</div>
+          <div class="faq-a">はい、完全無料で使えます。登録も1分でできます。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">📱 スマホでも使えますか？</div>
+          <div class="faq-a">はい、スマホ・タブレット・PCすべてに対応しています。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">🧠 ファインマン学習法って何ですか？</div>
+          <div class="faq-a">「人に教えられれば本当に理解している」という学習法です。Feynに教えることで、わかったつもりを防ぎ、深い理解が身につきます。</div>
+        </div>
+        <div class="faq-item">
+          <div class="faq-q">🎓 先生アカウントとは何ですか？</div>
+          <div class="faq-a">塾や学校の講師向けのアカウントです。生徒の学習状況・科目別クリア数をダッシュボードで一覧できます。先生コードが必要です。</div>
+        </div>
       </div>
     </div>
   </section>

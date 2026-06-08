@@ -255,6 +255,15 @@ body {
   text-align: center;
 }
 
+.level-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 14px;
+  border-radius: 99px;
+  border: 2px solid;
+  transition: color 0.3s, border-color 0.3s;
+}
+
 /* XP・納得度 */
 .xp-area {
   width: 100%;

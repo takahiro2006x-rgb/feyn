@@ -332,12 +332,14 @@ def me():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしていません'}), 401
     with get_db() as conn:
-        user = conn.execute('SELECT security_question FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        user  = conn.execute('SELECT security_question FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        total = conn.execute('SELECT COUNT(*) as cnt FROM session_logs WHERE user_id = ?', (session['user_id'],)).fetchone()['cnt']
     return jsonify({
-        'id':                  session['user_id'],
-        'name':                session['user_name'],
-        'role':                session.get('user_role', 'student'),
+        'id':                    session['user_id'],
+        'name':                  session['user_name'],
+        'role':                  session.get('user_role', 'student'),
         'has_security_question': bool(user and user['security_question']),
+        'total_clears':          total,
     })
 
 

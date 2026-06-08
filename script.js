@@ -331,7 +331,11 @@ async function sendMessage() {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ subject: currentSubject, difficulty: diffSelect.value }),
-      }).then(() => fetchStreak()).catch(() => {});
+      }).then(async () => {
+        fetchStreak();
+        const r = await fetch('/api/me');
+        if (r.ok) { const u = await r.json(); updateStatus(u.total_clears || 0); }
+      }).catch(() => {});
     } else {
       setExpression('normal');
       addMessage('feyn', data.reply);
@@ -420,12 +424,34 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 
+// ===== レベル計算 =====
+function getLevel(total) {
+  if (total >= 50) return { level: 6, label: '伝説',       color: '#FF6B35' };
+  if (total >= 30) return { level: 5, label: 'マスター',   color: '#8B5CF6' };
+  if (total >= 15) return { level: 4, label: 'エキスパート', color: '#F97316' };
+  if (total >= 8)  return { level: 3, label: '中級者',     color: '#3B82F6' };
+  if (total >= 3)  return { level: 2, label: '初学者',     color: '#10B981' };
+  return           { level: 1, label: 'ビギナー',          color: '#AFAFAF' };
+}
+
+function updateStatus(totalClears) {
+  const xpEl    = document.getElementById('xpCount');
+  const lvEl    = document.getElementById('levelBadge');
+  if (xpEl) xpEl.textContent = totalClears * 10;
+  if (lvEl) {
+    const lv = getLevel(totalClears);
+    lvEl.textContent        = `Lv.${lv.level} ${lv.label}`;
+    lvEl.style.color        = lv.color;
+    lvEl.style.borderColor  = lv.color;
+  }
+}
+
 // ===== ストリーク =====
 async function fetchStreak() {
   try {
     const res = await fetch('/api/streak');
     const data = await res.json();
-    const el = document.querySelector('.status-item strong');
+    const el = document.getElementById('streakCount');
     if (el) el.textContent = data.streak ?? 0;
   } catch (e) {}
 }
@@ -441,6 +467,7 @@ async function init() {
     const user = await res.json();
     teacherInput.value = user.name;
     document.getElementById('userDisplay').textContent = `ログイン中: ${user.name}`;
+    updateStatus(user.total_clears || 0);
 
     if (!user.has_security_question) {
       document.getElementById('securityBtn').style.display = 'block';

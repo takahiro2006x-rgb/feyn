@@ -471,7 +471,7 @@ def start():
 
     chat_sessions[session_key] = {
         'chat': client.chats.create(
-            model="gemini-2.0-flash-lite",
+            model="gemini-2.0-flash",
             config=types.GenerateContentConfig(
                 system_instruction=build_instruction(subject, difficulty, teacher_name)
             )

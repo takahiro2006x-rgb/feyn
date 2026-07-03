@@ -359,6 +359,7 @@ async function sendMessage() {
           updateStatus(u.total_clears || 0);
           subjectStats = u.subject_clears || {};
           updateStatsDisplay();
+          updateGapsBadge(u.due_reviews || 0);
         }
       }).catch(() => {});
     } else {
@@ -477,6 +478,11 @@ function getLevel(total) {
   return           { level: 1, label: 'ビギナー',          color: '#AFAFAF' };
 }
 
+function updateGapsBadge(count) {
+  const btn = document.getElementById('gapsBtn');
+  if (btn) btn.textContent = count > 0 ? `📝 苦手ノート 🔴${count}` : '📝 苦手ノート';
+}
+
 function updateStatus(totalClears) {
   const xpEl    = document.getElementById('xpCount');
   const lvEl    = document.getElementById('levelBadge');
@@ -512,6 +518,7 @@ async function init() {
     document.getElementById('userDisplay').textContent = `ログイン中: ${user.name}`;
     updateStatus(user.total_clears || 0);
     subjectStats = user.subject_clears || {};
+    updateGapsBadge(user.due_reviews || 0);
 
     if (!user.has_security_question) {
       document.getElementById('securityBtn').style.display = 'block';

@@ -165,6 +165,8 @@
       white-space: nowrap;
     }
 
+    .due-badge { background: #FF9600; }
+
     .gap-desc { font-size: 14px; font-weight: 700; line-height: 1.7; }
 
     .gap-evidence {
@@ -266,17 +268,22 @@
     function gapCard(g, labels) {
       const emoji    = SUBJECT_EMOJIS[g.subject] || '📚';
       const resolved = g.status === 'resolved';
-      const badge    = resolved
-        ? `<span class="status-badge">✅ 解決済み</span>`
+      const badge = resolved
+        ? (g.due ? `<span class="status-badge due-badge">⏰ 復習どき</span>` : `<span class="status-badge">✅ 解決済み</span>`)
         : `<span class="type-badge type-${escHtml(g.gap_type)}">${escHtml(labels[g.gap_type] || g.gap_type)}</span>`;
       const evidence = g.evidence
         ? `<div class="gap-evidence">💬 きみの発言: 「${escHtml(g.evidence)}」</div>` : '';
-      const action = resolved
-        ? ''
-        : `<button class="review-btn" data-id="${g.id}" data-subject="${escHtml(g.subject)}">🔥 復習する</button>`;
+      const action = (!resolved || g.due)
+        ? `<button class="review-btn" data-id="${g.id}" data-subject="${escHtml(g.subject)}">🔥 復習する</button>`
+        : '';
+      let dateInfo = `📅 ${escHtml(g.session_date)}`;
+      if (resolved && g.review_count > 0) {
+        dateInfo += ` ・ 復習${g.review_count}回`;
+        if (!g.due && g.next_review) dateInfo += ` ・ 次回 ${escHtml(g.next_review)}`;
+      }
 
       return `
-        <div class="gap-card ${resolved ? 'resolved' : ''}">
+        <div class="gap-card ${resolved && !g.due ? 'resolved' : ''}">
           <div class="gap-top">
             <span class="gap-topic">${emoji} ${escHtml(g.subject)}: ${escHtml(g.topic)}</span>
             ${badge}
@@ -284,7 +291,7 @@
           <div class="gap-desc">${escHtml(g.description)}</div>
           ${evidence}
           <div class="gap-foot">
-            <span class="gap-date">📅 ${escHtml(g.session_date)}</span>
+            <span class="gap-date">${dateInfo}</span>
             ${action}
           </div>
         </div>
@@ -328,8 +335,13 @@
         }
 
         const open     = data.gaps.filter(g => g.status !== 'resolved');
-        const resolved = data.gaps.filter(g => g.status === 'resolved');
+        const due      = data.gaps.filter(g => g.status === 'resolved' && g.due);
+        const resolved = data.gaps.filter(g => g.status === 'resolved' && !g.due);
 
+        if (due.length > 0) {
+          html += `<div class="section-title">⏰ 復習どき — 忘れかけているかも（${due.length}件）</div>`;
+          html += due.map(g => gapCard(g, data.labels)).join('');
+        }
         if (open.length > 0) {
           html += `<div class="section-title">🔥 いま残っている苦手（${open.length}件）</div>`;
           html += open.map(g => gapCard(g, data.labels)).join('');

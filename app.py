@@ -23,6 +23,9 @@ CORS(app, supports_credentials=True)
 DB_PATH = os.path.join(os.path.dirname(__file__), 'feyn.db')
 TEACHER_CODE = os.environ.get('TEACHER_CODE', 'FEYN_TEACHER_2024')
 SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史']
+
+# 忘却曲線ベースの復習間隔（日）。復習に成功するたびに次の間隔へ進む
+REVIEW_INTERVALS = [1, 3, 7, 14, 30]
 SECURITY_QUESTIONS = [
     '小学校の名前は？',
     '初めて飼ったペットの名前は？',
@@ -60,6 +63,14 @@ def init_db():
             pass
         try:
             conn.execute("ALTER TABLE users ADD COLUMN security_answer_hash TEXT")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE knowledge_gaps ADD COLUMN review_count INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
+        try:
+            conn.execute("ALTER TABLE knowledge_gaps ADD COLUMN next_review TEXT")
         except Exception:
             pass
         conn.execute('''
@@ -455,12 +466,18 @@ def logout():
 def me():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしていません'}), 401
+    today = str(date.today())
     with get_db() as conn:
         user = conn.execute('SELECT security_question FROM users WHERE id = ?', (session['user_id'],)).fetchone()
         rows = conn.execute(
             'SELECT subject, COUNT(*) as cnt FROM session_logs WHERE user_id = ? GROUP BY subject',
             (session['user_id'],)
         ).fetchall()
+        due = conn.execute(
+            "SELECT COUNT(*) as cnt FROM knowledge_gaps "
+            "WHERE user_id = ? AND ((status = 'resolved' AND next_review IS NOT NULL AND next_review <= ?) OR status = 'open')",
+            (session['user_id'], today)
+        ).fetchone()['cnt']
     subject_clears = {row['subject']: row['cnt'] for row in rows}
     return jsonify({
         'id':                    session['user_id'],
@@ -469,6 +486,7 @@ def me():
         'has_security_question': bool(user and user['security_question']),
         'total_clears':          sum(subject_clears.values()),
         'subject_clears':        subject_clears,
+        'due_reviews':           due,
     })
 
 
@@ -592,16 +610,29 @@ def complete():
             'INSERT INTO session_logs (user_id, subject, difficulty) VALUES (?, ?, ?)',
             (session['user_id'], subject, difficulty)
         )
-        # 復習セッションの完了 = Feynが納得した = ギャップ解消とみなす
+        # 復習セッションの完了 = Feynが納得した = ギャップ解消とみなす。
+        # 忘却曲線に沿って次の復習日を先送りしていく（1→3→7→14→30日）
         if gap_id:
-            conn.execute(
-                "UPDATE knowledge_gaps SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+            row = conn.execute(
+                'SELECT review_count FROM knowledge_gaps WHERE id = ? AND user_id = ?',
                 (gap_id, session['user_id'])
-            )
+            ).fetchone()
+            if row:
+                count    = row['review_count'] + 1
+                interval = REVIEW_INTERVALS[min(count - 1, len(REVIEW_INTERVALS) - 1)]
+                conn.execute(
+                    "UPDATE knowledge_gaps SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP, "
+                    'review_count = ?, next_review = ? WHERE id = ? AND user_id = ?',
+                    (count, str(date.today() + timedelta(days=interval)), gap_id, session['user_id'])
+                )
         rows = conn.execute(
             'SELECT role, message FROM conversation_logs '
             'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
             (session['user_id'], subject, today)
+        ).fetchall()
+        topic_rows = conn.execute(
+            'SELECT topic FROM topic_progress WHERE user_id = ? AND subject = ?',
+            (session['user_id'], subject)
         ).fetchall()
         conn.commit()
 
@@ -610,11 +641,14 @@ def complete():
     try:
         analysis = gap_analyzer.analyze_session(
             client, GEMINI_MODELS, subject, difficulty,
-            [{'role': r['role'], 'message': r['message']} for r in rows]
+            [{'role': r['role'], 'message': r['message']} for r in rows],
+            existing_topics=[r['topic'] for r in topic_rows]
         )
         if analysis:
             save_analysis(session['user_id'], subject, analysis, today)
     except Exception:
+        # 分析失敗はクリア記録を妨げない（原因調査用にログだけ残す）
+        import traceback; traceback.print_exc()
         analysis = None
 
     return jsonify({'ok': True, 'analysis': analysis})
@@ -628,9 +662,11 @@ def gaps_api():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
 
+    today = str(date.today())
     with get_db() as conn:
         gap_rows = conn.execute(
-            "SELECT id, subject, topic, gap_type, description, evidence, suggested_question, status, session_date, resolved_at "
+            "SELECT id, subject, topic, gap_type, description, evidence, suggested_question, "
+            "status, session_date, resolved_at, review_count, next_review "
             "FROM knowledge_gaps WHERE user_id = ? "
             "ORDER BY (status = 'resolved'), id DESC",
             (session['user_id'],)
@@ -641,8 +677,15 @@ def gaps_api():
             (session['user_id'],)
         ).fetchall()
 
+    gaps = []
+    for r in gap_rows:
+        g = dict(r)
+        # 忘却曲線: 解決済みでも次の復習日が来ていたら「復習どき」として再浮上させる
+        g['due'] = bool(g['status'] == 'resolved' and g['next_review'] and g['next_review'] <= today)
+        gaps.append(g)
+
     return jsonify({
-        'gaps':     [dict(r) for r in gap_rows],
+        'gaps':     gaps,
         'progress': [dict(r) for r in progress_rows],
         'labels':   tutoring.GAP_TYPE_LABELS,
     })
@@ -736,15 +779,16 @@ def start():
     gap_id       = data.get('gap_id')
 
     # 復習モード: 過去に特定した知識ギャップを狙い撃ちする
+    # （解決済みでも忘却曲線の「復習どき」に再挑戦できるよう、statusでは弾かない）
     gap = None
     if gap_id:
         with get_db() as conn:
             gap = conn.execute(
-                "SELECT * FROM knowledge_gaps WHERE id = ? AND user_id = ? AND status != 'resolved'",
+                'SELECT * FROM knowledge_gaps WHERE id = ? AND user_id = ?',
                 (gap_id, session['user_id'])
             ).fetchone()
         if gap is None:
-            return jsonify({'error': 'この復習項目は見つかりません（すでに解決済みかもしれません）'}), 404
+            return jsonify({'error': 'この復習項目は見つかりません'}), 404
         subject = gap['subject']
 
     session_key = f"{session['user_id']}_{subject}"
@@ -757,6 +801,7 @@ def start():
 
     response   = None
     used_model = None
+    quota_only = True
     for model in GEMINI_MODELS:
         try:
             chat = create_chat(model, instruction)
@@ -764,12 +809,19 @@ def start():
             used_model = model
             break
         except Exception as e:
-            if '429' in str(e):
+            err = str(e)
+            # 枠切れ(429)・過負荷(503)はモデル単位の問題なので次のモデルで再挑戦する
+            if '429' in err:
+                continue
+            if '503' in err or 'UNAVAILABLE' in err:
+                quota_only = False
                 continue
             return jsonify({'error': 'AIサーバーが混み合っています。少し待ってからもう一度試してください。'}), 503
 
     if response is None:
-        return jsonify({'error': '本日のAPI利用上限に達しました。'}), 429
+        if quota_only:
+            return jsonify({'error': '本日のAPI利用上限に達しました。'}), 429
+        return jsonify({'error': 'AIサーバーが混み合っています。少し待ってからもう一度試してください。'}), 503
 
     chat_sessions[session_key] = {
         'chat':        chat,
@@ -833,19 +885,25 @@ def chat():
             break
         except Exception as e:
             err = str(e)
-            if '429' in err:
-                # 使用中モデルの無料枠が尽きたら、会話履歴を引き継いで次のモデルへ切り替える
+            overloaded = '503' in err or 'UNAVAILABLE' in err
+
+            # 過負荷はまず同じモデルで少し待って再試行する
+            if overloaded and retries < 2:
+                retries += 1
+                time.sleep(2)
+                continue
+
+            # 枠切れ(429)・回復しない過負荷は、会話履歴を引き継いで次のモデルへ切り替える
+            if '429' in err or overloaded:
                 idx = GEMINI_MODELS.index(sess['model']) if sess.get('model') in GEMINI_MODELS else len(GEMINI_MODELS) - 1
                 if idx + 1 < len(GEMINI_MODELS):
                     next_model = GEMINI_MODELS[idx + 1]
                     sess['chat']  = create_chat(next_model, sess['instruction'], history=sess['chat'].get_history())
                     sess['model'] = next_model
+                    retries = 0
                     continue
-                return jsonify({'error': '本日のAPI利用上限に達しました。'}), 429
-            if '503' in err and retries < 2:
-                retries += 1
-                time.sleep(2)
-                continue
+                if '429' in err:
+                    return jsonify({'error': '本日のAPI利用上限に達しました。'}), 429
             return jsonify({'error': 'AIサーバーが混み合っています。'}), 503
 
     reply   = response.text or ''

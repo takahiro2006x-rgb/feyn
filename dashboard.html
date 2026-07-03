@@ -190,6 +190,7 @@
       border: 2px solid var(--border);
       border-radius: 20px;
       overflow: hidden;
+      overflow-x: auto;   /* スマホでは表を横スクロールできるようにする */
       box-shadow: 0 4px 0 var(--border);
     }
 
@@ -341,6 +342,21 @@
 
     .reset-pass-btn:hover { border-color: #FF4B4B; color: #FF4B4B; background: rgba(255,75,75,0.06); }
 
+    .detail-btn {
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--subtext);
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .detail-btn:hover { border-color: var(--green); color: var(--green); }
+
     /* ===== モーダル ===== */
     .modal-overlay {
       position: fixed; inset: 0;
@@ -363,6 +379,69 @@
 
     .modal-title { font-size: 18px; font-weight: 800; color: var(--text); }
     .modal-desc  { font-size: 14px; font-weight: 700; color: var(--subtext); line-height: 1.6; }
+
+    /* ===== 生徒詳細モーダル ===== */
+    .detail-modal {
+      width: min(680px, 94vw);
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .detail-section-title { font-size: 14px; font-weight: 800; color: var(--text); margin-top: 4px; }
+
+    .d-progress-row { display: flex; align-items: center; gap: 10px; }
+    .d-progress-name { flex: 1; font-size: 12px; font-weight: 800; min-width: 0; }
+    .d-progress-name small { color: var(--subtext); font-weight: 700; }
+    .d-progress-track {
+      flex: 1.2; height: 10px; border-radius: 99px; overflow: hidden;
+      background: var(--bg); border: 2px solid var(--border);
+    }
+    .d-progress-fill { height: 100%; border-radius: 99px; }
+    .d-progress-score { width: 32px; text-align: right; font-size: 12px; font-weight: 800; color: var(--subtext); }
+
+    .d-gap {
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .d-gap.resolved { opacity: 0.55; }
+    .d-gap-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .d-gap-topic { flex: 1; font-size: 13px; font-weight: 800; }
+    .d-gap-type {
+      font-size: 10px; font-weight: 800; padding: 3px 8px;
+      border-radius: 99px; border: 2px solid; white-space: nowrap;
+    }
+    .d-type-misconception        { color: #FF4B4B; border-color: #FF4B4B; }
+    .d-type-vague                { color: var(--yellow); border-color: var(--yellow); }
+    .d-type-missing_prerequisite { color: var(--blue); border-color: var(--blue); }
+    .d-gap-desc { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.6; }
+
+    .d-session { border: 2px solid var(--border); border-radius: 14px; overflow: hidden; }
+    .d-session-head {
+      width: 100%; display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; background: none; border: none;
+      font-family: inherit; font-size: 13px; font-weight: 800; color: var(--text);
+      cursor: pointer; text-align: left;
+    }
+    .d-session-head:hover { background: var(--bg); }
+    .d-session-meta { flex: 1; color: var(--subtext); font-size: 11px; font-weight: 700; }
+    .d-session-body { display: none; flex-direction: column; gap: 8px; padding: 12px 14px; border-top: 2px solid var(--border); }
+    .d-session.open .d-session-body { display: flex; }
+
+    .d-msg { display: flex; max-width: 88%; }
+    .d-msg.feyn { align-self: flex-start; }
+    .d-msg.user { align-self: flex-end; }
+    .d-msg .d-bubble {
+      padding: 8px 12px; font-size: 12px; font-weight: 700; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word; border-radius: 12px;
+    }
+    .d-msg.feyn .d-bubble { background: var(--bg); border: 2px solid var(--border); color: var(--text); }
+    .d-msg.user .d-bubble { background: var(--green); color: white; }
+
+    .d-empty { font-size: 12px; font-weight: 700; color: var(--subtext); }
 
     .temp-pass {
       background: var(--bg);
@@ -395,7 +474,10 @@
     /* ===== レスポンシブ ===== */
     @media (max-width: 768px) {
       .summary { grid-template-columns: 1fr; }
-      .header  { padding: 0 16px; }
+      .header  { height: auto; flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+      .header-divider { display: none; }
+      .header-user { display: none; }
+      .header-title { flex-basis: auto; }
       .container { padding: 16px; }
       th, td { padding: 10px 8px; font-size: 12px; }
     }
@@ -554,7 +636,9 @@
             <td><span class="count-badge ${s.total > 0 ? 'total' : ''}">${s.total > 0 ? s.total + '回' : '0'}</span></td>
             <td class="td-date">${s.last_active ? '🟢 ' + formatDate(s.last_active) : '未学習'}</td>
             <td class="td-date">${formatDate(s.created_at)}</td>
-            <td><button class="reset-pass-btn" data-id="${s.id}" data-name="${escHtml(s.name)}">🔑 リセット</button></td>
+            <td style="white-space:nowrap;">
+              <button class="detail-btn" data-id="${s.id}" style="margin-right:4px;">👀 詳細</button><button class="reset-pass-btn" data-id="${s.id}" data-name="${escHtml(s.name)}">🔑 リセット</button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -577,6 +661,10 @@
 
       document.querySelectorAll('.reset-pass-btn').forEach(btn => {
         btn.addEventListener('click', () => showResetModal(btn.dataset.id, btn.dataset.name));
+      });
+
+      document.querySelectorAll('.detail-btn').forEach(btn => {
+        btn.addEventListener('click', () => showStudentModal(btn.dataset.id));
       });
 
       document.querySelectorAll('th.sortable').forEach(th => {
@@ -621,6 +709,88 @@
           </div>
         `;
       }
+    }
+
+    // ===== 生徒詳細モーダル（苦手・理解度・会話ログ） =====
+    async function showStudentModal(studentId) {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `<div class="modal detail-modal"><div class="loading">読み込み中...</div></div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+      let d;
+      try {
+        const res = await fetch(`/api/dashboard/student/${studentId}`);
+        d = await res.json();
+        if (!res.ok) throw new Error(d.error);
+      } catch (e) {
+        overlay.querySelector('.detail-modal').innerHTML = `<div class="modal-desc">読み込みに失敗しました</div>`;
+        return;
+      }
+
+      const scoreColor = v => v >= 70 ? 'var(--green)' : (v >= 40 ? 'var(--yellow)' : '#FF4B4B');
+
+      const progressHtml = d.progress.length === 0
+        ? `<div class="d-empty">まだ分析データがありません</div>`
+        : d.progress.map(p => `
+            <div class="d-progress-row">
+              <span class="d-progress-name">${SUBJECT_EMOJIS[p.subject] || '📚'} ${escHtml(p.topic)} <small>（${p.sessions_count}回）</small></span>
+              <div class="d-progress-track"><div class="d-progress-fill" style="width:${p.understanding}%;background:${scoreColor(p.understanding)}"></div></div>
+              <span class="d-progress-score">${p.understanding}</span>
+            </div>
+          `).join('');
+
+      const gapHtml = g => `
+        <div class="d-gap ${g.status === 'resolved' ? 'resolved' : ''}">
+          <div class="d-gap-top">
+            <span class="d-gap-topic">${SUBJECT_EMOJIS[g.subject] || '📚'} ${escHtml(g.topic)}</span>
+            ${g.status === 'resolved'
+              ? '<span class="d-gap-type" style="color:var(--green);border-color:var(--green);">✅ 解決済み</span>'
+              : `<span class="d-gap-type d-type-${escHtml(g.gap_type)}">${escHtml(d.labels[g.gap_type] || g.gap_type)}</span>`}
+          </div>
+          <div class="d-gap-desc">${escHtml(g.description)}</div>
+        </div>
+      `;
+      const openGaps     = d.gaps.filter(g => g.status !== 'resolved');
+      const resolvedGaps = d.gaps.filter(g => g.status === 'resolved');
+      const gapsHtml = d.gaps.length === 0
+        ? `<div class="d-empty">記録された苦手はまだありません</div>`
+        : openGaps.map(gapHtml).join('') + resolvedGaps.map(gapHtml).join('');
+
+      const sessionsHtml = d.sessions.length === 0
+        ? `<div class="d-empty">まだ会話がありません</div>`
+        : d.sessions.map(s => `
+            <div class="d-session">
+              <button class="d-session-head">
+                <span>${SUBJECT_EMOJIS[s.subject] || '📚'} ${escHtml(s.subject)}</span>
+                <span class="d-session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)} ・ 💬 ${s.messages.length}</span>
+                <span>▶</span>
+              </button>
+              <div class="d-session-body">
+                ${s.messages.map(m => `
+                  <div class="d-msg ${m.role === 'user' ? 'user' : 'feyn'}"><div class="d-bubble">${escHtml(m.message)}</div></div>
+                `).join('')}
+              </div>
+            </div>
+          `).join('');
+
+      overlay.querySelector('.detail-modal').innerHTML = `
+        <div class="modal-title">👤 ${escHtml(d.student.name)}</div>
+        <div class="modal-desc">${escHtml(d.student.email)}</div>
+        <div class="detail-section-title">📊 テーマ別の理解度</div>
+        ${progressHtml}
+        <div class="detail-section-title">📝 知識のギャップ（未解決 ${openGaps.length}件 / 解決済み ${resolvedGaps.length}件）</div>
+        ${gapsHtml}
+        <div class="detail-section-title">💬 会話ログ</div>
+        ${sessionsHtml}
+        <button class="modal-close" id="detailClose">閉じる</button>
+      `;
+
+      overlay.querySelectorAll('.d-session-head').forEach(btn => {
+        btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
+      });
+      document.getElementById('detailClose').addEventListener('click', () => overlay.remove());
     }
 
     function showResetModal(studentId, studentName) {

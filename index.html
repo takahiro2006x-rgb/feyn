@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feyn - ファインマン学習アプリ</title>
+  <script>
+    // ちらつき防止のため、描画前に保存済みテーマを適用する
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
@@ -46,6 +52,8 @@
 
       <div class="user-info">
         <div id="userDisplay" class="user-name-display"></div>
+        <button class="logout-btn" id="historyBtn">📚 学習のきろく</button>
+        <button class="logout-btn" id="gapsBtn">📝 苦手ノート</button>
         <button class="logout-btn" id="securityBtn" style="display:none">🔐 秘密の質問を設定</button>
         <button class="logout-btn" id="logoutBtn">🚪 ログアウト</button>
       </div>

@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feyn - 講師ダッシュボード</title>
+  <script>
+    // ちらつき防止のため、描画前に保存済みテーマを適用する
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -22,11 +28,20 @@
       --yellow-dark: #D4A200;
     }
 
+    [data-theme="dark"] {
+      --bg:          #0D1117;
+      --card:        #161B22;
+      --border:      #30363D;
+      --text:        #E2E8F0;
+      --subtext:     #6E7681;
+    }
+
     body {
       font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
     }
 
     /* ===== ヘッダー ===== */
@@ -251,6 +266,9 @@
     .count-badge.lv2 { background: #d4f5b0; color: #3a8c00; border-color: #7dd950; }
     .count-badge.lv3 { background: #58CC02; color: white;   border-color: #46A302; box-shadow: 0 2px 0 #46A302; }
 
+    [data-theme="dark"] .count-badge.lv1 { background: #14260b; color: #7dd950; border-color: #2f5a1a; }
+    [data-theme="dark"] .count-badge.lv2 { background: #1e3a0e; color: #a5e77d; border-color: #46A302; }
+
     .count-badge.total {
       background: var(--green);
       color: white;
@@ -391,6 +409,7 @@
     <div class="header-title">📊 講師ダッシュボード</div>
     <div class="header-right">
       <span class="header-user" id="headerUser"></span>
+      <button class="btn" id="themeToggle">🌙 ダークモード</button>
       <a href="/" class="btn">← アプリへ戻る</a>
       <button class="btn btn-danger" id="logoutBtn">🚪 ログアウト</button>
     </div>
@@ -415,6 +434,23 @@
   </div>
 
   <script>
+    // ===== テーマ切り替え =====
+    const themeToggle = document.getElementById('themeToggle');
+
+    function updateThemeLabel() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+    }
+    updateThemeLabel();
+
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('feynTheme', next);
+      updateThemeLabel();
+    });
+
     const SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史'];
     const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
 

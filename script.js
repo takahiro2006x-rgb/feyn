@@ -1,10 +1,18 @@
 // ===== テーマ切り替え =====
 const themeToggle = document.getElementById('themeToggle');
+
+function updateThemeLabel() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+}
+updateThemeLabel();
+
 themeToggle.addEventListener('click', () => {
   const html = document.documentElement;
-  const isDark = html.getAttribute('data-theme') === 'dark';
-  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
-  themeToggle.textContent = isDark ? '🌙 ダークモード' : '☀️ ライトモード';
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('feynTheme', next);
+  updateThemeLabel();
 });
 
 
@@ -23,6 +31,7 @@ let isBusy         = false;
 let startAbortCtrl = null;
 let currentSubject = '物理';
 let currentEmoji   = '⚡';
+let reviewGapId    = null;  // 苦手ノートからの復習セッション中はギャップIDが入る
 
 const SUBJECT_COLORS = {
   '物理': { color: '#3B82F6', dark: '#1D4ED8' },
@@ -62,11 +71,17 @@ function updateCharPanel(subject, emoji) {
 
 // ===== 設定値を読む =====
 function getSettings() {
-  return {
+  const settings = {
     subject:      currentSubject,
     difficulty:   diffSelect.value,
     teacher_name: teacherInput.value.trim() || '先生',
   };
+  if (reviewGapId) settings.gap_id = reviewGapId;
+  return settings;
+}
+
+function escText(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 
@@ -220,23 +235,13 @@ function playCompleteSound() {
 }
 
 
-// ===== 統計（localStorage） =====
-function getStats() {
-  return JSON.parse(localStorage.getItem('feynStats') || '{}');
-}
-
-function recordClear(subject) {
-  const stats = getStats();
-  stats[subject] = (stats[subject] || 0) + 1;
-  localStorage.setItem('feynStats', JSON.stringify(stats));
-  updateStatsDisplay();
-}
+// ===== 統計（サーバー保存。端末が変わっても引き継がれる） =====
+let subjectStats = {};
 
 function updateStatsDisplay() {
   const el = document.getElementById('statsDisplay');
   if (!el) return;
-  const stats = getStats();
-  const count = stats[currentSubject] || 0;
+  const count = subjectStats[currentSubject] || 0;
   el.textContent = `🏆 ${currentSubject}クリア: ${count}回`;
 }
 
@@ -325,16 +330,36 @@ async function sendMessage() {
       setTimeout(() => {
         launchConfetti();
         playCompleteSound();
-        recordClear(currentSubject);
       }, 400);
       fetch('/api/complete', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ subject: currentSubject, difficulty: diffSelect.value }),
-      }).then(async () => {
+        body:    JSON.stringify({ subject: currentSubject, difficulty: diffSelect.value, gap_id: reviewGapId }),
+      }).then(async (res) => {
+        const wasReview = !!reviewGapId;
+        reviewGapId = null;
+        history.replaceState(null, '', '/');
+
+        // ギャップ分析の結果を「今日の気づき」として表示
+        const c = await res.json().catch(() => ({}));
+        if (wasReview) {
+          addMessage('feyn', '✅ この苦手は<strong>解決済み</strong>にしたよ！ <a href="/gaps" style="color:inherit;">📝 苦手ノートを見る</a>');
+        }
+        if (c.analysis && c.analysis.gaps && c.analysis.gaps.length > 0) {
+          const items = c.analysis.gaps.map(g => `・${escText(g.description)}`).join('<br>');
+          addMessage('feyn',
+            `📝 <strong>今日の気づき</strong>（テーマ: ${escText(c.analysis.topic)}）<br>${items}<br>` +
+            `<a href="/gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`);
+        }
+
         fetchStreak();
         const r = await fetch('/api/me');
-        if (r.ok) { const u = await r.json(); updateStatus(u.total_clears || 0); }
+        if (r.ok) {
+          const u = await r.json();
+          updateStatus(u.total_clears || 0);
+          subjectStats = u.subject_clears || {};
+          updateStatsDisplay();
+        }
       }).catch(() => {});
     } else {
       setExpression('normal');
@@ -354,6 +379,8 @@ document.querySelectorAll('.subject').forEach(btn => {
     btn.classList.add('active');
     currentSubject = btn.dataset.subject;
     currentEmoji   = btn.dataset.emoji;
+    reviewGapId    = null;
+    history.replaceState(null, '', '/');
     updateCharPanel(currentSubject, currentEmoji);
     startSession();
   });
@@ -361,7 +388,11 @@ document.querySelectorAll('.subject').forEach(btn => {
 
 
 // ===== リセットボタン =====
-resetBtn.addEventListener('click', () => startSession());
+resetBtn.addEventListener('click', () => {
+  reviewGapId = null;
+  history.replaceState(null, '', '/');
+  startSession();
+});
 
 
 // ===== 送信ボタン / Ctrl+Enter =====
@@ -417,6 +448,18 @@ document.getElementById('sqSave').addEventListener('click', async () => {
 });
 
 
+// ===== 学習のきろく =====
+document.getElementById('historyBtn').addEventListener('click', () => {
+  window.location.href = '/history';
+});
+
+
+// ===== 苦手ノート =====
+document.getElementById('gapsBtn').addEventListener('click', () => {
+  window.location.href = '/gaps';
+});
+
+
 // ===== ログアウト =====
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
@@ -468,6 +511,7 @@ async function init() {
     teacherInput.value = user.name;
     document.getElementById('userDisplay').textContent = `ログイン中: ${user.name}`;
     updateStatus(user.total_clears || 0);
+    subjectStats = user.subject_clears || {};
 
     if (!user.has_security_question) {
       document.getElementById('securityBtn').style.display = 'block';
@@ -484,6 +528,23 @@ async function init() {
 
     updateStatsDisplay();
     fetchStreak();
+
+    // 苦手ノートの「復習する」から来た場合は復習モードで開始する
+    const params       = new URLSearchParams(location.search);
+    const reviewParam  = params.get('review');
+    const subjectParam = params.get('subject');
+    if (reviewParam) {
+      reviewGapId = parseInt(reviewParam, 10) || null;
+      const btn = subjectParam && document.querySelector(`.subject[data-subject="${subjectParam}"]`);
+      if (btn) {
+        document.querySelectorAll('.subject').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSubject = btn.dataset.subject;
+        currentEmoji   = btn.dataset.emoji;
+        updateCharPanel(currentSubject, currentEmoji);
+      }
+    }
+
     startSession();
   } catch (e) {
     window.location.href = '/login';

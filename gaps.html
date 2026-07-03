@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feyn - 苦手ノート</title>
+  <script>
+    // ちらつき防止のため、描画前に保存済みテーマを適用する
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:         #F0F4F8;
+      --card:       #FFFFFF;
+      --border:     #E5E5E5;
+      --text:       #3C3C3C;
+      --subtext:    #AFAFAF;
+      --green:      #58CC02;
+      --green-dark: #46A302;
+      --red:        #FF4B4B;
+      --yellow:     #E6A700;
+      --blue:       #1CB0F6;
+      --quote-bg:   #F0F4F8;
+    }
+
+    [data-theme="dark"] {
+      --bg:       #0D1117;
+      --card:     #161B22;
+      --border:   #30363D;
+      --text:     #E2E8F0;
+      --subtext:  #6E7681;
+      --yellow:   #FFC200;
+      --quote-bg: #0D1117;
+    }
+
+    body {
+      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ===== ヘッダー ===== */
+    .header {
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-logo { font-size: 22px; font-weight: 800; color: var(--green); letter-spacing: 2px; }
+    .header-divider { width: 2px; height: 24px; background: var(--border); }
+    .header-title { font-size: 16px; font-weight: 800; color: var(--text); flex: 1; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--subtext);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn:hover { border-color: var(--green); color: var(--green); }
+
+    /* ===== コンテンツ ===== */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .page-desc { font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      margin-top: 8px;
+    }
+
+    /* ===== 理解度バー ===== */
+    .progress-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .progress-row { display: flex; align-items: center; gap: 12px; }
+    .progress-name { flex: 1; font-size: 13px; font-weight: 800; }
+    .progress-name small { font-weight: 700; color: var(--subtext); }
+    .progress-track {
+      flex: 2;
+      height: 12px;
+      background: var(--quote-bg);
+      border: 2px solid var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill { height: 100%; border-radius: 99px; background: var(--green); }
+    .progress-score { width: 44px; text-align: right; font-size: 13px; font-weight: 800; color: var(--subtext); }
+
+    /* ===== ギャップカード ===== */
+    .gap-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .gap-card.resolved { opacity: 0.6; }
+
+    .gap-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .gap-topic { font-size: 15px; font-weight: 800; flex: 1; }
+
+    .type-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 99px;
+      border: 2px solid;
+      white-space: nowrap;
+    }
+    .type-misconception        { color: var(--red);    border-color: var(--red); }
+    .type-vague                { color: var(--yellow); border-color: var(--yellow); }
+    .type-missing_prerequisite { color: var(--blue);   border-color: var(--blue); }
+
+    .status-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: var(--green);
+      color: white;
+      white-space: nowrap;
+    }
+
+    .gap-desc { font-size: 14px; font-weight: 700; line-height: 1.7; }
+
+    .gap-evidence {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+      background: var(--quote-bg);
+      border-left: 4px solid var(--border);
+      border-radius: 0 10px 10px 0;
+      padding: 8px 12px;
+      line-height: 1.6;
+    }
+
+    .gap-foot { display: flex; align-items: center; gap: 8px; }
+    .gap-date { flex: 1; font-size: 12px; font-weight: 700; color: var(--subtext); }
+
+    .review-btn {
+      padding: 8px 18px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 0 var(--green-dark);
+      transition: all 0.1s;
+    }
+    .review-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
+    /* ===== 空状態 ===== */
+    .empty-state {
+      padding: 64px 24px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+    }
+    .empty-emoji { font-size: 48px; }
+    .empty-title { font-size: 18px; font-weight: 800; color: var(--text); }
+    .empty-desc  { font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    .loading { padding: 64px; text-align: center; font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    @media (max-width: 600px) {
+      .header { padding: 0 16px; }
+      .container { padding: 16px; }
+      .progress-row { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-logo">🎓 Feyn</div>
+    <div class="header-divider"></div>
+    <div class="header-title">📝 苦手ノート</div>
+    <div class="header-right">
+      <button class="btn" id="themeToggle">🌙 ダークモード</button>
+      <a href="/" class="btn">← アプリへ戻る</a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="page-desc">Feynとの会話から見つかった「理解の抜け漏れ」。復習して1つずつ潰していこう！</div>
+    <div id="content"><div class="loading">読み込み中...</div></div>
+  </div>
+
+  <script>
+    // ===== テーマ切り替え =====
+    const themeToggle = document.getElementById('themeToggle');
+
+    function updateThemeLabel() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+    }
+    updateThemeLabel();
+
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('feynTheme', next);
+      updateThemeLabel();
+    });
+
+    // ===== 苦手ノートの描画 =====
+    const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
+
+    function escHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function gapCard(g, labels) {
+      const emoji    = SUBJECT_EMOJIS[g.subject] || '📚';
+      const resolved = g.status === 'resolved';
+      const badge    = resolved
+        ? `<span class="status-badge">✅ 解決済み</span>`
+        : `<span class="type-badge type-${escHtml(g.gap_type)}">${escHtml(labels[g.gap_type] || g.gap_type)}</span>`;
+      const evidence = g.evidence
+        ? `<div class="gap-evidence">💬 きみの発言: 「${escHtml(g.evidence)}」</div>` : '';
+      const action = resolved
+        ? ''
+        : `<button class="review-btn" data-id="${g.id}" data-subject="${escHtml(g.subject)}">🔥 復習する</button>`;
+
+      return `
+        <div class="gap-card ${resolved ? 'resolved' : ''}">
+          <div class="gap-top">
+            <span class="gap-topic">${emoji} ${escHtml(g.subject)}: ${escHtml(g.topic)}</span>
+            ${badge}
+          </div>
+          <div class="gap-desc">${escHtml(g.description)}</div>
+          ${evidence}
+          <div class="gap-foot">
+            <span class="gap-date">📅 ${escHtml(g.session_date)}</span>
+            ${action}
+          </div>
+        </div>
+      `;
+    }
+
+    async function init() {
+      const contentEl = document.getElementById('content');
+      try {
+        const res = await fetch('/api/gaps');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+
+        if (data.gaps.length === 0) {
+          contentEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-emoji">🎉</div>
+              <div class="empty-title">記録された苦手はまだありません</div>
+              <div class="empty-desc">Feynとの会話を最後まで進めると、見つかった弱点がここに残ります</div>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+
+        // 理解度の進捗
+        if (data.progress.length > 0) {
+          const rows = data.progress.map(p => {
+            const emoji = SUBJECT_EMOJIS[p.subject] || '📚';
+            const color = p.understanding >= 70 ? 'var(--green)' : (p.understanding >= 40 ? 'var(--yellow)' : 'var(--red)');
+            return `
+              <div class="progress-row">
+                <span class="progress-name">${emoji} ${escHtml(p.topic)} <small>（${escHtml(p.subject)}・${p.sessions_count}回）</small></span>
+                <div class="progress-track"><div class="progress-fill" style="width:${p.understanding}%;background:${color}"></div></div>
+                <span class="progress-score">${p.understanding}</span>
+              </div>
+            `;
+          }).join('');
+          html += `<div class="section-title">📊 テーマ別の理解度</div><div class="progress-card">${rows}</div>`;
+        }
+
+        const open     = data.gaps.filter(g => g.status !== 'resolved');
+        const resolved = data.gaps.filter(g => g.status === 'resolved');
+
+        if (open.length > 0) {
+          html += `<div class="section-title">🔥 いま残っている苦手（${open.length}件）</div>`;
+          html += open.map(g => gapCard(g, data.labels)).join('');
+        }
+        if (resolved.length > 0) {
+          html += `<div class="section-title">✅ 解決済み（${resolved.length}件）</div>`;
+          html += resolved.map(g => gapCard(g, data.labels)).join('');
+        }
+
+        contentEl.innerHTML = html;
+        contentEl.style.display = 'flex';
+        contentEl.style.flexDirection = 'column';
+        contentEl.style.gap = '16px';
+
+        document.querySelectorAll('.review-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            window.location.href = `/?review=${btn.dataset.id}&subject=${encodeURIComponent(btn.dataset.subject)}`;
+          });
+        });
+      } catch (e) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">⚠️</div>
+            <div class="empty-title">読み込みに失敗しました</div>
+            <div class="empty-desc">ページを再読み込みしてください</div>
+          </div>
+        `;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -15,10 +15,22 @@ import os
 import sqlite3
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'feyn.db')
-DATABASE_URL = os.environ.get('DATABASE_URL')
+
+# Renderなどの環境変数入力欄に貼り付ける際、前後の空白や引用符が
+# 誤って混入しやすいため、接続文字列として無効な文字を自動で取り除く
+_raw_database_url = os.environ.get('DATABASE_URL', '').strip()
+if len(_raw_database_url) >= 2 and _raw_database_url[0] == _raw_database_url[-1] and _raw_database_url[0] in ('"', "'"):
+    _raw_database_url = _raw_database_url[1:-1].strip()
+DATABASE_URL = _raw_database_url or None
 USE_POSTGRES = bool(DATABASE_URL)
 
 if USE_POSTGRES:
+    if not DATABASE_URL.startswith(('postgres://', 'postgresql://')):
+        raise RuntimeError(
+            'DATABASE_URLが postgresql:// または postgres:// で始まっていません。'
+            'Supabaseの接続文字列をそのまま（引用符なしで）環境変数に設定してください。'
+            f' 現在の先頭部分: {DATABASE_URL[:20]!r}'
+        )
     import psycopg2
     import psycopg2.extras
     IntegrityError = psycopg2.IntegrityError

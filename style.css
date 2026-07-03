@@ -757,7 +757,8 @@ body {
   .messages { padding: 14px; gap: 12px; }
   .message { max-width: 90%; }
   .input-area { padding: 10px 12px; gap: 8px; }
-  .input-area textarea { height: 56px; padding: 10px 12px; font-size: 14px; }
+  /* font-size は16px以上にする（iOS Safariは16px未満だとフォーカス時に自動ズームしてレイアウトが崩れる） */
+  .input-area textarea { height: 56px; padding: 10px 12px; font-size: 16px; }
   .send-btn { padding: 0 16px; font-size: 14px; }
 
   .start-card {

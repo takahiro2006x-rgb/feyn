@@ -3,7 +3,6 @@ from flask_cors import CORS
 from google import genai
 from google.genai import types
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3
 import os
 import time
 import random
@@ -11,6 +10,7 @@ import string
 from datetime import date, timedelta
 from dotenv import load_dotenv
 
+import db
 import tutoring
 import gap_analyzer
 
@@ -22,7 +22,6 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'feyn-dev-secret-2024')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 CORS(app, supports_credentials=True)
 
-DB_PATH = os.path.join(os.path.dirname(__file__), 'feyn.db')
 TEACHER_CODE = os.environ.get('TEACHER_CODE', 'FEYN_TEACHER_2024')
 SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史']
 
@@ -38,16 +37,16 @@ SECURITY_QUESTIONS = [
 
 
 # --- DB初期化 ---
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+get_db = db.get_db
+
 
 def init_db():
+    pk = db.PK
     with get_db() as conn:
-        conn.execute('''
+        # 1. まず全テーブルを作成する（ALTER TABLEより先に必ず存在させる）
+        conn.execute(f'''
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id {pk},
                 email TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 password_hash TEXT NOT NULL,
@@ -55,29 +54,9 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        try:
-            conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'student'")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE users ADD COLUMN security_question TEXT")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE users ADD COLUMN security_answer_hash TEXT")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE knowledge_gaps ADD COLUMN review_count INTEGER NOT NULL DEFAULT 0")
-        except Exception:
-            pass
-        try:
-            conn.execute("ALTER TABLE knowledge_gaps ADD COLUMN next_review TEXT")
-        except Exception:
-            pass
-        conn.execute('''
+        conn.execute(f'''
             CREATE TABLE IF NOT EXISTS conversation_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id {pk},
                 user_id INTEGER NOT NULL,
                 subject TEXT NOT NULL,
                 difficulty TEXT NOT NULL,
@@ -88,9 +67,9 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         ''')
-        conn.execute('''
+        conn.execute(f'''
             CREATE TABLE IF NOT EXISTS session_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id {pk},
                 user_id INTEGER NOT NULL,
                 subject TEXT NOT NULL,
                 difficulty TEXT NOT NULL,
@@ -98,9 +77,9 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         ''')
-        conn.execute('''
+        conn.execute(f'''
             CREATE TABLE IF NOT EXISTS knowledge_gaps (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id {pk},
                 user_id INTEGER NOT NULL,
                 subject TEXT NOT NULL,
                 topic TEXT NOT NULL,
@@ -115,9 +94,9 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         ''')
-        conn.execute('''
+        conn.execute(f'''
             CREATE TABLE IF NOT EXISTS topic_progress (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id {pk},
                 user_id INTEGER NOT NULL,
                 subject TEXT NOT NULL,
                 topic TEXT NOT NULL,
@@ -128,6 +107,14 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         ''')
+
+        # 2. 全テーブルが存在する状態で、あとから追加したカラムをマイグレーションする
+        db.add_column_if_missing(conn, 'users', "role TEXT NOT NULL DEFAULT 'student'")
+        db.add_column_if_missing(conn, 'users', 'security_question TEXT')
+        db.add_column_if_missing(conn, 'users', 'security_answer_hash TEXT')
+        db.add_column_if_missing(conn, 'knowledge_gaps', 'review_count INTEGER NOT NULL DEFAULT 0')
+        db.add_column_if_missing(conn, 'knowledge_gaps', 'next_review TEXT')
+
         conn.commit()
 
 init_db()
@@ -294,7 +281,7 @@ def signup():
             session['user_name'] = name
             session['user_role'] = role
         return jsonify({'ok': True, 'name': name, 'role': role})
-    except sqlite3.IntegrityError:
+    except db.IntegrityError:
         return jsonify({'error': 'そのメールアドレスはすでに登録されています'}), 409
 
 

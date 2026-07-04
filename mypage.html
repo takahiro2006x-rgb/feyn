@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feyn - マイページ</title>
+  <script>
+    // ちらつき防止のため、描画前に保存済みテーマを適用する
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:         #F0F4F8;
+      --card:       #FFFFFF;
+      --border:     #E5E5E5;
+      --text:       #3C3C3C;
+      --subtext:    #AFAFAF;
+      --green:      #58CC02;
+      --green-dark: #46A302;
+      --purple:     #8B5CF6;
+      --purple-dark: #6D28D9;
+      --red:        #FF4B4B;
+      --yellow:     #E6A700;
+      --blue:       #1CB0F6;
+      --bubble:     #F0F4F8;
+    }
+
+    [data-theme="dark"] {
+      --bg:       #0D1117;
+      --card:     #161B22;
+      --border:   #30363D;
+      --text:     #E2E8F0;
+      --subtext:  #6E7681;
+      --yellow:   #FFC200;
+      --bubble:   #0D1117;
+    }
+
+    body {
+      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ===== ヘッダー ===== */
+    .header {
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-logo { font-size: 22px; font-weight: 800; color: var(--green); letter-spacing: 2px; }
+    .header-divider { width: 2px; height: 24px; background: var(--border); }
+    .header-title { font-size: 16px; font-weight: 800; color: var(--text); flex: 1; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--subtext);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn:hover { border-color: var(--green); color: var(--green); }
+
+    /* ===== タブ ===== */
+    .tab-bar {
+      position: sticky;
+      top: 64px;
+      z-index: 9;
+      background: var(--bg);
+      display: flex;
+      gap: 8px;
+      padding: 16px 24px 0;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border-radius: 12px 12px 0 0;
+      border: 2px solid var(--border);
+      border-bottom: none;
+      background: var(--bg);
+      color: var(--subtext);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--card); color: var(--green); }
+    .tab-btn:not(.active):hover { color: var(--text); }
+
+    /* ===== コンテンツ ===== */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tab-panel { display: none; flex-direction: column; gap: 16px; }
+    .tab-panel.active { display: flex; }
+
+    .page-desc { font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    .disclaimer {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 14px;
+      padding: 12px 16px;
+      line-height: 1.6;
+    }
+
+    .section-title { font-size: 15px; font-weight: 800; color: var(--text); margin-top: 8px; }
+
+    /* ===== 総合偏差値カード ===== */
+    .overall-card {
+      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+      border-radius: 24px;
+      padding: 28px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      box-shadow: 0 6px 0 var(--purple-dark);
+    }
+
+    .overall-label { font-size: 13px; font-weight: 800; opacity: 0.85; }
+    .overall-hensachi { font-size: 56px; font-weight: 800; line-height: 1; }
+    .overall-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .overall-university { font-size: 16px; font-weight: 800; }
+    .overall-note { font-size: 13px; font-weight: 700; opacity: 0.85; }
+
+    .subject-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .subject-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .subject-card-top { display: flex; align-items: center; gap: 8px; }
+    .subject-card-name { font-size: 14px; font-weight: 800; flex: 1; }
+    .subject-card-hensachi { font-size: 28px; font-weight: 800; color: var(--green); }
+
+    .subject-bar-track {
+      height: 10px;
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .subject-bar-fill { height: 100%; background: var(--green); border-radius: 99px; }
+
+    .subject-card-university { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.5; }
+
+    /* ===== 理解度バー（苦手ノート） ===== */
+    .progress-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .progress-row { display: flex; align-items: center; gap: 12px; }
+    .progress-name { flex: 1; font-size: 13px; font-weight: 800; }
+    .progress-name small { font-weight: 700; color: var(--subtext); }
+    .progress-track {
+      flex: 2;
+      height: 12px;
+      background: var(--bubble);
+      border: 2px solid var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill { height: 100%; border-radius: 99px; background: var(--green); }
+    .progress-score { width: 44px; text-align: right; font-size: 13px; font-weight: 800; color: var(--subtext); }
+
+    /* ===== ギャップカード ===== */
+    .gap-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+    .gap-card.resolved { opacity: 0.6; }
+
+    .gap-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .gap-topic { font-size: 15px; font-weight: 800; flex: 1; }
+
+    .type-badge {
+      font-size: 11px; font-weight: 800; padding: 4px 10px;
+      border-radius: 99px; border: 2px solid; white-space: nowrap;
+    }
+    .type-misconception        { color: var(--red);    border-color: var(--red); }
+    .type-vague                { color: var(--yellow); border-color: var(--yellow); }
+    .type-missing_prerequisite { color: var(--blue);   border-color: var(--blue); }
+
+    .status-badge {
+      font-size: 11px; font-weight: 800; padding: 4px 10px;
+      border-radius: 99px; background: var(--green); color: white; white-space: nowrap;
+    }
+    .due-badge { background: #FF9600; }
+
+    /* 学習のきろく用の「中断中」バッジ（苦手ノートのstatus-badgeと名前が被らないよう別クラスにする） */
+    .incomplete-badge {
+      font-size: 11px; font-weight: 800; padding: 4px 10px;
+      border-radius: 99px; white-space: nowrap; background: #FF9600; color: white;
+    }
+
+    .gap-desc { font-size: 14px; font-weight: 700; line-height: 1.7; }
+
+    .gap-evidence {
+      font-size: 12px; font-weight: 700; color: var(--subtext);
+      background: var(--bubble); border-left: 4px solid var(--border);
+      border-radius: 0 10px 10px 0; padding: 8px 12px; line-height: 1.6;
+    }
+
+    .gap-foot { display: flex; align-items: center; gap: 8px; }
+    .gap-date { flex: 1; font-size: 12px; font-weight: 700; color: var(--subtext); }
+
+    .review-btn, .resume-btn {
+      padding: 8px 18px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 0 var(--green-dark);
+      transition: all 0.1s;
+    }
+    .review-btn:hover, .resume-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .resume-btn { align-self: flex-start; padding: 10px 20px; }
+
+    /* ===== セッションカード（アコーディオン・学習のきろく） ===== */
+    .session-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .session-head {
+      width: 100%; display: flex; align-items: center; gap: 12px;
+      padding: 18px 20px; background: none; border: none;
+      font-family: inherit; color: var(--text); cursor: pointer; text-align: left;
+    }
+    .session-head:hover { background: var(--bubble); }
+
+    .session-emoji { font-size: 24px; }
+    .session-info  { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .session-subject { font-size: 15px; font-weight: 800; }
+    .session-meta  { font-size: 12px; font-weight: 700; color: var(--subtext); }
+
+    .session-count {
+      font-size: 12px; font-weight: 700; color: var(--subtext);
+      background: var(--bubble); border: 2px solid var(--border);
+      border-radius: 99px; padding: 4px 12px; white-space: nowrap;
+    }
+
+    .session-arrow { font-size: 13px; color: var(--subtext); transition: transform 0.2s; }
+    .session-card.open .session-arrow { transform: rotate(90deg); }
+
+    .session-body {
+      display: none; flex-direction: column; gap: 14px;
+      padding: 4px 20px 20px; border-top: 2px solid var(--border); padding-top: 18px;
+    }
+    .session-card.open .session-body { display: flex; }
+
+    .msg { display: flex; max-width: 85%; }
+    .msg.feyn { align-self: flex-start; }
+    .msg.user { align-self: flex-end; }
+
+    .msg .bubble {
+      padding: 12px 16px; font-size: 14px; line-height: 1.7; font-weight: 700;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .msg.feyn .bubble { background: var(--bubble); border: 2px solid var(--border); color: var(--text); border-radius: 4px 16px 16px 16px; }
+    .msg.user .bubble { background: var(--green); color: white; border-radius: 16px 4px 16px 16px; box-shadow: 0 3px 0 var(--green-dark); }
+
+    /* ===== 空状態 ===== */
+    .empty-state {
+      padding: 64px 24px; text-align: center; display: flex; flex-direction: column;
+      align-items: center; gap: 12px; background: var(--card);
+      border: 2px solid var(--border); border-radius: 20px;
+    }
+    .empty-emoji { font-size: 48px; }
+    .empty-title { font-size: 18px; font-weight: 800; color: var(--text); }
+    .empty-desc  { font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    .loading { padding: 64px; text-align: center; font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    @media (max-width: 600px) {
+      .header { padding: 0 16px; }
+      .tab-bar { padding: 12px 16px 0; }
+      .tab-btn { font-size: 12px; padding: 8px 12px; }
+      .container { padding: 16px; }
+      .overall-card { flex-direction: column; text-align: center; gap: 12px; }
+      .subject-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+      .progress-row { flex-wrap: wrap; }
+      .msg { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-logo">🎓 Feyn</div>
+    <div class="header-divider"></div>
+    <div class="header-title">📊 マイページ</div>
+    <div class="header-right">
+      <button class="btn" id="themeToggle">🌙 ダークモード</button>
+      <a href="/" class="btn">← アプリへ戻る</a>
+    </div>
+  </header>
+
+  <div class="tab-bar">
+    <button class="tab-btn" data-tab="hensachi">📊 偏差値</button>
+    <button class="tab-btn" data-tab="gaps">📝 苦手ノート</button>
+    <button class="tab-btn" data-tab="history">📚 学習のきろく</button>
+  </div>
+
+  <div class="container">
+    <div class="tab-panel" id="panel-hensachi">
+      <div class="page-desc">Feynに教えてきた成果を、疑似偏差値で見てみよう！</div>
+      <div class="disclaimer">
+        ⚠️ ここに表示される偏差値は、模試などの本物の統計データに基づくものではなく、
+        このアプリでの学習の進み具合をゲーム的にスコア化した「目安」です。
+      </div>
+      <div id="content-hensachi"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <div class="tab-panel" id="panel-gaps">
+      <div class="page-desc">Feynとの会話から見つかった「理解の抜け漏れ」。復習して1つずつ潰していこう！</div>
+      <div id="content-gaps"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <div class="tab-panel" id="panel-history">
+      <div class="page-desc">Feynに説明した内容を見返して、理解を深めよう！</div>
+      <div id="content-history"><div class="loading">読み込み中...</div></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== テーマ切り替え =====
+    const themeToggle = document.getElementById('themeToggle');
+
+    function updateThemeLabel() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+    }
+    updateThemeLabel();
+
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('feynTheme', next);
+      updateThemeLabel();
+    });
+
+    // ===== タブ切り替え =====
+    const TABS = ['hensachi', 'gaps', 'history'];
+    const loadedTabs = new Set();
+
+    function activateTab(tab) {
+      if (!TABS.includes(tab)) tab = 'hensachi';
+      TABS.forEach(t => {
+        document.getElementById(`panel-${t}`).classList.toggle('active', t === tab);
+        document.querySelector(`.tab-btn[data-tab="${t}"]`).classList.toggle('active', t === tab);
+      });
+      history.replaceState(null, '', `/mypage?tab=${tab}`);
+      if (!loadedTabs.has(tab)) {
+        loadedTabs.add(tab);
+        if (tab === 'hensachi') loadHensachi();
+        if (tab === 'gaps')     loadGaps();
+        if (tab === 'history')  loadHistory();
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    });
+
+    const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
+
+    function escHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // ===== 偏差値タブ =====
+    const HENSACHI_MIN = 35, HENSACHI_MAX = 70;
+    function barPercent(hensachi) {
+      const pct = (hensachi - HENSACHI_MIN) / (HENSACHI_MAX - HENSACHI_MIN) * 100;
+      return Math.max(4, Math.min(100, pct));
+    }
+
+    async function loadHensachi() {
+      const contentEl = document.getElementById('content-hensachi');
+      try {
+        const res = await fetch('/api/mypage');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+
+        if (!data.overall) {
+          contentEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-emoji">📈</div>
+              <div class="empty-title">まだ判定できるデータがありません</div>
+              <div class="empty-desc">Feynとの学習を進めると、ここに偏差値が表示されます</div>
+            </div>
+          `;
+          return;
+        }
+
+        const o = data.overall;
+        let html = `
+          <div class="overall-card">
+            <div>
+              <div class="overall-label">総合偏差値</div>
+              <div class="overall-hensachi">${o.hensachi}</div>
+            </div>
+            <div class="overall-info">
+              <div class="overall-university">🏫 ${escHtml(o.university.name)}</div>
+              <div class="overall-note">${escHtml(o.university.note)}</div>
+            </div>
+          </div>
+          <div class="subject-grid">
+        `;
+
+        data.subjects.forEach(s => {
+          const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+          html += `
+            <div class="subject-card">
+              <div class="subject-card-top">
+                <span class="subject-card-name">${emoji} ${escHtml(s.subject)}</span>
+                <span class="subject-card-hensachi">${s.hensachi}</span>
+              </div>
+              <div class="subject-bar-track"><div class="subject-bar-fill" style="width:${barPercent(s.hensachi)}%"></div></div>
+              <div class="subject-card-university">🏫 ${escHtml(s.university.name)}</div>
+            </div>
+          `;
+        });
+
+        html += '</div>';
+        contentEl.innerHTML = html;
+      } catch (e) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">⚠️</div>
+            <div class="empty-title">読み込みに失敗しました</div>
+            <div class="empty-desc">ページを再読み込みしてください</div>
+          </div>
+        `;
+      }
+    }
+
+    // ===== 苦手ノートタブ =====
+    function gapCard(g, labels) {
+      const emoji    = SUBJECT_EMOJIS[g.subject] || '📚';
+      const resolved = g.status === 'resolved';
+      const badge = resolved
+        ? (g.due ? `<span class="status-badge due-badge">⏰ 復習どき</span>` : `<span class="status-badge">✅ 解決済み</span>`)
+        : `<span class="type-badge type-${escHtml(g.gap_type)}">${escHtml(labels[g.gap_type] || g.gap_type)}</span>`;
+      const evidence = g.evidence
+        ? `<div class="gap-evidence">💬 きみの発言: 「${escHtml(g.evidence)}」</div>` : '';
+      const action = (!resolved || g.due)
+        ? `<button class="review-btn" data-id="${g.id}" data-subject="${escHtml(g.subject)}">🔥 復習する</button>`
+        : '';
+      let dateInfo = `📅 ${escHtml(g.session_date)}`;
+      if (resolved && g.review_count > 0) {
+        dateInfo += ` ・ 復習${g.review_count}回`;
+        if (!g.due && g.next_review) dateInfo += ` ・ 次回 ${escHtml(g.next_review)}`;
+      }
+
+      return `
+        <div class="gap-card ${resolved && !g.due ? 'resolved' : ''}">
+          <div class="gap-top">
+            <span class="gap-topic">${emoji} ${escHtml(g.subject)}: ${escHtml(g.topic)}</span>
+            ${badge}
+          </div>
+          <div class="gap-desc">${escHtml(g.description)}</div>
+          ${evidence}
+          <div class="gap-foot">
+            <span class="gap-date">${dateInfo}</span>
+            ${action}
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadGaps() {
+      const contentEl = document.getElementById('content-gaps');
+      try {
+        const res = await fetch('/api/gaps');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+
+        if (data.gaps.length === 0) {
+          contentEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-emoji">🎉</div>
+              <div class="empty-title">記録された苦手はまだありません</div>
+              <div class="empty-desc">Feynとの会話を最後まで進めると、見つかった弱点がここに残ります</div>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+
+        if (data.progress.length > 0) {
+          const rows = data.progress.map(p => {
+            const emoji = SUBJECT_EMOJIS[p.subject] || '📚';
+            const color = p.understanding >= 70 ? 'var(--green)' : (p.understanding >= 40 ? 'var(--yellow)' : 'var(--red)');
+            return `
+              <div class="progress-row">
+                <span class="progress-name">${emoji} ${escHtml(p.topic)} <small>（${escHtml(p.subject)}・${p.sessions_count}回）</small></span>
+                <div class="progress-track"><div class="progress-fill" style="width:${p.understanding}%;background:${color}"></div></div>
+                <span class="progress-score">${p.understanding}</span>
+              </div>
+            `;
+          }).join('');
+          html += `<div class="section-title">📊 テーマ別の理解度</div><div class="progress-card">${rows}</div>`;
+        }
+
+        const open     = data.gaps.filter(g => g.status !== 'resolved');
+        const due      = data.gaps.filter(g => g.status === 'resolved' && g.due);
+        const resolved = data.gaps.filter(g => g.status === 'resolved' && !g.due);
+
+        if (due.length > 0) {
+          html += `<div class="section-title">⏰ 復習どき — 忘れかけているかも（${due.length}件）</div>`;
+          html += due.map(g => gapCard(g, data.labels)).join('');
+        }
+        if (open.length > 0) {
+          html += `<div class="section-title">🔥 いま残っている苦手（${open.length}件）</div>`;
+          html += open.map(g => gapCard(g, data.labels)).join('');
+        }
+        if (resolved.length > 0) {
+          html += `<div class="section-title">✅ 解決済み（${resolved.length}件）</div>`;
+          html += resolved.map(g => gapCard(g, data.labels)).join('');
+        }
+
+        contentEl.innerHTML = html;
+
+        document.querySelectorAll('#content-gaps .review-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            window.location.href = `/?review=${btn.dataset.id}&subject=${encodeURIComponent(btn.dataset.subject)}`;
+          });
+        });
+      } catch (e) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">⚠️</div>
+            <div class="empty-title">読み込みに失敗しました</div>
+            <div class="empty-desc">ページを再読み込みしてください</div>
+          </div>
+        `;
+      }
+    }
+
+    // ===== 学習のきろくタブ =====
+    async function loadHistory() {
+      const contentEl = document.getElementById('content-history');
+      try {
+        const res = await fetch('/api/history');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+
+        if (!data.sessions || data.sessions.length === 0) {
+          contentEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-emoji">📭</div>
+              <div class="empty-title">まだ学習のきろくがありません</div>
+              <div class="empty-desc">Feynと会話すると、ここに残っていきます</div>
+            </div>
+          `;
+          return;
+        }
+
+        contentEl.innerHTML = '';
+
+        data.sessions.forEach(s => {
+          const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+          const card = document.createElement('div');
+          card.className = 'session-card';
+
+          const bubbles = s.messages.map(m => `
+            <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
+              <div class="bubble">${escHtml(m.message)}</div>
+            </div>
+          `).join('');
+
+          const badge = s.completed ? '' : `<span class="incomplete-badge">⏸ 中断中</span>`;
+          const resumeBtn = s.completed ? '' : `<button class="resume-btn" data-subject="${escHtml(s.subject)}" data-date="${escHtml(s.date)}">▶️ 続きから再開する</button>`;
+
+          card.innerHTML = `
+            <button class="session-head">
+              <span class="session-emoji">${emoji}</span>
+              <span class="session-info">
+                <span class="session-subject">${escHtml(s.subject)}</span>
+                <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
+              </span>
+              ${badge}
+              <span class="session-count">💬 ${s.messages.length}</span>
+              <span class="session-arrow">▶</span>
+            </button>
+            <div class="session-body">${bubbles}${resumeBtn}</div>
+          `;
+
+          card.querySelector('.session-head').addEventListener('click', () => {
+            card.classList.toggle('open');
+          });
+
+          const resumeButtonEl = card.querySelector('.resume-btn');
+          if (resumeButtonEl) {
+            resumeButtonEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const subject = resumeButtonEl.dataset.subject;
+              const date    = resumeButtonEl.dataset.date;
+              window.location.href = `/?resume=${encodeURIComponent(subject)}&date=${encodeURIComponent(date)}`;
+            });
+          }
+
+          contentEl.appendChild(card);
+        });
+      } catch (e) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">⚠️</div>
+            <div class="empty-title">読み込みに失敗しました</div>
+            <div class="empty-desc">ページを再読み込みしてください</div>
+          </div>
+        `;
+      }
+    }
+
+    // ===== 起動 =====
+    const initialTab = new URLSearchParams(location.search).get('tab') || 'hensachi';
+    activateTab(initialTab);
+  </script>
+</body>
+</html>

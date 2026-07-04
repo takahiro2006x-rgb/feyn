@@ -493,13 +493,13 @@ async function sendMessage() {
         // ギャップ分析の結果を「今日の気づき」として表示
         const c = await res.json().catch(() => ({}));
         if (wasReview) {
-          addMessage('feyn', '✅ この苦手は<strong>解決済み</strong>にしたよ！ <a href="/gaps" style="color:inherit;">📝 苦手ノートを見る</a>');
+          addMessage('feyn', '✅ この苦手は<strong>解決済み</strong>にしたよ！ <a href="/mypage?tab=gaps" style="color:inherit;">📝 苦手ノートを見る</a>');
         }
         if (c.analysis && c.analysis.gaps && c.analysis.gaps.length > 0) {
           const items = c.analysis.gaps.map(g => `・${escText(g.description)}`).join('<br>');
           addMessage('feyn',
             `📝 <strong>今日の気づき</strong>（テーマ: ${escText(c.analysis.topic)}）<br>${items}<br>` +
-            `<a href="/gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`);
+            `<a href="/mypage?tab=gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`);
         }
 
         fetchStreak();
@@ -610,7 +610,7 @@ revealBtn.addEventListener('click', async () => {
     addHelpMessage('answer', '🔍 答え', data.answer);
     renderPicker('答えを確認したね！このあとどうする？', [
       { label: '💪 今から説明してみる', onClick: () => { textarea.focus(); } },
-      { label: '📌 今日はここまでにする', onClick: () => { window.location.href = '/history'; } },
+      { label: '📌 今日はここまでにする', onClick: () => { window.location.href = '/mypage?tab=history'; } },
     ], { clear: false });
   } catch (e) {
     thinkingEl.remove();
@@ -665,15 +665,9 @@ document.getElementById('sqSave').addEventListener('click', async () => {
 });
 
 
-// ===== 学習のきろく =====
-document.getElementById('historyBtn').addEventListener('click', () => {
-  window.location.href = '/history';
-});
-
-
-// ===== 苦手ノート =====
-document.getElementById('gapsBtn').addEventListener('click', () => {
-  window.location.href = '/gaps';
+// ===== マイページ（偏差値・苦手ノート・学習のきろく） =====
+document.getElementById('mypageBtn').addEventListener('click', () => {
+  window.location.href = '/mypage';
 });
 
 
@@ -695,8 +689,8 @@ function getLevel(total) {
 }
 
 function updateGapsBadge(count) {
-  const btn = document.getElementById('gapsBtn');
-  if (btn) btn.textContent = count > 0 ? `📝 苦手ノート 🔴${count}` : '📝 苦手ノート';
+  const btn = document.getElementById('mypageBtn');
+  if (btn) btn.textContent = count > 0 ? `📊 マイページ 🔴${count}` : '📊 マイページ';
 }
 
 function updateStatus(totalClears) {

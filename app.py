@@ -14,6 +14,7 @@ import db
 import llm
 import tutoring
 import gap_analyzer
+import report
 
 load_dotenv()
 
@@ -260,17 +261,24 @@ def login_page():
         return redirect('/')
     return send_from_directory('.', 'login.html')
 
+# 学習のきろく・苦手ノートはマイページのタブに統合したため、旧URLはそちらへ誘導する
 @app.route('/history')
 def history_page():
     if not session.get('user_id'):
         return redirect('/login')
-    return send_from_directory('.', 'history.html')
+    return redirect('/mypage?tab=history')
 
 @app.route('/gaps')
 def gaps_page():
     if not session.get('user_id'):
         return redirect('/login')
-    return send_from_directory('.', 'gaps.html')
+    return redirect('/mypage?tab=gaps')
+
+@app.route('/mypage')
+def mypage_page():
+    if not session.get('user_id'):
+        return redirect('/login')
+    return send_from_directory('.', 'mypage.html')
 
 @app.route('/dashboard')
 def dashboard_page():
@@ -791,6 +799,49 @@ def gaps_api():
         'progress': [dict(r) for r in progress_rows],
         'labels':   tutoring.GAP_TYPE_LABELS,
     })
+
+
+@app.route('/api/mypage')
+def mypage_api():
+    """科目別・総合の疑似偏差値と対応する大学レベルの目安を返す"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    with get_db() as conn:
+        topic_rows = conn.execute(
+            'SELECT subject, understanding FROM topic_progress WHERE user_id = ?',
+            (session['user_id'],)
+        ).fetchall()
+        gap_rows = conn.execute(
+            'SELECT subject, status FROM knowledge_gaps WHERE user_id = ?',
+            (session['user_id'],)
+        ).fetchall()
+
+    subjects_result = []
+    scores = []
+    for subject in SUBJECTS:
+        s_topics = [dict(r) for r in topic_rows if r['subject'] == subject]
+        s_gaps   = [dict(r) for r in gap_rows if r['subject'] == subject]
+        score = report.compute_subject_score(s_topics, s_gaps)
+        if score is None:
+            continue
+        hensachi = report.score_to_hensachi(score)
+        scores.append(score)
+        subjects_result.append({
+            'subject':    subject,
+            'hensachi':   hensachi,
+            'university': report.hensachi_to_university(hensachi),
+        })
+
+    overall = None
+    if scores:
+        overall_hensachi = report.score_to_hensachi(sum(scores) / len(scores))
+        overall = {
+            'hensachi':   overall_hensachi,
+            'university': report.hensachi_to_university(overall_hensachi),
+        }
+
+    return jsonify({'subjects': subjects_result, 'overall': overall})
 
 
 @app.route('/api/gaps/resolve', methods=['POST'])

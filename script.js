@@ -132,16 +132,33 @@ function escText(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// ===== 数式（LaTeX）をKaTeXで描画 =====
+const KATEX_DELIMITERS = [
+  { left: '$$', right: '$$', display: true },
+  { left: '\\[', right: '\\]', display: true },
+  { left: '$', right: '$', display: false },
+  { left: '\\(', right: '\\)', display: false },
+];
+
+function renderMath(el) {
+  if (window.renderMathInElement) {
+    renderMathInElement(el, { delimiters: KATEX_DELIMITERS, throwOnError: false });
+  }
+}
 
 // ===== メッセージを追加 =====
-function addMessage(role, text) {
+// raw: true の場合のみ text をHTMLとして扱う（開発者が書いた定型文専用。ユーザー入力/AI応答は必ずエスケープする）
+function addMessage(role, text, { raw = false } = {}) {
   const el = document.createElement('div');
   el.classList.add('message', role, 'pop-in');
+  const bubbleHtml = raw ? text : escText(text);
   el.innerHTML = role === 'feyn'
-    ? `<div class="avatar">${currentEmoji}</div><div class="bubble">${text}</div>`
-    : `<div class="bubble">${text}</div>`;
+    ? `<div class="avatar">${currentEmoji}</div><div class="bubble">${bubbleHtml}</div>`
+    : `<div class="bubble">${bubbleHtml}</div>`;
   messagesEl.appendChild(el);
+  renderMath(el.querySelector('.bubble'));
   el.scrollIntoView({ behavior: 'smooth' });
+  return el;
 }
 
 // ===== ヒント・答えの表示用メッセージ（kind: 'hint' | 'answer'） =====
@@ -150,6 +167,7 @@ function addHelpMessage(kind, label, text) {
   el.classList.add('message', 'feyn', 'pop-in');
   el.innerHTML = `<div class="avatar">${currentEmoji}</div><div class="bubble ${kind}"><strong>${escText(label)}</strong><br>${escText(text)}</div>`;
   messagesEl.appendChild(el);
+  renderMath(el.querySelector('.bubble'));
   el.scrollIntoView({ behavior: 'smooth' });
   return el;
 }
@@ -530,16 +548,17 @@ async function sendMessage() {
         // ギャップ分析の結果を「今日の気づき」として表示
         const c = await res.json().catch(() => ({}));
         if (wasReview) {
-          addMessage('feyn', '✅ この苦手は<strong>解決済み</strong>にしたよ！ <a href="/mypage?tab=gaps" style="color:inherit;">📝 苦手ノートを見る</a>');
+          addMessage('feyn', '✅ この苦手は<strong>解決済み</strong>にしたよ！ <a href="/mypage?tab=gaps" style="color:inherit;">📝 苦手ノートを見る</a>', { raw: true });
         }
         if (wasAssignment) {
-          addMessage('feyn', '✅ 先生からの<strong>課題</strong>を終えたよ！お疲れさま！');
+          addMessage('feyn', '✅ 先生からの<strong>課題</strong>を終えたよ！お疲れさま！', { raw: true });
         }
         if (c.analysis && c.analysis.gaps && c.analysis.gaps.length > 0) {
           const items = c.analysis.gaps.map(g => `・${escText(g.description)}`).join('<br>');
           addMessage('feyn',
             `📝 <strong>今日の気づき</strong>（テーマ: ${escText(c.analysis.topic)}）<br>${items}<br>` +
-            `<a href="/mypage?tab=gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`);
+            `<a href="/mypage?tab=gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`,
+            { raw: true });
         }
 
         fetchStreak();

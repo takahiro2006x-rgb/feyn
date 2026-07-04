@@ -11,6 +11,9 @@
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   </script>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -389,6 +392,15 @@
     .assignment-row .assignment-info { flex: 1; }
     .assignment-row.completed { opacity: 0.55; }
 
+    .submission-list { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+    .submission-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border: 2px solid var(--border); border-radius: 12px;
+      font-size: 13px; font-weight: 700;
+    }
+    .submission-row .submission-info { flex: 1; }
+    .submission-row .submission-time { color: var(--subtext); font-size: 11px; white-space: nowrap; }
+
     /* ===== モーダル ===== */
     .modal-overlay {
       position: fixed; inset: 0;
@@ -548,6 +560,14 @@
       <div class="loading">読み込み中...</div>
     </div>
 
+    <!-- 課題の提出状況 -->
+    <div class="section-header">
+      <div class="section-title">📋 最近提出された課題</div>
+    </div>
+    <div class="table-wrap" id="submissionsWrap">
+      <div class="loading">読み込み中...</div>
+    </div>
+
     <!-- 生徒テーブル -->
     <div class="section-header">
       <div class="section-title">生徒一覧</div>
@@ -632,6 +652,38 @@
       return str.slice(0, 10);
     }
 
+    function formatDateTime(str) {
+      if (!str) return '—';
+      return str.replace('T', ' ').slice(0, 16);
+    }
+
+    function renderSubmissions(list) {
+      const wrap = document.getElementById('submissionsWrap');
+      if (!list || list.length === 0) {
+        wrap.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">📭</div>
+            <div class="empty-title">まだ提出された課題はありません</div>
+            <div class="empty-desc">生徒が課題を終えると、ここに表示されます</div>
+          </div>
+        `;
+        return;
+      }
+      wrap.innerHTML = `
+        <div class="submission-list">
+          ${list.map(sub => `
+            <div class="submission-row">
+              <span class="submission-info">
+                ${SUBJECT_EMOJIS[sub.subject] || '📚'} <strong>${escHtml(sub.student_name)}</strong>さんが
+                「${escHtml(sub.subject)}${sub.unit ? '・' + escHtml(sub.unit) : ''}」の課題を提出しました
+              </span>
+              <span class="submission-time">${formatDateTime(sub.completed_at)}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     function countBadgeClass(cnt) {
       if (cnt >= 5) return 'lv3';
       if (cnt >= 2) return 'lv2';
@@ -668,6 +720,8 @@
           va = a.name; vb = b.name;
         } else if (sortKey === 'last_active') {
           va = a.last_active || ''; vb = b.last_active || '';
+        } else if (sortKey === 'last_login') {
+          va = a.last_login || ''; vb = b.last_login || '';
         } else if (SUBJECTS.includes(sortKey)) {
           va = a.subjects[sortKey] || 0; vb = b.subjects[sortKey] || 0;
         } else {
@@ -722,6 +776,7 @@
             ${subjectCells}
             <td><span class="count-badge ${s.total > 0 ? 'total' : ''}">${s.total > 0 ? s.total + '回' : '0'}</span></td>
             <td class="td-date">${s.last_active ? '🟢 ' + formatDate(s.last_active) : '未学習'}</td>
+            <td class="td-date">${formatDateTime(s.last_login)}</td>
             <td class="td-date">${formatDate(s.created_at)}</td>
             <td style="white-space:nowrap;">
               <button class="detail-btn" data-id="${s.id}" style="margin-right:4px;">👀 詳細</button><button class="assign-btn" data-id="${s.id}" data-name="${escHtml(s.name)}" style="margin-right:4px;">📋 課題</button><button class="reset-pass-btn" data-id="${s.id}" data-name="${escHtml(s.name)}">🔑 リセット</button>
@@ -738,6 +793,7 @@
               ${headerCells}
               <th class="${thClass('total')}" data-key="total">合計</th>
               <th class="${thClass('last_active')}" data-key="last_active">最終学習</th>
+              <th class="${thClass('last_login')}" data-key="last_login">最終ログイン</th>
               <th class="${thClass('created_at')}" data-key="created_at">登録日</th>
               <th>操作</th>
             </tr>
@@ -824,6 +880,7 @@
         const data = await res.json();
         allStudents = data.students;
         renderSummary(data.summary);
+        renderSubmissions(data.recent_submissions);
         renderTable(allStudents);
         loadUsage();
       } catch (e) {
@@ -890,7 +947,7 @@
         : assignments.map(a => `
             <div class="assignment-row ${a.status === 'completed' ? 'completed' : ''}">
               <span class="assignment-info">${SUBJECT_EMOJIS[a.subject] || '📚'} ${escHtml(a.subject)}${a.unit ? '・' + escHtml(a.unit) : '（おまかせ）'}</span>
-              <span>${a.status === 'completed' ? '✅ 完了' : '⏳ 未完了'}</span>
+              <span>${a.status === 'completed' ? `✅ ${formatDateTime(a.completed_at)} 提出` : '⏳ 未完了'}</span>
             </div>
           `).join('');
 
@@ -929,6 +986,18 @@
         btn.addEventListener('click', () => btn.parentElement.classList.toggle('open'));
       });
       document.getElementById('detailClose').addEventListener('click', () => overlay.remove());
+
+      if (window.renderMathInElement) {
+        renderMathInElement(overlay.querySelector('.detail-modal'), {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '\\[', right: '\\]', display: true },
+            { left: '$', right: '$', display: false },
+            { left: '\\(', right: '\\)', display: false },
+          ],
+          throwOnError: false,
+        });
+      }
     }
 
     // ===== 課題アサイン =====

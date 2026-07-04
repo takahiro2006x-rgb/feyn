@@ -141,6 +141,7 @@ def init_db():
         db.add_column_if_missing(conn, 'users', 'security_answer_hash TEXT')
         db.add_column_if_missing(conn, 'knowledge_gaps', 'review_count INTEGER NOT NULL DEFAULT 0')
         db.add_column_if_missing(conn, 'knowledge_gaps', 'next_review TEXT')
+        db.add_column_if_missing(conn, 'users', 'last_login TIMESTAMP')
 
         conn.commit()
 
@@ -346,7 +347,8 @@ def signup():
     try:
         with get_db() as conn:
             conn.execute(
-                'INSERT INTO users (email, name, password_hash, role, security_question, security_answer_hash) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO users (email, name, password_hash, role, security_question, security_answer_hash, last_login) '
+                'VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
                 (email, name, generate_password_hash(password), role,
                  security_question, generate_password_hash(security_answer))
             )
@@ -372,6 +374,10 @@ def login():
 
     if not user or not check_password_hash(user['password_hash'], password):
         return jsonify({'error': 'メールアドレスまたはパスワードが違います'}), 401
+
+    with get_db() as conn:
+        conn.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', (user['id'],))
+        conn.commit()
 
     session.permanent    = True
     session['user_id']   = user['id']
@@ -957,13 +963,20 @@ def dashboard_api():
 
     with get_db() as conn:
         students_rows = conn.execute(
-            "SELECT id, name, email, created_at FROM users WHERE role = 'student' ORDER BY created_at DESC"
+            "SELECT id, name, email, created_at, last_login FROM users WHERE role = 'student' ORDER BY created_at DESC"
         ).fetchall()
         count_rows = conn.execute(
             'SELECT user_id, subject, COUNT(*) as cnt FROM session_logs GROUP BY user_id, subject'
         ).fetchall()
         last_rows = conn.execute(
             'SELECT user_id, MAX(completed_at) as last_at FROM session_logs GROUP BY user_id'
+        ).fetchall()
+        submission_rows = conn.execute(
+            "SELECT a.subject, a.unit, a.completed_at, u.name as student_name "
+            "FROM assignments a JOIN users u ON u.id = a.student_id "
+            "WHERE a.status = 'completed' AND a.teacher_id = ? "
+            "ORDER BY a.completed_at DESC LIMIT 20",
+            (session['user_id'],)
         ).fetchall()
 
     counts_by_user = {}
@@ -981,6 +994,7 @@ def dashboard_api():
             'email':      s['email'],
             'created_at': s['created_at'],
             'last_active': last_by_user.get(s['id']),
+            'last_login': s['last_login'],
             'subjects':   counts,
             'total':      sum(counts.values()),
         })
@@ -995,6 +1009,7 @@ def dashboard_api():
             'total_clears':   total_clears,
             'top_subject':    top_subject,
         },
+        'recent_submissions': [dict(r) for r in submission_rows],
     })
 
 
@@ -1258,6 +1273,7 @@ def reveal():
     instruction = (
         f'あなたは{subject}の先生です。キャラクターの演技はせず、素直な解説者として答えてください。'
         '生徒からの質問に対して、高校生にも分かるように3〜4文程度で簡潔に説明してください。'
+        '数式を書くときは必ずLaTeX記法にして、インラインは $ で、独立した式は $$ で囲んでください。'
     )
     result = generate_once(instruction, f'次の質問に答えてください: {question}', 'reveal')
     if result is None:

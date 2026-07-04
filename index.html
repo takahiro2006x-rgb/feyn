@@ -196,7 +196,23 @@
     <div class="math-modal">
       <div class="math-modal-title">🧮 数式を入力</div>
       <math-field id="mathField"></math-field>
-      <div class="math-modal-hint">分数・累乗・ルートなどはキーボードで入力すると自動できれいに整形されます</div>
+      <div class="math-quick-row">
+        <button type="button" data-insert="\frac{#0}{#0}">分数</button>
+        <button type="button" data-insert="#0^{#0}">x²</button>
+        <button type="button" data-insert="\sqrt{#0}">√</button>
+        <button type="button" data-insert="#0_{#0}">添字</button>
+        <button type="button" data-insert="\pi">π</button>
+        <button type="button" data-insert="\theta">θ</button>
+        <button type="button" data-insert="\infty">∞</button>
+        <button type="button" data-insert="\times">×</button>
+        <button type="button" data-insert="\div">÷</button>
+        <button type="button" data-insert="\pm">±</button>
+        <button type="button" data-insert="\leq">≤</button>
+        <button type="button" data-insert="\geq">≥</button>
+        <button type="button" data-insert="\sum_{#0}^{#0}">Σ</button>
+        <button type="button" data-insert="\int_{#0}^{#0}">∫</button>
+      </div>
+      <div class="math-modal-hint">キーボードで「1/2」「x^2」のように打つと自動できれいに整形されます。ボタンでもよく使う記号を入力できます</div>
       <div class="math-modal-actions">
         <button class="math-modal-btn math-modal-cancel" id="mathCancelBtn" type="button">キャンセル</button>
         <button class="math-modal-btn math-modal-insert" id="mathInsertBtn" type="button">挿入する</button>

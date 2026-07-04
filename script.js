@@ -657,9 +657,18 @@ mathField.addEventListener('keydown', (e) => {
   }
 });
 mathInsertBtn.addEventListener('click', () => {
-  const latex = mathField.value.trim();
+  // 未入力のプレースホルダーはKaTeXが解釈できないので取り除く
+  const latex = mathField.value.trim().replace(/\\placeholder\{\}/g, '');
   if (latex) insertAtCursor(`$${latex}$`);
   closeMathModal();
+});
+
+// よく使う記号・構造をワンタップで挿入するクイックボタン
+document.querySelectorAll('.math-quick-row button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    mathField.insert(btn.dataset.insert);
+    mathField.focus();
+  });
 });
 
 

@@ -608,9 +608,11 @@ body {
   inset: 0;
   background: rgba(0,0,0,0.45);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  z-index: 300;
+  padding-top: 5vh;
+  z-index: 90; /* MathLiveの仮想キーボード(z-index:105)より下にして、キー操作を奪わないようにする */
+  overflow-y: auto;
 }
 
 .math-modal {
@@ -637,6 +639,27 @@ body {
   background: var(--input-bg);
   color: var(--text);
 }
+
+.math-quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.math-quick-row button {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 2px solid var(--card-border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.math-quick-row button:hover { border-color: #CB6CE6; color: #CB6CE6; }
+.math-quick-row button:active { transform: translateY(1px); }
 
 .math-modal-hint { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.5; }
 

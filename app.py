@@ -119,6 +119,21 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # 先生が生徒に出す課題（科目・単元を指定して出題する）
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS assignments (
+                id {pk},
+                teacher_id INTEGER NOT NULL,
+                student_id INTEGER NOT NULL,
+                subject TEXT NOT NULL,
+                unit TEXT,
+                status TEXT NOT NULL DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP,
+                FOREIGN KEY (teacher_id) REFERENCES users(id),
+                FOREIGN KEY (student_id) REFERENCES users(id)
+            )
+        ''')
 
         # 2. 全テーブルが存在する状態で、あとから追加したカラムをマイグレーションする
         db.add_column_if_missing(conn, 'users', "role TEXT NOT NULL DEFAULT 'student'")
@@ -474,14 +489,52 @@ def dashboard_student(student_id):
             'FROM topic_progress WHERE user_id = ? ORDER BY understanding, last_studied DESC',
             (student_id,)
         ).fetchall()
+        assignment_rows = conn.execute(
+            "SELECT id, subject, unit, status, created_at, completed_at "
+            "FROM assignments WHERE student_id = ? ORDER BY (status = 'completed'), id DESC",
+            (student_id,)
+        ).fetchall()
 
     return jsonify({
-        'student':  dict(student),
-        'gaps':     [dict(r) for r in gap_rows],
-        'progress': [dict(r) for r in progress_rows],
-        'sessions': get_history_sessions(student_id),
-        'labels':   tutoring.GAP_TYPE_LABELS,
+        'student':     dict(student),
+        'gaps':        [dict(r) for r in gap_rows],
+        'progress':    [dict(r) for r in progress_rows],
+        'sessions':    get_history_sessions(student_id),
+        'assignments': [dict(r) for r in assignment_rows],
+        'labels':      tutoring.GAP_TYPE_LABELS,
     })
+
+
+@app.route('/api/dashboard/assignments', methods=['POST'])
+def create_assignment():
+    """先生が生徒に科目・単元を指定して課題を出す"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+    if session.get('user_role') != 'teacher':
+        return jsonify({'error': '権限がありません'}), 403
+
+    data       = request.get_json()
+    student_id = data.get('student_id')
+    subject    = data.get('subject', '')
+    unit       = (data.get('unit') or '').strip() or None
+
+    if subject not in SUBJECTS:
+        return jsonify({'error': '科目を指定してください'}), 400
+
+    with get_db() as conn:
+        student = conn.execute(
+            "SELECT id FROM users WHERE id = ? AND role = 'student'", (student_id,)
+        ).fetchone()
+        if not student:
+            return jsonify({'error': '生徒が見つかりません'}), 404
+
+        conn.execute(
+            'INSERT INTO assignments (teacher_id, student_id, subject, unit) VALUES (?, ?, ?, ?)',
+            (session['user_id'], student_id, subject, unit)
+        )
+        conn.commit()
+
+    return jsonify({'ok': True})
 
 
 @app.route('/api/dashboard/reset-password', methods=['POST'])
@@ -530,6 +583,10 @@ def me():
             "WHERE user_id = ? AND ((status = 'resolved' AND next_review IS NOT NULL AND next_review <= ?) OR status = 'open')",
             (session['user_id'], today)
         ).fetchone()['cnt']
+        open_assignments = conn.execute(
+            "SELECT COUNT(*) as cnt FROM assignments WHERE student_id = ? AND status = 'open'",
+            (session['user_id'],)
+        ).fetchone()['cnt']
     subject_clears = {row['subject']: row['cnt'] for row in rows}
     return jsonify({
         'id':                    session['user_id'],
@@ -539,7 +596,24 @@ def me():
         'total_clears':          sum(subject_clears.values()),
         'subject_clears':        subject_clears,
         'due_reviews':           due,
+        'open_assignments':      open_assignments,
     })
+
+
+@app.route('/api/assignments')
+def assignments_api():
+    """自分に出されている未完了の課題一覧（アプリのトップで受け取る用）"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, subject, unit, created_at FROM assignments "
+            "WHERE student_id = ? AND status = 'open' ORDER BY id",
+            (session['user_id'],)
+        ).fetchall()
+
+    return jsonify({'assignments': [dict(r) for r in rows]})
 
 
 # ========================================
@@ -703,10 +777,11 @@ def complete():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
 
-    data       = request.get_json()
-    subject    = data.get('subject', '')
-    difficulty = data.get('difficulty', '')
-    gap_id     = data.get('gap_id')
+    data          = request.get_json()
+    subject       = data.get('subject', '')
+    difficulty    = data.get('difficulty', '')
+    gap_id        = data.get('gap_id')
+    assignment_id = data.get('assignment_id')
 
     if not subject:
         return jsonify({'error': '科目が指定されていません'}), 400
@@ -717,6 +792,13 @@ def complete():
             'INSERT INTO session_logs (user_id, subject, difficulty) VALUES (?, ?, ?)',
             (session['user_id'], subject, difficulty)
         )
+        # 課題として出されていたセッションの完了を記録する
+        if assignment_id:
+            conn.execute(
+                "UPDATE assignments SET status = 'completed', completed_at = CURRENT_TIMESTAMP "
+                'WHERE id = ? AND student_id = ?',
+                (assignment_id, session['user_id'])
+            )
         # 復習セッションの完了 = Feynが納得した = ギャップ解消とみなす。
         # 忘却曲線に沿って次の復習日を先送りしていく（1→3→7→14→30日）
         if gap_id:
@@ -954,12 +1036,13 @@ def start():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
 
-    data         = request.get_json()
-    subject      = data.get('subject', '物理')
-    difficulty   = data.get('difficulty', '大学受験')
-    teacher_name = data.get('teacher_name', session.get('user_name', '先生'))
-    unit         = (data.get('unit') or '').strip() or None
-    gap_id       = data.get('gap_id')
+    data          = request.get_json()
+    subject       = data.get('subject', '物理')
+    difficulty    = data.get('difficulty', '大学受験')
+    teacher_name  = data.get('teacher_name', session.get('user_name', '先生'))
+    unit          = (data.get('unit') or '').strip() or None
+    gap_id        = data.get('gap_id')
+    assignment_id = data.get('assignment_id')
 
     # 復習モード: 過去に特定した知識ギャップを狙い撃ちする
     # （解決済みでも忘却曲線の「復習どき」に再挑戦できるよう、statusでは弾かない）
@@ -973,6 +1056,18 @@ def start():
         if gap is None:
             return jsonify({'error': 'この復習項目は見つかりません'}), 404
         subject = gap['subject']
+
+    # 課題モード: 先生が指定した科目・単元で開始する
+    if assignment_id:
+        with get_db() as conn:
+            assignment = conn.execute(
+                "SELECT * FROM assignments WHERE id = ? AND student_id = ? AND status = 'open'",
+                (assignment_id, session['user_id'])
+            ).fetchone()
+        if assignment is None:
+            return jsonify({'error': 'この課題は見つかりません（すでに完了しているかもしれません）'}), 404
+        subject = assignment['subject']
+        unit    = assignment['unit']
 
     session_key = f"{session['user_id']}_{subject}"
     if gap:

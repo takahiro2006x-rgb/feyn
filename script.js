@@ -35,6 +35,7 @@ let startInFlight  = false;  // /api/start が完了するまで次の開始を�
 let currentSubject = '物理';
 let currentEmoji   = '⚡';
 let reviewGapId    = null;  // 苦手ノートからの復習セッション中はギャップIDが入る
+let assignmentId   = null;  // 先生からの課題セッション中は課題IDが入る
 
 const SUBJECT_COLORS = {
   '物理': { color: '#3B82F6', dark: '#1D4ED8' },
@@ -122,7 +123,8 @@ function getSettings() {
     difficulty:   diffSelect.value,
     teacher_name: teacherInput.value.trim() || '先生',
   };
-  if (reviewGapId) settings.gap_id = reviewGapId;
+  if (reviewGapId)  settings.gap_id        = reviewGapId;
+  if (assignmentId) settings.assignment_id = assignmentId;
   return settings;
 }
 
@@ -321,8 +323,38 @@ function renderPicker(promptText, buttons, { clear = true } = {}) {
   el.scrollIntoView({ behavior: 'smooth' });
 }
 
+// ===== 先生からの課題を受け取る画面 =====
+function showAssignmentPicker(assignments) {
+  sessionKey = null;
+  hintBtn.disabled   = true;
+  revealBtn.disabled = true;
+  resetXP();
+  setExpression('normal');
+
+  const buttons = assignments.map(a => ({
+    label: `📋 ${a.subject}${a.unit ? '・' + a.unit : '（おまかせ）'}`,
+    onClick: () => {
+      const btn = document.querySelector(`.subject[data-subject="${a.subject}"]`);
+      if (btn) {
+        document.querySelectorAll('.subject').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSubject = btn.dataset.subject;
+        currentEmoji   = btn.dataset.emoji;
+        updateCharPanel(currentSubject, currentEmoji);
+      }
+      assignmentId = a.id;
+      startSession(a.unit || undefined);
+    },
+  }));
+  buttons.push({ label: '↩️ 自分で科目を選ぶ', onClick: () => showUnitPicker(currentSubject) });
+
+  const plural = assignments.length > 1 ? `（${assignments.length}件）` : '';
+  renderPicker(`📋 先生から課題が届いています！${plural}`, buttons);
+}
+
 function showUnitPicker(subject) {
   sessionKey = null;
+  assignmentId = null;
   hintBtn.disabled   = true;
   revealBtn.disabled = true;
   resetXP();
@@ -484,16 +516,24 @@ async function sendMessage() {
       fetch('/api/complete', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ subject: currentSubject, difficulty: diffSelect.value, gap_id: reviewGapId }),
+        body:    JSON.stringify({
+          subject: currentSubject, difficulty: diffSelect.value,
+          gap_id: reviewGapId, assignment_id: assignmentId,
+        }),
       }).then(async (res) => {
-        const wasReview = !!reviewGapId;
-        reviewGapId = null;
+        const wasReview     = !!reviewGapId;
+        const wasAssignment = !!assignmentId;
+        reviewGapId  = null;
+        assignmentId = null;
         history.replaceState(null, '', '/');
 
         // ギャップ分析の結果を「今日の気づき」として表示
         const c = await res.json().catch(() => ({}));
         if (wasReview) {
           addMessage('feyn', '✅ この苦手は<strong>解決済み</strong>にしたよ！ <a href="/mypage?tab=gaps" style="color:inherit;">📝 苦手ノートを見る</a>');
+        }
+        if (wasAssignment) {
+          addMessage('feyn', '✅ 先生からの<strong>課題</strong>を終えたよ！お疲れさま！');
         }
         if (c.analysis && c.analysis.gaps && c.analysis.gaps.length > 0) {
           const items = c.analysis.gaps.map(g => `・${escText(g.description)}`).join('<br>');
@@ -531,6 +571,7 @@ document.querySelectorAll('.subject').forEach(btn => {
     currentSubject = btn.dataset.subject;
     currentEmoji   = btn.dataset.emoji;
     reviewGapId    = null;
+    assignmentId   = null;
     history.replaceState(null, '', '/');
     updateCharPanel(currentSubject, currentEmoji);
     showUnitPicker(currentSubject);
@@ -540,7 +581,8 @@ document.querySelectorAll('.subject').forEach(btn => {
 
 // ===== リセットボタン =====
 resetBtn.addEventListener('click', () => {
-  reviewGapId = null;
+  reviewGapId  = null;
+  assignmentId = null;
   history.replaceState(null, '', '/');
   showUnitPicker(currentSubject);
 });
@@ -788,7 +830,18 @@ async function init() {
     } else if (reviewGapId) {
       startSession();
     } else {
-      showUnitPicker(currentSubject);
+      // 先生からの課題があれば、通常の単元選択より先に見せる
+      let pendingAssignments = [];
+      try {
+        const aRes = await fetch('/api/assignments');
+        if (aRes.ok) pendingAssignments = (await aRes.json()).assignments || [];
+      } catch (e) {}
+
+      if (pendingAssignments.length > 0) {
+        showAssignmentPicker(pendingAssignments);
+      } else {
+        showUnitPicker(currentSubject);
+      }
     }
   } catch (e) {
     window.location.href = '/login';

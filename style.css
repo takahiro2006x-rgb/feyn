@@ -230,8 +230,9 @@ body {
   box-shadow: 0 4px 0 var(--subject-color-dark);
 }
 
-/* キャラクターイラスト */
+/* キャラクターイラスト（デザイン見直し中のため非表示。マークアップ・SVGは削除せず残す） */
 .char-illustration {
+  display: none;
   animation: float 3.5s ease-in-out infinite;
   filter: drop-shadow(0 10px 24px rgba(88, 204, 2, 0.22));
 }

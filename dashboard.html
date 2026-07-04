@@ -504,6 +504,14 @@
       <div class="loading">読み込み中...</div>
     </div>
 
+    <!-- API使用量 -->
+    <div class="section-header">
+      <div class="section-title">🔋 今日のGemini使用量</div>
+    </div>
+    <div class="table-wrap" id="usageWrap">
+      <div class="loading">読み込み中...</div>
+    </div>
+
     <!-- 生徒テーブル -->
     <div class="section-header">
       <div class="section-title">生徒一覧</div>
@@ -685,6 +693,40 @@
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // ===== API使用量 =====
+    async function loadUsage() {
+      const wrap = document.getElementById('usageWrap');
+      try {
+        const res = await fetch('/api/dashboard/usage');
+        const data = await res.json();
+        if (!res.ok) { wrap.innerHTML = `<div class="loading">${escHtml(data.error || '読み込みに失敗しました')}</div>`; return; }
+
+        if (data.total_calls === 0) {
+          wrap.innerHTML = `<div class="loading">今日はまだ呼び出しがありません</div>`;
+          return;
+        }
+
+        const rows = data.models_order
+          .filter(m => data.by_model[m])
+          .map(m => {
+            const s = data.by_model[m];
+            const failCell = s.fail > 0
+              ? `<span class="count-badge" style="background:#FFF0F0;color:#FF4B4B;border-color:#FFB3B3;">${s.fail}</span>`
+              : '—';
+            return `<tr><td>${escHtml(m)}</td><td><span class="count-badge total">${s.success}</span></td><td>${failCell}</td></tr>`;
+          }).join('');
+
+        wrap.innerHTML = `
+          <table>
+            <thead><tr><th>モデル</th><th>成功</th><th>失敗（枠切れ・過負荷など）</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      } catch (e) {
+        wrap.innerHTML = `<div class="loading">読み込みに失敗しました</div>`;
+      }
+    }
+
     async function init() {
       try {
         const meRes = await fetch('/api/me');
@@ -700,6 +742,7 @@
         allStudents = data.students;
         renderSummary(data.summary);
         renderTable(allStudents);
+        loadUsage();
       } catch (e) {
         document.getElementById('tableWrap').innerHTML = `
           <div class="empty-state">

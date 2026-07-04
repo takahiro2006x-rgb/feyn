@@ -29,6 +29,7 @@ const resetBtn     = document.querySelector('.reset-btn');
 let sessionKey     = null;
 let isBusy         = false;
 let startAbortCtrl = null;
+let startInFlight  = false;  // /api/start が完了するまで次の開始を防ぐ（無料枠の無駄遣い対策）
 let currentSubject = '物理';
 let currentEmoji   = '⚡';
 let reviewGapId    = null;  // 苦手ノートからの復習セッション中はギャップIDが入る
@@ -298,7 +299,11 @@ function renderPicker(promptText, buttons) {
   el.innerHTML = `<div class="avatar">${currentEmoji}</div><div class="bubble">${promptText}<div class="quick-replies">${btnHtml}</div></div>`;
   messagesEl.appendChild(el);
   el.querySelectorAll('.quick-reply').forEach((btn, i) => {
-    btn.addEventListener('click', () => buttons[i].onClick());
+    btn.addEventListener('click', () => {
+      // 連打で同じボタンから二重にAPIが呼ばれ、無料枠を無駄に消費するのを防ぐ
+      el.querySelectorAll('.quick-reply').forEach(b => b.disabled = true);
+      buttons[i].onClick();
+    });
   });
   el.scrollIntoView({ behavior: 'smooth' });
 }
@@ -329,6 +334,10 @@ function showUnitSubPicker(subject, category) {
 
 // ===== セッション開始 =====
 async function startSession(unit) {
+  // すでに /api/start が実行中なら無視する（無駄なGemini呼び出しを防ぐ）
+  if (startInFlight) return;
+  startInFlight = true;
+
   if (startAbortCtrl) startAbortCtrl.abort();
   startAbortCtrl = new AbortController();
   const signal = startAbortCtrl.signal;
@@ -361,6 +370,8 @@ async function startSession(unit) {
     } else {
       thinkingEl.remove();
     }
+  } finally {
+    startInFlight = false;
   }
 }
 

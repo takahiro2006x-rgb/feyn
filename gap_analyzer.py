@@ -130,11 +130,12 @@ def build_analysis_prompt(subject, difficulty, transcript_rows, existing_topics=
 """
 
 
-def analyze_session(client, models, subject, difficulty, transcript_rows, existing_topics=None):
+def analyze_session(client, models, subject, difficulty, transcript_rows, existing_topics=None, on_attempt=None):
     """対話履歴を分析して知識ギャップを構造化して返す
 
     client: genai.Client / models: フォールバック順のモデル名リスト
     existing_topics: 既存テーマ名のリスト（topicの表記ゆれを寄せるために使う）
+    on_attempt: 呼び出しごとに on_attempt(model, success) を呼ぶコールバック（使用量記録用、任意）
     戻り値: {'topic', 'understanding_score', 'summary', 'gaps': [...]} または None（全モデル枯渇・失敗時）
     """
     user_turns = [r for r in transcript_rows if r['role'] == 'user']
@@ -157,7 +158,11 @@ def analyze_session(client, models, subject, difficulty, transcript_rows, existi
                 config=types.GenerateContentConfig(**config_kwargs),
             )
             result = json.loads(response.text)
+            if on_attempt:
+                on_attempt(model, True)
         except Exception as e:
+            if on_attempt:
+                on_attempt(model, False)
             err = str(e)
             # 枠切れ(429)・過負荷(503)はモデル単位の問題なので次のモデルで再挑戦する
             if '429' in err or '503' in err or 'UNAVAILABLE' in err:

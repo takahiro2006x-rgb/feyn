@@ -107,6 +107,16 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         ''')
+        # Gemini無料枠の使用量を先生ダッシュボードで確認できるようにするための記録
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS api_calls (
+                id {pk},
+                model TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                success INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
 
         # 2. 全テーブルが存在する状態で、あとから追加したカラムをマイグレーションする
         db.add_column_if_missing(conn, 'users', "role TEXT NOT NULL DEFAULT 'student'")
@@ -143,6 +153,19 @@ def create_chat(model, instruction, history=None):
         config=types.GenerateContentConfig(**config_kwargs),
         history=history,
     )
+
+
+def log_api_call(model, endpoint, success):
+    """先生ダッシュボードでの無料枠使用量確認のため、Gemini呼び出しの成否を記録する"""
+    try:
+        with get_db() as conn:
+            conn.execute(
+                'INSERT INTO api_calls (model, endpoint, success) VALUES (?, ?, ?)',
+                (model, endpoint, 1 if success else 0)
+            )
+            conn.commit()
+    except Exception:
+        pass  # 記録の失敗が本来の処理を止めないようにする
 
 
 # --- チャットセッションを管理する辞書 ---
@@ -633,7 +656,8 @@ def complete():
         analysis = gap_analyzer.analyze_session(
             client, GEMINI_MODELS, subject, difficulty,
             [{'role': r['role'], 'message': r['message']} for r in rows],
-            existing_topics=[r['topic'] for r in topic_rows]
+            existing_topics=[r['topic'] for r in topic_rows],
+            on_attempt=lambda model, ok: log_api_call(model, 'analysis', ok)
         )
         if analysis:
             save_analysis(session['user_id'], subject, analysis, today)
@@ -755,6 +779,36 @@ def dashboard_api():
     })
 
 
+@app.route('/api/dashboard/usage')
+def dashboard_usage():
+    """Gemini無料枠の今日の使用状況（モデル別の成功/失敗回数）"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+    if session.get('user_role') != 'teacher':
+        return jsonify({'error': '権限がありません'}), 403
+
+    today = str(date.today())
+    with get_db() as conn:
+        rows = conn.execute(
+            'SELECT model, endpoint, success, created_at FROM api_calls ORDER BY id DESC LIMIT 2000'
+        ).fetchall()
+
+    # created_atはSQLiteでは文字列、Postgresではdatetimeで返るため str() で先頭10文字を比較する
+    today_rows = [r for r in rows if str(r['created_at'])[:10] == today]
+
+    by_model = {}
+    for r in today_rows:
+        m = by_model.setdefault(r['model'], {'success': 0, 'fail': 0})
+        m['success' if r['success'] else 'fail'] += 1
+
+    return jsonify({
+        'date':        today,
+        'total_calls': len(today_rows),
+        'by_model':    by_model,
+        'models_order': GEMINI_MODELS,
+    })
+
+
 # ========================================
 # Feyn の最初のメッセージを取得
 # ========================================
@@ -799,9 +853,11 @@ def start():
             chat = create_chat(model, instruction)
             response = chat.send_message(kickoff)
             used_model = model
+            log_api_call(model, 'start', True)
             break
         except Exception as e:
             err = str(e)
+            log_api_call(model, 'start', False)
             # 枠切れ(429)・過負荷(503)はモデル単位の問題なので次のモデルで再挑戦する
             if '429' in err:
                 continue
@@ -874,9 +930,11 @@ def chat():
     while True:
         try:
             response = sess['chat'].send_message(message)
+            log_api_call(sess['model'], 'chat', True)
             break
         except Exception as e:
             err = str(e)
+            log_api_call(sess['model'], 'chat', False)
             overloaded = '503' in err or 'UNAVAILABLE' in err
 
             # 過負荷はまず同じモデルで少し待って再試行する

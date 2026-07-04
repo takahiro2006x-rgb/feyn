@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feyn - 生徒の記録</title>
+  <script>
+    // ちらつき防止のため、描画前に保存済みテーマを適用する
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:         #F0F4F8;
+      --card:       #FFFFFF;
+      --border:     #E5E5E5;
+      --text:       #3C3C3C;
+      --subtext:    #AFAFAF;
+      --green:      #58CC02;
+      --green-dark: #46A302;
+      --red:        #FF4B4B;
+      --yellow:     #E6A700;
+      --blue:       #1CB0F6;
+      --bubble:     #F0F4F8;
+    }
+
+    [data-theme="dark"] {
+      --bg:       #0D1117;
+      --card:     #161B22;
+      --border:   #30363D;
+      --text:     #E2E8F0;
+      --subtext:  #6E7681;
+      --yellow:   #FFC200;
+      --bubble:   #0D1117;
+    }
+
+    body {
+      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ===== ヘッダー ===== */
+    .header {
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-logo { font-size: 22px; font-weight: 800; color: var(--green); letter-spacing: 2px; }
+    .header-divider { width: 2px; height: 24px; background: var(--border); }
+    .header-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .header-email { font-size: 12px; font-weight: 700; color: var(--subtext); }
+    .header-titles { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: transparent;
+      color: var(--subtext);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+      display: inline-block;
+      white-space: nowrap;
+    }
+    .btn:hover { border-color: var(--green); color: var(--green); }
+
+    /* ===== タブ ===== */
+    .tab-bar {
+      position: sticky;
+      top: 64px;
+      z-index: 9;
+      background: var(--bg);
+      display: flex;
+      gap: 8px;
+      padding: 16px 24px 0;
+      max-width: 800px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      border-radius: 12px 12px 0 0;
+      border: 2px solid var(--border);
+      border-bottom: none;
+      background: var(--bg);
+      color: var(--subtext);
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--card); color: var(--green); }
+    .tab-btn:not(.active):hover { color: var(--text); }
+
+    /* ===== コンテンツ ===== */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tab-panel { display: none; flex-direction: column; gap: 16px; }
+    .tab-panel.active { display: flex; }
+
+    .page-desc { font-size: 14px; font-weight: 700; color: var(--subtext); }
+    .section-title { font-size: 15px; font-weight: 800; color: var(--text); margin-top: 8px; }
+
+    /* ===== 理解度バー ===== */
+    .progress-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .progress-row { display: flex; align-items: center; gap: 12px; }
+    .progress-name { flex: 1; font-size: 13px; font-weight: 800; }
+    .progress-name small { font-weight: 700; color: var(--subtext); }
+    .progress-track {
+      flex: 2;
+      height: 12px;
+      background: var(--bubble);
+      border: 2px solid var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill { height: 100%; border-radius: 99px; background: var(--green); }
+    .progress-score { width: 44px; text-align: right; font-size: 13px; font-weight: 800; color: var(--subtext); }
+
+    /* ===== ギャップカード ===== */
+    .gap-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 0 var(--border);
+    }
+    .gap-card.resolved { opacity: 0.6; }
+
+    .gap-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .gap-topic { font-size: 15px; font-weight: 800; flex: 1; }
+
+    .type-badge {
+      font-size: 11px; font-weight: 800; padding: 4px 10px;
+      border-radius: 99px; border: 2px solid; white-space: nowrap;
+    }
+    .type-misconception        { color: var(--red);    border-color: var(--red); }
+    .type-vague                { color: var(--yellow); border-color: var(--yellow); }
+    .type-missing_prerequisite { color: var(--blue);   border-color: var(--blue); }
+
+    .status-badge {
+      font-size: 11px; font-weight: 800; padding: 4px 10px;
+      border-radius: 99px; background: var(--green); color: white; white-space: nowrap;
+    }
+
+    .gap-desc { font-size: 14px; font-weight: 700; line-height: 1.7; }
+
+    .gap-evidence {
+      font-size: 12px; font-weight: 700; color: var(--subtext);
+      background: var(--bubble); border-left: 4px solid var(--border);
+      border-radius: 0 10px 10px 0; padding: 8px 12px; line-height: 1.6;
+    }
+
+    .gap-date { font-size: 12px; font-weight: 700; color: var(--subtext); }
+
+    /* ===== 課題カード ===== */
+    .assignment-row {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 13px; font-weight: 700;
+      box-shadow: 0 4px 0 var(--border);
+    }
+    .assignment-row .assignment-info { flex: 1; }
+    .assignment-row.completed { opacity: 0.6; }
+
+    /* ===== セッションカード（アコーディオン・会話ログ） ===== */
+    .session-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 4px 0 var(--border);
+    }
+
+    .session-head {
+      width: 100%; display: flex; align-items: center; gap: 12px;
+      padding: 18px 20px; background: none; border: none;
+      font-family: inherit; color: var(--text); cursor: pointer; text-align: left;
+    }
+    .session-head:hover { background: var(--bubble); }
+
+    .session-emoji { font-size: 24px; }
+    .session-info  { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .session-subject { font-size: 15px; font-weight: 800; }
+    .session-meta  { font-size: 12px; font-weight: 700; color: var(--subtext); }
+
+    .session-count {
+      font-size: 12px; font-weight: 700; color: var(--subtext);
+      background: var(--bubble); border: 2px solid var(--border);
+      border-radius: 99px; padding: 4px 12px; white-space: nowrap;
+    }
+
+    .session-arrow { font-size: 13px; color: var(--subtext); transition: transform 0.2s; }
+    .session-card.open .session-arrow { transform: rotate(90deg); }
+
+    .session-body {
+      display: none; flex-direction: column; gap: 14px;
+      padding: 4px 20px 20px; border-top: 2px solid var(--border); padding-top: 18px;
+    }
+    .session-card.open .session-body { display: flex; }
+
+    .msg { display: flex; max-width: 85%; }
+    .msg.feyn { align-self: flex-start; }
+    .msg.user { align-self: flex-end; }
+
+    .msg .bubble {
+      padding: 12px 16px; font-size: 14px; line-height: 1.7; font-weight: 700;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .msg.feyn .bubble { background: var(--bubble); border: 2px solid var(--border); color: var(--text); border-radius: 4px 16px 16px 16px; }
+    .msg.user .bubble { background: var(--green); color: white; border-radius: 16px 4px 16px 16px; box-shadow: 0 3px 0 var(--green-dark); }
+
+    /* ===== 空状態 ===== */
+    .empty-state {
+      padding: 64px 24px; text-align: center; display: flex; flex-direction: column;
+      align-items: center; gap: 12px; background: var(--card);
+      border: 2px solid var(--border); border-radius: 20px;
+    }
+    .empty-emoji { font-size: 48px; }
+    .empty-title { font-size: 18px; font-weight: 800; color: var(--text); }
+    .empty-desc  { font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    .loading { padding: 64px; text-align: center; font-size: 14px; font-weight: 700; color: var(--subtext); }
+
+    @media (max-width: 600px) {
+      .header { padding: 0 16px; }
+      .tab-bar { padding: 12px 16px 0; }
+      .tab-btn { font-size: 12px; padding: 8px 12px; }
+      .container { padding: 16px; }
+      .progress-row { flex-wrap: wrap; }
+      .msg { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-logo">🎓 Feyn</div>
+    <div class="header-divider"></div>
+    <div class="header-titles">
+      <div class="header-title" id="headerName">👤 読み込み中...</div>
+      <div class="header-email" id="headerEmail"></div>
+    </div>
+    <div class="header-right">
+      <button class="btn" id="themeToggle">🌙 ダークモード</button>
+      <a href="/dashboard" class="btn">← ダッシュボードへ戻る</a>
+    </div>
+  </header>
+
+  <div class="tab-bar">
+    <button class="tab-btn" data-tab="progress">📊 理解度</button>
+    <button class="tab-btn" data-tab="gaps">📝 苦手ノート</button>
+    <button class="tab-btn" data-tab="assignments">📋 課題</button>
+    <button class="tab-btn" data-tab="sessions">💬 会話ログ</button>
+  </div>
+
+  <div class="container">
+    <div class="tab-panel" id="panel-progress">
+      <div class="page-desc">テーマごとの理解度</div>
+      <div id="content-progress"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <div class="tab-panel" id="panel-gaps">
+      <div class="page-desc">会話から見つかった「理解の抜け漏れ」</div>
+      <div id="content-gaps"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <div class="tab-panel" id="panel-assignments">
+      <div class="page-desc">これまでに出した課題と提出状況</div>
+      <div id="content-assignments"><div class="loading">読み込み中...</div></div>
+    </div>
+
+    <div class="tab-panel" id="panel-sessions">
+      <div class="page-desc">Feynとの会話ログ</div>
+      <div id="content-sessions"><div class="loading">読み込み中...</div></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== テーマ切り替え =====
+    const themeToggle = document.getElementById('themeToggle');
+
+    function updateThemeLabel() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+    }
+    updateThemeLabel();
+
+    themeToggle.addEventListener('click', () => {
+      const html = document.documentElement;
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('feynTheme', next);
+      updateThemeLabel();
+    });
+
+    // ===== タブ切り替え =====
+    const TABS = ['progress', 'gaps', 'assignments', 'sessions'];
+
+    function activateTab(tab) {
+      if (!TABS.includes(tab)) tab = 'progress';
+      TABS.forEach(t => {
+        document.getElementById(`panel-${t}`).classList.toggle('active', t === tab);
+        document.querySelector(`.tab-btn[data-tab="${t}"]`).classList.toggle('active', t === tab);
+      });
+      const studentId = location.pathname.split('/').pop();
+      history.replaceState(null, '', `/dashboard/student/${studentId}?tab=${tab}`);
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+    });
+
+    const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
+
+    function escHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    const MATH_DELIMITERS = [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\[', right: '\\]', display: true },
+      { left: '$', right: '$', display: false },
+      { left: '\\(', right: '\\)', display: false },
+    ];
+    function renderMath(el) {
+      if (window.renderMathInElement) {
+        renderMathInElement(el, { delimiters: MATH_DELIMITERS, throwOnError: false });
+      }
+    }
+
+    function renderProgress(progress) {
+      const contentEl = document.getElementById('content-progress');
+      if (progress.length === 0) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">📈</div>
+            <div class="empty-title">まだ分析データがありません</div>
+            <div class="empty-desc">生徒がFeynとの学習を進めると、ここに理解度が表示されます</div>
+          </div>
+        `;
+        return;
+      }
+      const rows = progress.map(p => {
+        const emoji = SUBJECT_EMOJIS[p.subject] || '📚';
+        const color = p.understanding >= 70 ? 'var(--green)' : (p.understanding >= 40 ? 'var(--yellow)' : 'var(--red)');
+        return `
+          <div class="progress-row">
+            <span class="progress-name">${emoji} ${escHtml(p.topic)} <small>（${escHtml(p.subject)}・${p.sessions_count}回）</small></span>
+            <div class="progress-track"><div class="progress-fill" style="width:${p.understanding}%;background:${color}"></div></div>
+            <span class="progress-score">${p.understanding}</span>
+          </div>
+        `;
+      }).join('');
+      contentEl.innerHTML = `<div class="progress-card">${rows}</div>`;
+    }
+
+    function renderGaps(gaps, labels) {
+      const contentEl = document.getElementById('content-gaps');
+      if (gaps.length === 0) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">🎉</div>
+            <div class="empty-title">記録された苦手はまだありません</div>
+            <div class="empty-desc">会話を最後まで進めると、見つかった弱点がここに残ります</div>
+          </div>
+        `;
+        return;
+      }
+
+      function gapCard(g) {
+        const emoji    = SUBJECT_EMOJIS[g.subject] || '📚';
+        const resolved = g.status === 'resolved';
+        const badge = resolved
+          ? `<span class="status-badge">✅ 解決済み</span>`
+          : `<span class="type-badge type-${escHtml(g.gap_type)}">${escHtml(labels[g.gap_type] || g.gap_type)}</span>`;
+        const evidence = g.evidence
+          ? `<div class="gap-evidence">💬 生徒の発言: 「${escHtml(g.evidence)}」</div>` : '';
+        return `
+          <div class="gap-card ${resolved ? 'resolved' : ''}">
+            <div class="gap-top">
+              <span class="gap-topic">${emoji} ${escHtml(g.subject)}: ${escHtml(g.topic)}</span>
+              ${badge}
+            </div>
+            <div class="gap-desc">${escHtml(g.description)}</div>
+            ${evidence}
+            <span class="gap-date">📅 ${escHtml(g.session_date)}</span>
+          </div>
+        `;
+      }
+
+      const open     = gaps.filter(g => g.status !== 'resolved');
+      const resolved = gaps.filter(g => g.status === 'resolved');
+      let html = '';
+      if (open.length > 0)     html += `<div class="section-title">🔥 いま残っている苦手（${open.length}件）</div>` + open.map(gapCard).join('');
+      if (resolved.length > 0) html += `<div class="section-title">✅ 解決済み（${resolved.length}件）</div>` + resolved.map(gapCard).join('');
+      contentEl.innerHTML = html;
+    }
+
+    function renderAssignments(assignments) {
+      const contentEl = document.getElementById('content-assignments');
+      if (assignments.length === 0) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">📭</div>
+            <div class="empty-title">まだ課題を出していません</div>
+            <div class="empty-desc">ダッシュボードから課題を出すと、ここに表示されます</div>
+          </div>
+        `;
+        return;
+      }
+      function formatDateTime(str) {
+        if (!str) return '—';
+        return str.replace('T', ' ').slice(0, 16);
+      }
+      contentEl.innerHTML = assignments.map(a => `
+        <div class="assignment-row ${a.status === 'completed' ? 'completed' : ''}">
+          <span class="assignment-info">${SUBJECT_EMOJIS[a.subject] || '📚'} ${escHtml(a.subject)}${a.unit ? '・' + escHtml(a.unit) : '（おまかせ）'}</span>
+          <span>${a.status === 'completed' ? `✅ ${formatDateTime(a.completed_at)} 提出` : '⏳ 未完了'}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderSessions(sessions) {
+      const contentEl = document.getElementById('content-sessions');
+      if (sessions.length === 0) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-emoji">📭</div>
+            <div class="empty-title">まだ会話がありません</div>
+            <div class="empty-desc">生徒がFeynと会話すると、ここに残っていきます</div>
+          </div>
+        `;
+        return;
+      }
+
+      contentEl.innerHTML = '';
+      sessions.forEach(s => {
+        const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+        const card = document.createElement('div');
+        card.className = 'session-card';
+
+        const bubbles = s.messages.map(m => `
+          <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
+            <div class="bubble">${escHtml(m.message)}</div>
+          </div>
+        `).join('');
+
+        const badge = s.completed ? '' : `<span class="status-badge" style="background:#FF9600;">⏸ 中断中</span>`;
+
+        card.innerHTML = `
+          <button class="session-head">
+            <span class="session-emoji">${emoji}</span>
+            <span class="session-info">
+              <span class="session-subject">${escHtml(s.subject)}</span>
+              <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
+            </span>
+            ${badge}
+            <span class="session-count">💬 ${s.messages.length}</span>
+            <span class="session-arrow">▶</span>
+          </button>
+          <div class="session-body">${bubbles}</div>
+        `;
+
+        card.querySelector('.session-head').addEventListener('click', () => {
+          card.classList.toggle('open');
+        });
+
+        contentEl.appendChild(card);
+        renderMath(card);
+      });
+    }
+
+    async function init() {
+      const studentId = location.pathname.split('/').pop();
+      try {
+        const res = await fetch(`/api/dashboard/student/${studentId}`);
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        if (res.status === 403) { window.location.href = '/'; return; }
+        if (!res.ok) throw new Error('not found');
+        const data = await res.json();
+
+        document.getElementById('headerName').textContent  = `👤 ${data.student.name}`;
+        document.getElementById('headerEmail').textContent = data.student.email;
+        document.title = `Feyn - ${data.student.name}さんの記録`;
+
+        renderProgress(data.progress);
+        renderGaps(data.gaps, data.labels);
+        renderAssignments(data.assignments);
+        renderSessions(data.sessions);
+
+        const initialTab = new URLSearchParams(location.search).get('tab') || 'progress';
+        activateTab(initialTab);
+      } catch (e) {
+        document.getElementById('headerName').textContent = '⚠️ 読み込みエラー';
+        document.querySelectorAll('.tab-panel > div[id^="content-"]').forEach(el => {
+          el.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-emoji">⚠️</div>
+              <div class="empty-title">読み込みに失敗しました</div>
+              <div class="empty-desc">ページを再読み込みしてください</div>
+            </div>
+          `;
+        });
+        activateTab('progress');
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -303,6 +303,14 @@ def dashboard_page():
         return redirect('/')
     return send_from_directory('.', 'dashboard.html')
 
+@app.route('/dashboard/student/<int:student_id>')
+def dashboard_student_page(student_id):
+    if not session.get('user_id'):
+        return redirect('/login')
+    if session.get('user_role') != 'teacher':
+        return redirect('/')
+    return send_from_directory('.', 'student_detail.html')
+
 # DBや.envを外部に配信しないよう、公開ファイルはホワイトリスト方式にする
 ALLOWED_STATIC = {'style.css', 'script.js'}
 

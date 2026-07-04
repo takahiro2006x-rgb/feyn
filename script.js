@@ -617,6 +617,52 @@ textarea.addEventListener('keydown', (e) => {
 });
 
 
+// ===== 数式入力モーダル（MathLiveで組み立ててLaTeXとして挿入） =====
+const mathBtn          = document.getElementById('mathBtn');
+const mathModalOverlay = document.getElementById('mathModalOverlay');
+const mathField        = document.getElementById('mathField');
+const mathCancelBtn    = document.getElementById('mathCancelBtn');
+const mathInsertBtn    = document.getElementById('mathInsertBtn');
+
+function openMathModal() {
+  mathModalOverlay.style.display = 'flex';
+  mathField.value = '';
+  setTimeout(() => mathField.focus(), 50);
+}
+
+function closeMathModal() {
+  mathModalOverlay.style.display = 'none';
+}
+
+function insertAtCursor(text) {
+  const start  = textarea.selectionStart;
+  const end    = textarea.selectionEnd;
+  const before = textarea.value.slice(0, start);
+  const after  = textarea.value.slice(end);
+  textarea.value = `${before}${text}${after}`;
+  const cursor = start + text.length;
+  textarea.focus();
+  textarea.setSelectionRange(cursor, cursor);
+}
+
+mathBtn.addEventListener('click', openMathModal);
+mathCancelBtn.addEventListener('click', closeMathModal);
+mathModalOverlay.addEventListener('click', (e) => {
+  if (e.target === mathModalOverlay) closeMathModal();
+});
+mathField.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    mathInsertBtn.click();
+  }
+});
+mathInsertBtn.addEventListener('click', () => {
+  const latex = mathField.value.trim();
+  if (latex) insertAtCursor(`$${latex}$`);
+  closeMathModal();
+});
+
+
 // ===== ヒント =====
 hintBtn.addEventListener('click', async () => {
   if (!sessionKey || hintBtn.disabled) return;

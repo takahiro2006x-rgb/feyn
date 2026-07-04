@@ -589,6 +589,74 @@ body {
   box-shadow: 0 2px 0 var(--subject-color-dark);
 }
 
+/* ===== 数式入力ボタン・モーダル ===== */
+.math-btn {
+  flex-shrink: 0;
+  width: 52px;
+  background: var(--card);
+  color: var(--subtext);
+  border: 2px solid var(--card-border);
+  border-radius: 16px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.math-btn:hover { border-color: #CB6CE6; color: #CB6CE6; }
+
+.math-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.math-modal {
+  background: var(--card);
+  border: 2px solid var(--card-border);
+  border-radius: 20px;
+  padding: 28px;
+  width: min(480px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.math-modal-title { font-size: 16px; font-weight: 800; color: var(--text); }
+
+.math-modal math-field {
+  width: 100%;
+  min-height: 56px;
+  font-size: 22px;
+  border: 2px solid var(--card-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+.math-modal-hint { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.5; }
+
+.math-modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+.math-modal-btn {
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.math-modal-cancel { background: var(--bg); color: var(--subtext); border: 2px solid var(--card-border); }
+.math-modal-insert { background: var(--subject-color); color: white; box-shadow: 0 4px 0 var(--subject-color-dark); }
+.math-modal-insert:hover { filter: brightness(1.08); }
+.math-modal-insert:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--subject-color-dark); }
+
 /* ===== 紙吹雪キャンバス ===== */
 #confettiCanvas {
   display: none;
@@ -845,6 +913,8 @@ body {
   /* font-size は16px以上にする（iOS Safariは16px未満だとフォーカス時に自動ズームしてレイアウトが崩れる） */
   .input-area textarea { height: 56px; padding: 10px 12px; font-size: 16px; }
   .send-btn { padding: 0 16px; font-size: 14px; }
+  .math-btn { width: 44px; font-size: 18px; }
+  .math-modal { padding: 20px; }
 
   .start-card {
     width: 90%;

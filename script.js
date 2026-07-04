@@ -43,6 +43,49 @@ const SUBJECT_COLORS = {
   '歴史': { color: '#B45309', dark: '#78350F' },
 };
 
+// ===== 単元カリキュラム（科目 → 大分類 → 単元） =====
+const UNIT_CURRICULUM = {
+  '物理': {
+    '力学':   ['運動の法則', 'エネルギーと運動量', '円運動・万有引力', '単振動'],
+    '熱力学': ['熱と温度', '気体の性質', '熱力学の法則'],
+    '波動':   ['波の性質', '音', '光'],
+    '電磁気': ['電気', '磁気', '電磁誘導', '交流'],
+    '原子':   ['電子と光', '原子と原子核'],
+  },
+  '数学': {
+    '数学I':   ['数と式', '集合と命題', '二次関数', '図形と計量', 'データの分析'],
+    '数学II':  ['いろいろな式', '図形と方程式', '指数関数・対数関数', '三角関数', '微分・積分の考え方'],
+    '数学III': ['極限', '微分法', '積分法'],
+    '数学A':   ['図形の性質', '場合の数と確率', '数学と人間の活動'],
+    '数学B':   ['数列', '統計的な推測'],
+    '数学C':   ['ベクトル', '平面上の曲線と複素数平面'],
+  },
+  '英語': {
+    '文法':     ['時制', '仮定法', '関係詞', '比較', '不定詞・動名詞・分詞', '受動態', '話法'],
+    '構文・語法': ['倒置・強調・省略', '前置詞・句動詞', '接続詞'],
+  },
+  '化学': {
+    '理論化学': ['物質の構成', '化学結合', '物質量と化学反応式', '酸と塩基', '酸化還元', '化学反応と熱', '電池・電気分解', '反応速度・化学平衡'],
+    '無機化学': ['非金属元素', '金属元素とイオン'],
+    '有機化学': ['炭化水素', 'アルコール・カルボニル化合物', '芳香族化合物', '高分子化合物'],
+  },
+  '生物': {
+    '細胞と分子':   ['細胞の構造', '代謝', '遺伝情報の発現'],
+    '生殖と発生':   ['生殖', '発生のしくみ'],
+    '生物の体内環境': ['恒常性', '免疫'],
+    '生態と進化':   ['生態系', '進化と系統'],
+  },
+  '国語': {
+    '現代文': ['評論の読解', '小説の読解', '随筆の読解'],
+    '古文':   ['古文文法', '古文単語・古典常識'],
+    '漢文':   ['句法', '漢詩'],
+  },
+  '歴史': {
+    '日本史': ['原始・古代', '中世', '近世', '近代', '現代'],
+    '世界史': ['古代文明', '中世', '近世', '近代', '現代'],
+  },
+};
+
 
 // ===== 科目カラー適用 =====
 function applySubjectColor(subject) {
@@ -246,8 +289,46 @@ function updateStatsDisplay() {
 }
 
 
+// ===== 単元選択（科目を開いたら最初に表示する） =====
+function renderPicker(promptText, buttons) {
+  messagesEl.innerHTML = '';
+  const btnHtml = buttons.map((b, i) => `<button class="quick-reply" data-idx="${i}">${escText(b.label)}</button>`).join('');
+  const el = document.createElement('div');
+  el.classList.add('message', 'feyn', 'pop-in');
+  el.innerHTML = `<div class="avatar">${currentEmoji}</div><div class="bubble">${promptText}<div class="quick-replies">${btnHtml}</div></div>`;
+  messagesEl.appendChild(el);
+  el.querySelectorAll('.quick-reply').forEach((btn, i) => {
+    btn.addEventListener('click', () => buttons[i].onClick());
+  });
+  el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function showUnitPicker(subject) {
+  sessionKey = null;
+  resetXP();
+  setExpression('normal');
+
+  const categories = Object.keys(UNIT_CURRICULUM[subject] || {});
+  const buttons = [
+    { label: '🎲 Feynにおまかせ', onClick: () => startSession() },
+    ...categories.map(cat => ({ label: cat, onClick: () => showUnitSubPicker(subject, cat) })),
+  ];
+  renderPicker('今日はどの単元を教えてくれる？📖', buttons);
+}
+
+function showUnitSubPicker(subject, category) {
+  const units = (UNIT_CURRICULUM[subject] || {})[category] || [];
+  const buttons = [
+    { label: '🎲 この中でおまかせ', onClick: () => startSession(category) },
+    ...units.map(u => ({ label: u, onClick: () => startSession(u) })),
+    { label: '← 戻る', onClick: () => showUnitPicker(subject) },
+  ];
+  renderPicker(`「${escText(category)}」のどこがいい？`, buttons);
+}
+
+
 // ===== セッション開始 =====
-async function startSession() {
+async function startSession(unit) {
   if (startAbortCtrl) startAbortCtrl.abort();
   startAbortCtrl = new AbortController();
   const signal = startAbortCtrl.signal;
@@ -259,6 +340,7 @@ async function startSession() {
 
   const thinkingEl = addThinking();
   const settings   = getSettings();
+  if (unit) settings.unit = unit;
 
   try {
     const response = await fetch('/api/start', {
@@ -383,7 +465,7 @@ document.querySelectorAll('.subject').forEach(btn => {
     reviewGapId    = null;
     history.replaceState(null, '', '/');
     updateCharPanel(currentSubject, currentEmoji);
-    startSession();
+    showUnitPicker(currentSubject);
   });
 });
 
@@ -392,7 +474,7 @@ document.querySelectorAll('.subject').forEach(btn => {
 resetBtn.addEventListener('click', () => {
   reviewGapId = null;
   history.replaceState(null, '', '/');
-  startSession();
+  showUnitPicker(currentSubject);
 });
 
 
@@ -552,7 +634,11 @@ async function init() {
       }
     }
 
-    startSession();
+    if (reviewGapId) {
+      startSession();
+    } else {
+      showUnitPicker(currentSubject);
+    }
   } catch (e) {
     window.location.href = '/login';
   }

@@ -767,6 +767,7 @@ def start():
     subject      = data.get('subject', '物理')
     difficulty   = data.get('difficulty', '大学受験')
     teacher_name = data.get('teacher_name', session.get('user_name', '先生'))
+    unit         = (data.get('unit') or '').strip() or None
     gap_id       = data.get('gap_id')
 
     # 復習モード: 過去に特定した知識ギャップを狙い撃ちする
@@ -787,8 +788,8 @@ def start():
         instruction = tutoring.build_review_instruction(subject, difficulty, teacher_name, gap)
         kickoff     = tutoring.build_review_kickoff(gap)
     else:
-        instruction = tutoring.build_instruction(subject, difficulty, teacher_name)
-        kickoff     = tutoring.build_kickoff(subject)
+        instruction = tutoring.build_instruction(subject, difficulty, teacher_name, unit=unit)
+        kickoff     = tutoring.build_kickoff(subject, unit=unit)
 
     response   = None
     used_model = None

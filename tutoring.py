@@ -33,11 +33,16 @@ SOCRATIC_RULES = """【対話のルール（ソクラテス式問答法）】
 """
 
 
-def build_instruction(subject, difficulty, teacher_name):
-    """通常モード: Feynが疑問をぶつけ、学生の説明の穴を突く"""
+def build_instruction(subject, difficulty, teacher_name, unit=None):
+    """通常モード: Feynが疑問をぶつけ、学生の説明の穴を突く
+
+    unit: 学生が選んだ単元（例: '積分法'）。指定されていれば、その範囲に
+          テーマを絞る。Noneなら科目全体から自由に選ぶ（従来の挙動）。
+    """
+    scope = f'「{unit}」' if unit else subject
     return CHARACTER.format(subject=subject, difficulty=difficulty, teacher_name=teacher_name) + f"""
 【今回の役割】
-1. 最初の発言では、{subject}の範囲から「直感とズレていて納得いかないこと」を1つ選び、生意気に質問してください。
+1. 最初の発言では、{scope}の範囲から「直感とズレていて納得いかないこと」を1つ選び、生意気に質問してください。
 2. 相手の説明に対して、下のルールに従って鋭く突っ込んでください（最大3往復程度）。
 3. 本質的な説明をもらえたら、確認質問を経て納得し、感謝してください。
 
@@ -68,9 +73,10 @@ def build_review_instruction(subject, difficulty, teacher_name, gap):
 """ + SOCRATIC_RULES
 
 
-def build_kickoff(subject):
+def build_kickoff(subject, unit=None):
     """通常モードの起点メッセージ（学生には見えない内部プロンプト）"""
-    return f"{subject}の範囲から、あなたが今モヤモヤしているテーマを1つ選んで質問してください。"
+    scope = f'「{unit}」' if unit else subject
+    return f"{scope}の範囲から、あなたが今モヤモヤしているテーマを1つ選んで質問してください。"
 
 
 def build_review_kickoff(gap):

@@ -424,6 +424,33 @@ body {
   box-shadow: 0 4px 0 var(--subject-color-dark);
 }
 
+/* ===== 単元選択のクイックリプライ ===== */
+.quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.quick-reply {
+  padding: 8px 16px;
+  border-radius: 99px;
+  border: 2px solid var(--subject-color);
+  background: var(--card);
+  color: var(--subject-color);
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-reply:hover {
+  background: var(--subject-color);
+  color: white;
+  transform: translateY(-1px);
+}
+
 /* ===== 考え中アニメーション（3つの点） ===== */
 .bubble.thinking {
   display: flex;

@@ -73,7 +73,11 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.08);
     }
 
-    .logo  { font-size: 36px; font-weight: 800; color: #58CC02; letter-spacing: 3px; }
+    .logo  {
+      font-size: 36px; font-weight: 800; color: #58CC02; letter-spacing: 3px;
+      text-decoration: none; cursor: pointer; transition: opacity 0.15s;
+    }
+    .logo:hover { opacity: 0.8; }
     .title { font-size: 20px; font-weight: 800; color: var(--text); }
 
     .desc {
@@ -153,7 +157,7 @@
 <body>
   <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
   <div class="card">
-    <div class="logo">🎓 Feyn</div>
+    <a class="logo" href="/landing">🎓 Feyn</a>
     <div class="title" id="formTitle">ログイン</div>
     <div class="desc" id="formDesc">Feynにわかるように教えよう！</div>
 

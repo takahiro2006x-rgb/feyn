@@ -376,6 +376,42 @@ async function startSession(unit) {
 }
 
 
+// ===== 中断した学習を続きから再開する（学習のきろくから） =====
+async function resumeSession(subject, dateStr) {
+  if (startInFlight) return;
+  startInFlight = true;
+
+  messagesEl.innerHTML = '';
+  sessionKey = null;
+  resetXP();
+  setExpression('normal');
+
+  const thinkingEl = addThinking();
+
+  try {
+    const response = await fetch('/api/resume', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ subject, date: dateStr }),
+    });
+    const data = await response.json();
+    thinkingEl.remove();
+    if (data.error) { addMessage('feyn', `⚠️ ${data.error}`); return; }
+
+    sessionKey = data.session_key;
+    data.messages.forEach(m => addMessage(m.role === 'user' ? 'user' : 'feyn', m.message));
+    setXP(data.progress || 0);
+    messagesEl.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
+    history.replaceState(null, '', '/');
+  } catch (e) {
+    thinkingEl.remove();
+    addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+  } finally {
+    startInFlight = false;
+  }
+}
+
+
 // ===== メッセージ送信 =====
 async function sendMessage() {
   const text = textarea.value.trim();
@@ -629,12 +665,15 @@ async function init() {
     updateStatsDisplay();
     fetchStreak();
 
-    // 苦手ノートの「復習する」から来た場合は復習モードで開始する
+    // 苦手ノートの「復習する」・学習のきろくの「続きから再開する」から来た場合の処理
     const params       = new URLSearchParams(location.search);
     const reviewParam  = params.get('review');
-    const subjectParam = params.get('subject');
-    if (reviewParam) {
-      reviewGapId = parseInt(reviewParam, 10) || null;
+    const resumeParam  = params.get('resume');
+    const dateParam    = params.get('date');
+    const subjectParam = params.get('subject') || resumeParam;
+
+    if (reviewParam || resumeParam) {
+      reviewGapId = reviewParam ? (parseInt(reviewParam, 10) || null) : null;
       const btn = subjectParam && document.querySelector(`.subject[data-subject="${subjectParam}"]`);
       if (btn) {
         document.querySelectorAll('.subject').forEach(b => b.classList.remove('active'));
@@ -645,7 +684,9 @@ async function init() {
       }
     }
 
-    if (reviewGapId) {
+    if (resumeParam && dateParam) {
+      resumeSession(resumeParam, dateParam);
+    } else if (reviewGapId) {
       startSession();
     } else {
       showUnitPicker(currentSubject);

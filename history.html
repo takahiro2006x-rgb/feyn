@@ -136,6 +136,32 @@
     .session-arrow { font-size: 13px; color: var(--subtext); transition: transform 0.2s; }
     .session-card.open .session-arrow { transform: rotate(90deg); }
 
+    .status-badge {
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 99px;
+      white-space: nowrap;
+      background: #FF9600;
+      color: white;
+    }
+
+    .resume-btn {
+      align-self: flex-start;
+      padding: 10px 20px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 0 var(--green-dark);
+      transition: all 0.1s;
+    }
+    .resume-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+
     .session-body {
       display: none;
       flex-direction: column;
@@ -281,6 +307,9 @@
             </div>
           `).join('');
 
+          const badge = s.completed ? '' : `<span class="status-badge">⏸ 中断中</span>`;
+          const resumeBtn = s.completed ? '' : `<button class="resume-btn" data-subject="${escHtml(s.subject)}" data-date="${escHtml(s.date)}">▶️ 続きから再開する</button>`;
+
           card.innerHTML = `
             <button class="session-head">
               <span class="session-emoji">${emoji}</span>
@@ -288,15 +317,26 @@
                 <span class="session-subject">${escHtml(s.subject)}</span>
                 <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
               </span>
+              ${badge}
               <span class="session-count">💬 ${s.messages.length}</span>
               <span class="session-arrow">▶</span>
             </button>
-            <div class="session-body">${bubbles}</div>
+            <div class="session-body">${bubbles}${resumeBtn}</div>
           `;
 
           card.querySelector('.session-head').addEventListener('click', () => {
             card.classList.toggle('open');
           });
+
+          const resumeButtonEl = card.querySelector('.resume-btn');
+          if (resumeButtonEl) {
+            resumeButtonEl.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const subject = resumeButtonEl.dataset.subject;
+              const date    = resumeButtonEl.dataset.date;
+              window.location.href = `/?resume=${encodeURIComponent(subject)}&date=${encodeURIComponent(date)}`;
+            });
+          }
 
           contentEl.appendChild(card);
         });

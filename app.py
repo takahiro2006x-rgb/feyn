@@ -176,17 +176,18 @@ chat_sessions = {}
 
 
 # --- サーバー再起動などでメモリ上のセッションが消えた場合、DBの会話ログから復元する ---
-def restore_chat_session(session_key, user_id, teacher_name):
+# target_date を指定すると、当日以外（学習のきろくからの「続きから再開」）の会話も復元できる
+def restore_chat_session(session_key, user_id, teacher_name, target_date=None):
     subject = session_key[len(f"{user_id}_"):]
     if subject not in SUBJECTS:
         return None
 
-    today = str(date.today())
+    target_date = target_date or str(date.today())
     with get_db() as conn:
         rows = conn.execute(
             'SELECT role, message, difficulty FROM conversation_logs '
             'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
-            (user_id, subject, today)
+            (user_id, subject, target_date)
         ).fetchall()
     if not rows:
         return None
@@ -547,6 +548,13 @@ def get_history_sessions(user_id):
             'WHERE user_id = ? ORDER BY id',
             (user_id,)
         ).fetchall()
+        completed_rows = conn.execute(
+            'SELECT subject, completed_at FROM session_logs WHERE user_id = ?',
+            (user_id,)
+        ).fetchall()
+
+    # 「会話終了」まで到達した（＝完了記録がある）日付×科目の組み合わせ
+    completed_keys = {f"{str(r['completed_at'])[:10]}|{r['subject']}" for r in completed_rows}
 
     grouped = {}
     order = []
@@ -558,6 +566,7 @@ def get_history_sessions(user_id):
                 'subject':    row['subject'],
                 'difficulty': row['difficulty'],
                 'messages':   [],
+                'completed':  key in completed_keys,
             }
             order.append(key)
         grouped[key]['messages'].append({'role': row['role'], 'message': row['message']})
@@ -571,6 +580,53 @@ def history_api():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
     return jsonify({'sessions': get_history_sessions(session['user_id'])})
+
+
+# ========================================
+# 中断した学習を続きから再開する（学習のきろくから）
+# ========================================
+@app.route('/api/resume', methods=['POST'])
+def resume():
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    data         = request.get_json()
+    subject      = data.get('subject', '')
+    target_date  = data.get('date', '')
+    teacher_name = session.get('user_name', '先生')
+
+    if subject not in SUBJECTS or not target_date:
+        return jsonify({'error': '再開する学習が見つかりません'}), 400
+
+    with get_db() as conn:
+        completed_rows = conn.execute(
+            'SELECT completed_at FROM session_logs WHERE user_id = ? AND subject = ?',
+            (session['user_id'], subject)
+        ).fetchall()
+    if any(str(r['completed_at'])[:10] == target_date for r in completed_rows):
+        return jsonify({'error': 'この学習はすでに完了しています'}), 400
+
+    session_key = f"{session['user_id']}_{subject}"
+    restored = restore_chat_session(session_key, session['user_id'], teacher_name, target_date=target_date)
+    if restored is None:
+        return jsonify({'error': '再開する学習が見つかりません'}), 404
+
+    chat_sessions[session_key] = restored
+
+    with get_db() as conn:
+        rows = conn.execute(
+            'SELECT role, message FROM conversation_logs '
+            'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
+            (session['user_id'], subject, target_date)
+        ).fetchall()
+
+    return jsonify({
+        'session_key': session_key,
+        'subject':     subject,
+        'difficulty':  restored['difficulty'],
+        'messages':    [{'role': r['role'], 'message': r['message']} for r in rows],
+        'progress':    restored['turns'] * 25,
+    })
 
 
 # ========================================

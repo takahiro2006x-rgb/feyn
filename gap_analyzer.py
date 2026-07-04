@@ -123,19 +123,37 @@ def build_analysis_prompt(subject, difficulty, transcript_rows, existing_topics=
 - 対話ログに根拠のあるギャップだけを挙げる。推測で水増ししない（0件でもよい、最大3件）
 - evidence には学生の発言をそのまま短く引用する
 - suggested_question は「答えを教えずに考えさせる問い」にする
-- understanding_score: Feynの突っ込みにどこまで自力で答えられたかを重視する
+- understanding_score: Feynの突っ込みにどこまで自力で答えられたかを重視する（0〜100の整数、トップレベルに1つだけ）
+
+【出力形式】
+以下のキーを持つJSONのみを出力すること。キーの省略・追加・入れ子構造の変更はしないこと:
+{{
+  "topic": "このセッションの中心テーマ",
+  "understanding_score": 30,
+  "summary": "学生の理解状態の要約（1〜2文）",
+  "gaps": [
+    {{
+      "gap_type": "vague",
+      "description": "何をどう誤解/曖昧に理解しているか（1文）",
+      "evidence": "学生の発言の引用",
+      "suggested_question": "次回投げるべき問い"
+    }}
+  ]
+}}
 
 【対話ログ】
 {format_transcript(transcript_rows)}
 """
 
 
-def analyze_session(client, models, subject, difficulty, transcript_rows, existing_topics=None, on_attempt=None):
+def analyze_session(client, models, subject, difficulty, transcript_rows, existing_topics=None,
+                     on_attempt=None, groq_client=None, groq_models=()):
     """対話履歴を分析して知識ギャップを構造化して返す
 
-    client: genai.Client / models: フォールバック順のモデル名リスト
+    client: genai.Client / models: フォールバック順のモデル名リスト（GeminiとGroqが混在可）
     existing_topics: 既存テーマ名のリスト（topicの表記ゆれを寄せるために使う）
     on_attempt: 呼び出しごとに on_attempt(model, success) を呼ぶコールバック（使用量記録用、任意）
+    groq_client / groq_models: modelsの中にGroqのモデル名が含まれる場合に使う
     戻り値: {'topic', 'understanding_score', 'summary', 'gaps': [...]} または None（全モデル枯渇・失敗時）
     """
     user_turns = [r for r in transcript_rows if r['role'] == 'user']
@@ -145,19 +163,28 @@ def analyze_session(client, models, subject, difficulty, transcript_rows, existi
     prompt = build_analysis_prompt(subject, difficulty, transcript_rows, existing_topics)
 
     for model in models:
-        config_kwargs = {
-            'response_mime_type': 'application/json',
-            'response_schema': ANALYSIS_SCHEMA,
-        }
-        if model.startswith('gemini-2.5'):
-            config_kwargs['thinking_config'] = types.ThinkingConfig(thinking_budget=0)
         try:
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(**config_kwargs),
-            )
-            result = json.loads(response.text)
+            if model in groq_models:
+                # GroqはGeminiのようなスキーマ強制がないため、JSONモード＋プロンプト指示で近似する
+                resp = groq_client.chat.completions.create(
+                    model=model,
+                    messages=[{'role': 'user', 'content': prompt + '\n\n上記のJSON形式のみを出力してください。説明文は一切付けないこと。'}],
+                    response_format={'type': 'json_object'},
+                )
+                result = json.loads(resp.choices[0].message.content)
+            else:
+                config_kwargs = {
+                    'response_mime_type': 'application/json',
+                    'response_schema': ANALYSIS_SCHEMA,
+                }
+                if model.startswith('gemini-2.5'):
+                    config_kwargs['thinking_config'] = types.ThinkingConfig(thinking_budget=0)
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(**config_kwargs),
+                )
+                result = json.loads(response.text)
             if on_attempt:
                 on_attempt(model, True)
         except Exception as e:

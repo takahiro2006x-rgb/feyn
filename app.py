@@ -11,6 +11,7 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 
 import db
+import llm
 import tutoring
 import gap_analyzer
 
@@ -142,17 +143,19 @@ GEMINI_MODELS = [
     'gemini-2.0-flash-lite',
 ]
 
+# --- Groq クライアント（任意。GROQ_API_KEY未設定なら使わない） ---
+_groq_api_key = os.environ.get('GROQ_API_KEY')
+groq_client = None
+if _groq_api_key:
+    import groq
+    groq_client = groq.Groq(api_key=_groq_api_key)
+
+# Gemini全モデルの枠が尽きたときの最終フォールバックとしてGroqを末尾に追加
+ALL_MODELS = GEMINI_MODELS + (llm.GROQ_MODELS if groq_client else [])
+
 
 def create_chat(model, instruction, history=None):
-    config_kwargs = {'system_instruction': instruction}
-    if model.startswith('gemini-2.5'):
-        # 2.5系は思考モードが既定でONになり応答が遅くなるためOFFにする
-        config_kwargs['thinking_config'] = types.ThinkingConfig(thinking_budget=0)
-    return client.chats.create(
-        model=model,
-        config=types.GenerateContentConfig(**config_kwargs),
-        history=history,
-    )
+    return llm.create_chat(client, groq_client, model, instruction, history=history)
 
 
 def log_api_call(model, endpoint, success):
@@ -190,21 +193,18 @@ def restore_chat_session(session_key, user_id, teacher_name):
 
     difficulty = rows[-1]['difficulty']
 
-    # Geminiの履歴はuser発言から始まる必要があるため、/api/start で送る起点メッセージを先頭に補う
-    history = [types.Content(
-        role='user',
-        parts=[types.Part(text=tutoring.build_kickoff(subject))]
-    )]
+    # 会話はuser発言から始まる必要があるため、/api/start で送る起点メッセージを先頭に補う
+    history = [{'role': 'user', 'message': tutoring.build_kickoff(subject)}]
     for row in rows:
-        history.append(types.Content(
-            role='user' if row['role'] == 'user' else 'model',
-            parts=[types.Part(text=row['message'])]
-        ))
+        history.append({
+            'role':    'user' if row['role'] == 'user' else 'model',
+            'message': row['message'],
+        })
 
     instruction = tutoring.build_instruction(subject, difficulty, teacher_name)
-    chat = create_chat(GEMINI_MODELS[0], instruction, history=history)
+    chat = create_chat(ALL_MODELS[0], instruction, history=history)
     turns = min(sum(1 for row in rows if row['role'] == 'user'), 3)
-    return {'chat': chat, 'model': GEMINI_MODELS[0], 'instruction': instruction,
+    return {'chat': chat, 'model': ALL_MODELS[0], 'instruction': instruction,
             'turns': turns, 'subject': subject, 'difficulty': difficulty}
 
 
@@ -654,10 +654,11 @@ def complete():
     analysis = None
     try:
         analysis = gap_analyzer.analyze_session(
-            client, GEMINI_MODELS, subject, difficulty,
+            client, ALL_MODELS, subject, difficulty,
             [{'role': r['role'], 'message': r['message']} for r in rows],
             existing_topics=[r['topic'] for r in topic_rows],
-            on_attempt=lambda model, ok: log_api_call(model, 'analysis', ok)
+            on_attempt=lambda model, ok: log_api_call(model, 'analysis', ok),
+            groq_client=groq_client, groq_models=llm.GROQ_MODELS,
         )
         if analysis:
             save_analysis(session['user_id'], subject, analysis, today)
@@ -805,7 +806,7 @@ def dashboard_usage():
         'date':        today,
         'total_calls': len(today_rows),
         'by_model':    by_model,
-        'models_order': GEMINI_MODELS,
+        'models_order': ALL_MODELS,
     })
 
 
@@ -848,7 +849,7 @@ def start():
     response   = None
     used_model = None
     quota_only = True
-    for model in GEMINI_MODELS:
+    for model in ALL_MODELS:
         try:
             chat = create_chat(model, instruction)
             response = chat.send_message(kickoff)
@@ -945,9 +946,9 @@ def chat():
 
             # 枠切れ(429)・回復しない過負荷は、会話履歴を引き継いで次のモデルへ切り替える
             if '429' in err or overloaded:
-                idx = GEMINI_MODELS.index(sess['model']) if sess.get('model') in GEMINI_MODELS else len(GEMINI_MODELS) - 1
-                if idx + 1 < len(GEMINI_MODELS):
-                    next_model = GEMINI_MODELS[idx + 1]
+                idx = ALL_MODELS.index(sess['model']) if sess.get('model') in ALL_MODELS else len(ALL_MODELS) - 1
+                if idx + 1 < len(ALL_MODELS):
+                    next_model = ALL_MODELS[idx + 1]
                     sess['chat']  = create_chat(next_model, sess['instruction'], history=sess['chat'].get_history())
                     sess['model'] = next_model
                     retries = 0

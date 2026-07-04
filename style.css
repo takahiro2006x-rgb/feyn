@@ -64,6 +64,7 @@ body {
 }
 
 .logo {
+  display: block;
   font-size: 22px;
   font-weight: 800;
   color: #58CC02;
@@ -71,7 +72,11 @@ body {
   padding-bottom: 14px;
   border-bottom: 2px solid var(--card-border);
   letter-spacing: 2px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
 }
+.logo:hover { opacity: 0.8; }
 
 /* テーマ切り替えボタン */
 .theme-toggle {

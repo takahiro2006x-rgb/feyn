@@ -251,8 +251,7 @@ def index():
 
 @app.route('/landing')
 def landing_page():
-    if session.get('user_id'):
-        return redirect('/')
+    # ログイン中でもLPを見られるようにする（LP側でログイン状態に応じてCTAを出し分ける）
     return send_from_directory('.', 'landing.html')
 
 @app.route('/login')

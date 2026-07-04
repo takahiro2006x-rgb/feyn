@@ -176,7 +176,9 @@
       color: var(--subtext);
     }
 
+    /* デザイン見直し中のため非表示。マークアップ・SVGは削除せず残す */
     .hero-char {
+      display: none;
       flex-shrink: 0;
       animation: float 3.5s ease-in-out infinite;
       filter: drop-shadow(0 16px 32px rgba(88,204,2,0.2));
@@ -492,8 +494,8 @@
     <div class="nav-logo">🎓 Feyn</div>
     <div class="nav-actions">
       <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
-      <a href="/login" class="btn-outline">ログイン</a>
-      <a href="/login" class="btn-primary">無料で始める</a>
+      <a href="/login" class="btn-outline" data-auth-cta data-loggedin-hide>ログイン</a>
+      <a href="/login" class="btn-primary" data-auth-cta data-loggedin-text="🎓 アプリへ戻る">無料で始める</a>
     </div>
   </nav>
 
@@ -504,7 +506,7 @@
       <h1>Feynに教えると、<br><span>本当に</span>わかる。</h1>
       <p>AIキャラ「Feyn」に教えることで、ファインマン学習法を体験。自分の言葉で説明する力が、本物の理解を生む。</p>
       <div class="hero-actions">
-        <a href="/login" class="btn-primary-lg">今すぐ始める →</a>
+        <a href="/login" class="btn-primary-lg" data-auth-cta data-loggedin-text="🎓 アプリへ戻る →">今すぐ始める →</a>
         <span class="hero-sub">無料・登録1分</span>
       </div>
     </div>
@@ -667,7 +669,7 @@
   <section class="cta">
     <h2>さあ、Feynに教えよう</h2>
     <p>無料・登録1分ではじめられます</p>
-    <a href="/login" class="btn-white">今すぐ始める →</a>
+    <a href="/login" class="btn-white" data-auth-cta data-loggedin-text="🎓 アプリへ戻る →">今すぐ始める →</a>
   </section>
 
   <!-- フッター -->
@@ -692,6 +694,24 @@
       localStorage.setItem('feynTheme', next);
       updateThemeLabel();
     });
+
+    // ===== ログイン中なら、CTAを「アプリへ戻る」に出し分ける =====
+    // これにより、ログイン中にロゴなどからLPへ来ても再ログイン画面を踏まずに戻れる
+    (async () => {
+      try {
+        const res = await fetch('/api/me');
+        if (!res.ok) return; // 未ログインなら何もしない（通常のログイン導線のまま）
+        document.querySelectorAll('[data-auth-cta]').forEach(el => {
+          if (el.hasAttribute('data-loggedin-hide')) {
+            el.style.display = 'none';
+          } else {
+            el.href = '/';
+            const label = el.getAttribute('data-loggedin-text');
+            if (label) el.textContent = label;
+          }
+        });
+      } catch (e) {}
+    })();
   </script>
 
 </body>

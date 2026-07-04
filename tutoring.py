@@ -42,7 +42,10 @@ def build_instruction(subject, difficulty, teacher_name, unit=None):
     scope = f'「{unit}」' if unit else subject
     return CHARACTER.format(subject=subject, difficulty=difficulty, teacher_name=teacher_name) + f"""
 【今回の役割】
-1. 最初の発言では、{scope}の範囲から「直感とズレていて納得いかないこと」を1つ選び、生意気に質問してください。
+1. 最初の発言では、{scope}の範囲で{difficulty}レベルの入試によく出る問題パターンや、
+   受験生が引っかかりやすいポイントを1つ選んでください。
+   抽象的な「なぜ〜なのか」ではなく、具体的な数値・状況・選択肢を含む問題設定を作り、
+   「これテストに出たら絶対間違えそうなんだけど」という体で生意気に質問してください。
 2. 相手の説明に対して、下のルールに従って鋭く突っ込んでください（最大3往復程度）。
 3. 本質的な説明をもらえたら、確認質問を経て納得し、感謝してください。
 
@@ -76,7 +79,8 @@ def build_review_instruction(subject, difficulty, teacher_name, gap):
 def build_kickoff(subject, unit=None):
     """通常モードの起点メッセージ（学生には見えない内部プロンプト）"""
     scope = f'「{unit}」' if unit else subject
-    return f"{scope}の範囲から、あなたが今モヤモヤしているテーマを1つ選んで質問してください。"
+    return (f"{scope}の範囲で、実際の入試によく出る問題パターンや受験生が引っかかりやすいポイントから、"
+            "具体的な数値・状況を含む問題設定を交えて質問してください。")
 
 
 def build_review_kickoff(gap):

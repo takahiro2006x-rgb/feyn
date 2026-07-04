@@ -446,6 +446,13 @@
     els.passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
     els.forgotAnswerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') els.newPasswordInput.focus(); });
     els.newPasswordInput.addEventListener('keydown',  (e) => { if (e.key === 'Enter') submit(); });
+
+    // ===== 30分無操作による自動ログアウトからの遷移なら案内を出す =====
+    if (new URLSearchParams(location.search).get('timeout') === '1') {
+      els.successMsg.textContent   = 'しばらく操作がなかったため、自動的にログアウトしました。';
+      els.successMsg.style.display = 'block';
+      history.replaceState(null, '', '/login');
+    }
   </script>
 </body>
 </html>

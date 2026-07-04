@@ -678,6 +678,24 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
 });
 
 
+// ===== 自動ログアウト（30分操作がなければログアウトする） =====
+const AUTO_LOGOUT_MS = 30 * 60 * 1000;
+let autoLogoutTimer = null;
+
+function resetAutoLogoutTimer() {
+  if (autoLogoutTimer) clearTimeout(autoLogoutTimer);
+  autoLogoutTimer = setTimeout(async () => {
+    await fetch('/api/logout', { method: 'POST' }).catch(() => {});
+    window.location.href = '/login?timeout=1';
+  }, AUTO_LOGOUT_MS);
+}
+
+['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'].forEach(evt => {
+  document.addEventListener(evt, resetAutoLogoutTimer, { passive: true });
+});
+resetAutoLogoutTimer();
+
+
 // ===== レベル計算 =====
 function getLevel(total) {
   if (total >= 50) return { level: 6, label: '伝説',       color: '#FF6B35' };

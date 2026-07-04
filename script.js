@@ -25,6 +25,8 @@ const diffSelect   = document.getElementById('difficulty');
 const subjectBadge = document.getElementById('subjectBadge');
 const charRole     = document.getElementById('charRole');
 const resetBtn     = document.querySelector('.reset-btn');
+const hintBtn      = document.getElementById('hintBtn');
+const revealBtn    = document.getElementById('revealBtn');
 
 let sessionKey     = null;
 let isBusy         = false;
@@ -138,6 +140,16 @@ function addMessage(role, text) {
     : `<div class="bubble">${text}</div>`;
   messagesEl.appendChild(el);
   el.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== ヒント・答えの表示用メッセージ（kind: 'hint' | 'answer'） =====
+function addHelpMessage(kind, label, text) {
+  const el = document.createElement('div');
+  el.classList.add('message', 'feyn', 'pop-in');
+  el.innerHTML = `<div class="avatar">${currentEmoji}</div><div class="bubble ${kind}"><strong>${escText(label)}</strong><br>${escText(text)}</div>`;
+  messagesEl.appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth' });
+  return el;
 }
 
 
@@ -291,8 +303,9 @@ function updateStatsDisplay() {
 
 
 // ===== 単元選択（科目を開いたら最初に表示する） =====
-function renderPicker(promptText, buttons) {
-  messagesEl.innerHTML = '';
+// clear:false を渡すと、既存の会話を消さずに選択肢メッセージを末尾に追加する
+function renderPicker(promptText, buttons, { clear = true } = {}) {
+  if (clear) messagesEl.innerHTML = '';
   const btnHtml = buttons.map((b, i) => `<button class="quick-reply" data-idx="${i}">${escText(b.label)}</button>`).join('');
   const el = document.createElement('div');
   el.classList.add('message', 'feyn', 'pop-in');
@@ -310,6 +323,8 @@ function renderPicker(promptText, buttons) {
 
 function showUnitPicker(subject) {
   sessionKey = null;
+  hintBtn.disabled   = true;
+  revealBtn.disabled = true;
   resetXP();
   setExpression('normal');
 
@@ -362,6 +377,8 @@ async function startSession(unit) {
     thinkingEl.remove();
     if (data.error) { addMessage('feyn', `⚠️ ${data.error}`); return; }
     sessionKey = data.session_key;
+    hintBtn.disabled   = false;
+    revealBtn.disabled = false;
     addMessage('feyn', data.reply);
   } catch (e) {
     if (e.name !== 'AbortError') {
@@ -399,6 +416,8 @@ async function resumeSession(subject, dateStr) {
     if (data.error) { addMessage('feyn', `⚠️ ${data.error}`); return; }
 
     sessionKey = data.session_key;
+    hintBtn.disabled   = false;
+    revealBtn.disabled = false;
     data.messages.forEach(m => addMessage(m.role === 'user' ? 'user' : 'feyn', m.message));
     setXP(data.progress || 0);
     messagesEl.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
@@ -455,6 +474,8 @@ async function sendMessage() {
 
     if (data.is_done) {
       setExpression('happy');
+      hintBtn.disabled   = true;
+      revealBtn.disabled = true;
       addMessage('feyn', data.reply);
       setTimeout(() => {
         launchConfetti();
@@ -531,6 +552,72 @@ textarea.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.ctrlKey) {
     e.preventDefault();
     sendMessage();
+  }
+});
+
+
+// ===== ヒント =====
+hintBtn.addEventListener('click', async () => {
+  if (!sessionKey || hintBtn.disabled) return;
+  hintBtn.disabled   = true;
+  revealBtn.disabled = true;
+
+  const thinkingEl = addThinking();
+  try {
+    const res  = await fetch('/api/hint', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_key: sessionKey }),
+    });
+    const data = await res.json();
+    thinkingEl.remove();
+    if (data.error) {
+      addMessage('feyn', `⚠️ ${data.error}`);
+    } else {
+      addHelpMessage('hint', '💡 ヒント', data.hint);
+    }
+  } catch (e) {
+    thinkingEl.remove();
+    addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+  } finally {
+    hintBtn.disabled   = false;
+    revealBtn.disabled = false;
+  }
+});
+
+
+// ===== 答えを見る =====
+revealBtn.addEventListener('click', async () => {
+  if (!sessionKey || revealBtn.disabled) return;
+  if (!window.confirm('答えを見ると、自分で考える機会が減っちゃうよ。それでも見る？')) return;
+
+  hintBtn.disabled   = true;
+  revealBtn.disabled = true;
+
+  const thinkingEl = addThinking();
+  try {
+    const res  = await fetch('/api/reveal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_key: sessionKey }),
+    });
+    const data = await res.json();
+    thinkingEl.remove();
+    if (data.error) {
+      addMessage('feyn', `⚠️ ${data.error}`);
+      hintBtn.disabled   = false;
+      revealBtn.disabled = false;
+      return;
+    }
+    addHelpMessage('answer', '🔍 答え', data.answer);
+    renderPicker('答えを確認したね！このあとどうする？', [
+      { label: '💪 今から説明してみる', onClick: () => { textarea.focus(); } },
+      { label: '📌 今日はここまでにする', onClick: () => { window.location.href = '/history'; } },
+    ], { clear: false });
+  } catch (e) {
+    thinkingEl.remove();
+    addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+  } finally {
+    hintBtn.disabled   = false;
+    revealBtn.disabled = false;
   }
 });
 

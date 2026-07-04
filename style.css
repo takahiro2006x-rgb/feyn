@@ -476,6 +476,52 @@ body {
   40%            { transform: translateY(-8px); opacity: 1; }
 }
 
+/* ===== ヒント・答えを見る ===== */
+.help-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 28px 0;
+  flex-shrink: 0;
+}
+
+.help-btn {
+  padding: 8px 16px;
+  border-radius: 99px;
+  border: 2px solid var(--card-border);
+  background: var(--card);
+  color: var(--subtext);
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.help-btn:hover { border-color: #FFC200; color: #FFC200; }
+.help-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bubble.hint {
+  background: #FFF9E6;
+  border: 2px solid #FFE28A;
+  color: #8A6D00;
+}
+[data-theme="dark"] .bubble.hint {
+  background: #3A2E00;
+  border-color: #6B5300;
+  color: #FFD966;
+}
+
+.bubble.answer {
+  background: #EAF6FF;
+  border: 2px solid #A8DFFF;
+  color: #0A5A8C;
+}
+[data-theme="dark"] .bubble.answer {
+  background: #0A2A3D;
+  border-color: #14567D;
+  color: #7FCBFF;
+}
+
 /* ===== 入力エリア ===== */
 .input-area {
   display: flex;
@@ -784,6 +830,8 @@ body {
   /* チャット領域を最大化 */
   .messages { padding: 14px; gap: 12px; }
   .message { max-width: 90%; }
+  .help-row { padding: 8px 12px 0; }
+  .help-btn { font-size: 12px; padding: 6px 12px; }
   .input-area { padding: 10px 12px; gap: 8px; }
   /* font-size は16px以上にする（iOS Safariは16px未満だとフォーカス時に自動ズームしてレイアウトが崩れる） */
   .input-area textarea { height: 56px; padding: 10px 12px; font-size: 16px; }

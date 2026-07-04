@@ -171,6 +171,36 @@ def log_api_call(model, endpoint, success):
         pass  # 記録の失敗が本来の処理を止めないようにする
 
 
+def generate_once(instruction, message, endpoint_name):
+    """ヒント・答え表示など、1回だけの単発応答をフォールバックチェーンで取得する
+    （メインの対話セッションの履歴には残さない）"""
+    for model in ALL_MODELS:
+        try:
+            chat = create_chat(model, instruction)
+            response = chat.send_message(message)
+            log_api_call(model, endpoint_name, True)
+            return response.text or ''
+        except Exception as e:
+            log_api_call(model, endpoint_name, False)
+            err = str(e)
+            if '429' in err or '503' in err or 'UNAVAILABLE' in err:
+                continue
+            break
+    return None
+
+
+def get_last_feyn_message(session_key):
+    """現在のセッションでFeynが直前に言った発言（＝今まさに答えるべき質問）を取り出す"""
+    sess = chat_sessions.get(session_key)
+    if not sess:
+        return None
+    history = sess['chat'].get_history()
+    for h in reversed(history):
+        if h['role'] == 'model':
+            return h['message']
+    return None
+
+
 # --- チャットセッションを管理する辞書 ---
 chat_sessions = {}
 
@@ -962,7 +992,7 @@ def chat():
 
     data        = request.get_json()
     message     = data.get('message', '')
-    session_key = data.get('session_key', '')
+    session_key = data.get('session_key') or ''
 
     if not message:
         return jsonify({'error': 'メッセージが空です'}), 400
@@ -1036,6 +1066,58 @@ def chat():
         conn.commit()
 
     return jsonify({'reply': reply, 'is_done': is_done, 'progress': progress})
+
+
+# ========================================
+# ヒント・答えの表示（メインの対話ログには残さない）
+# ========================================
+@app.route('/api/hint', methods=['POST'])
+def hint():
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    session_key = request.get_json().get('session_key') or ''
+    if not session_key.startswith(f"{session['user_id']}_") or session_key not in chat_sessions:
+        return jsonify({'error': 'セッションが見つかりません。リロードしてください。'}), 400
+
+    question = get_last_feyn_message(session_key)
+    if not question:
+        return jsonify({'error': 'ヒントを出せる質問がまだありません。'}), 400
+
+    instruction = (
+        'あなたは学習アプリの「ヒント係」です。以下は、キャラクター「Feyn」が生徒に投げた質問です。'
+        '生徒はこの質問にどう答えればいいか困っています。'
+        '答えそのものや説明は絶対に言わないでください。考えるきっかけになるキーワードを1〜2つだけ、'
+        '短い言葉で提示してください（例:「浮力」「エネルギー保存」）。文章での説明はしないこと。'
+    )
+    result = generate_once(instruction, f'Feynの質問: {question}', 'hint')
+    if result is None:
+        return jsonify({'error': 'ヒントを取得できませんでした。少し待ってからもう一度試してください。'}), 503
+    return jsonify({'hint': result.strip()})
+
+
+@app.route('/api/reveal', methods=['POST'])
+def reveal():
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    session_key = request.get_json().get('session_key') or ''
+    if not session_key.startswith(f"{session['user_id']}_") or session_key not in chat_sessions:
+        return jsonify({'error': 'セッションが見つかりません。リロードしてください。'}), 400
+
+    subject  = chat_sessions[session_key].get('subject', '')
+    question = get_last_feyn_message(session_key)
+    if not question:
+        return jsonify({'error': '答えを表示できる質問がまだありません。'}), 400
+
+    instruction = (
+        f'あなたは{subject}の先生です。キャラクターの演技はせず、素直な解説者として答えてください。'
+        '生徒からの質問に対して、高校生にも分かるように3〜4文程度で簡潔に説明してください。'
+    )
+    result = generate_once(instruction, f'次の質問に答えてください: {question}', 'reveal')
+    if result is None:
+        return jsonify({'error': '答えを取得できませんでした。少し待ってからもう一度試してください。'}), 503
+    return jsonify({'answer': result.strip()})
 
 
 # ========================================

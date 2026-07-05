@@ -39,6 +39,7 @@ body {
   background: var(--bg);
   color: var(--text);
   height: 100vh;
+  height: 100dvh; /* iOSでソフトキーボードの開閉後にレイアウトが崩れて余白が残るのを防ぐ */
   overflow: hidden;
   transition: background 0.3s, color 0.3s;
 }
@@ -47,6 +48,7 @@ body {
 .app {
   display: flex;
   height: 100vh;
+  height: 100dvh;
 }
 
 /* ===== サイドバー ===== */

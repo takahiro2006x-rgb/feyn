@@ -444,7 +444,7 @@ async function startSession(unit) {
 
 
 // ===== 中断した学習を続きから再開する（学習のきろくから） =====
-async function resumeSession(subject, dateStr) {
+async function resumeSession(subject, dateStr, sessionId) {
   if (startInFlight) return;
   startInFlight = true;
 
@@ -459,7 +459,7 @@ async function resumeSession(subject, dateStr) {
     const response = await fetch('/api/resume', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ subject, date: dateStr }),
+      body:    JSON.stringify({ subject, date: dateStr, session_id: sessionId || null }),
     });
     const data = await response.json();
     thinkingEl.remove();
@@ -537,6 +537,7 @@ async function sendMessage() {
         body:    JSON.stringify({
           subject: currentSubject, difficulty: diffSelect.value,
           gap_id: reviewGapId, assignment_id: assignmentId,
+          session_key: sessionKey,
         }),
       }).then(async (res) => {
         const wasReview     = !!reviewGapId;
@@ -881,11 +882,12 @@ async function init() {
     fetchStreak();
 
     // 苦手ノートの「復習する」・学習のきろくの「続きから再開する」から来た場合の処理
-    const params       = new URLSearchParams(location.search);
-    const reviewParam  = params.get('review');
-    const resumeParam  = params.get('resume');
-    const dateParam    = params.get('date');
-    const subjectParam = params.get('subject') || resumeParam;
+    const params        = new URLSearchParams(location.search);
+    const reviewParam   = params.get('review');
+    const resumeParam   = params.get('resume');
+    const dateParam     = params.get('date');
+    const sessionIdParam = params.get('session_id');
+    const subjectParam  = params.get('subject') || resumeParam;
 
     if (reviewParam || resumeParam) {
       reviewGapId = reviewParam ? (parseInt(reviewParam, 10) || null) : null;
@@ -900,7 +902,7 @@ async function init() {
     }
 
     if (resumeParam && dateParam) {
-      resumeSession(resumeParam, dateParam);
+      resumeSession(resumeParam, dateParam, sessionIdParam);
     } else if (reviewGapId) {
       startSession();
     } else {

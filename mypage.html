@@ -644,7 +644,7 @@
           `).join('');
 
           const badge = s.completed ? '' : `<span class="incomplete-badge">⏸ 中断中</span>`;
-          const resumeBtn = s.completed ? '' : `<button class="resume-btn" data-subject="${escHtml(s.subject)}" data-date="${escHtml(s.date)}">▶️ 続きから再開する</button>`;
+          const resumeBtn = s.completed ? '' : `<button class="resume-btn" data-subject="${escHtml(s.subject)}" data-date="${escHtml(s.date)}" data-session-id="${escHtml(s.session_id || '')}">▶️ 続きから再開する</button>`;
 
           card.innerHTML = `
             <button class="session-head">
@@ -668,9 +668,11 @@
           if (resumeButtonEl) {
             resumeButtonEl.addEventListener('click', (e) => {
               e.stopPropagation();
-              const subject = resumeButtonEl.dataset.subject;
-              const date    = resumeButtonEl.dataset.date;
-              window.location.href = `/?resume=${encodeURIComponent(subject)}&date=${encodeURIComponent(date)}`;
+              const subject   = resumeButtonEl.dataset.subject;
+              const date      = resumeButtonEl.dataset.date;
+              const sessionId = resumeButtonEl.dataset.sessionId;
+              const sidParam  = sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : '';
+              window.location.href = `/?resume=${encodeURIComponent(subject)}&date=${encodeURIComponent(date)}${sidParam}`;
             });
           }
 

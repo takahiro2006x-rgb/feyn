@@ -7,6 +7,7 @@ import os
 import time
 import random
 import string
+import uuid
 from datetime import date, timedelta
 from dotenv import load_dotenv
 
@@ -153,6 +154,9 @@ def init_db():
         db.add_column_if_missing(conn, 'knowledge_gaps', 'next_review TEXT')
         db.add_column_if_missing(conn, 'users', 'last_login TIMESTAMP')
         db.add_column_if_missing(conn, 'users', 'school_id INTEGER')
+        # 同じ科目でも「会話を始めた回」ごとに区別するための識別子（過去データはNULLのまま=日付+科目でまとめる）
+        db.add_column_if_missing(conn, 'conversation_logs', 'session_id TEXT')
+        db.add_column_if_missing(conn, 'session_logs', 'session_id TEXT')
 
         conn.commit()
 
@@ -250,19 +254,45 @@ chat_sessions = {}
 
 
 # --- サーバー再起動などでメモリ上のセッションが消えた場合、DBの会話ログから復元する ---
-# target_date を指定すると、当日以外（学習のきろくからの「続きから再開」）の会話も復元できる
-def restore_chat_session(session_key, user_id, teacher_name, target_date=None):
+# target_date を指定すると、当日以外（学習のきろくからの「続きから再開」）の会話も復元できる。
+# conv_id を指定すると、同じ日付・科目に複数回分の会話があっても「その回」だけを取り出せる。
+def restore_chat_session(session_key, user_id, teacher_name, target_date=None, conv_id=None):
     subject = session_key[len(f"{user_id}_"):]
     if subject not in SUBJECTS:
         return None
 
     target_date = target_date or str(date.today())
     with get_db() as conn:
-        rows = conn.execute(
-            'SELECT role, message, difficulty FROM conversation_logs '
-            'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
-            (user_id, subject, target_date)
-        ).fetchall()
+        if conv_id:
+            rows = conn.execute(
+                'SELECT role, message, difficulty FROM conversation_logs '
+                'WHERE user_id = ? AND subject = ? AND session_id = ? ORDER BY id',
+                (user_id, subject, conv_id)
+            ).fetchall()
+        else:
+            # conv_id未指定（サーバー再起動時の自動復元など）の場合は、
+            # その日付・科目の中で「一番最後に始まった回」だけを復元する
+            latest = conn.execute(
+                'SELECT session_id FROM conversation_logs '
+                'WHERE user_id = ? AND subject = ? AND session_date = ? '
+                'ORDER BY id DESC LIMIT 1',
+                (user_id, subject, target_date)
+            ).fetchone()
+            latest_conv_id = latest['session_id'] if latest else None
+            if latest_conv_id:
+                rows = conn.execute(
+                    'SELECT role, message, difficulty FROM conversation_logs '
+                    'WHERE user_id = ? AND subject = ? AND session_id = ? ORDER BY id',
+                    (user_id, subject, latest_conv_id)
+                ).fetchall()
+                conv_id = latest_conv_id
+            else:
+                # session_id が無い過去データ（マイグレーション前）への後方互換
+                rows = conn.execute(
+                    'SELECT role, message, difficulty FROM conversation_logs '
+                    'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
+                    (user_id, subject, target_date)
+                ).fetchall()
     if not rows:
         return None
 
@@ -279,7 +309,7 @@ def restore_chat_session(session_key, user_id, teacher_name, target_date=None):
     instruction = tutoring.build_instruction(subject, difficulty, teacher_name)
     chat = create_chat(ALL_MODELS[0], instruction, history=history)
     turns = min(sum(1 for row in rows if row['role'] == 'user'), 3)
-    return {'chat': chat, 'model': ALL_MODELS[0], 'instruction': instruction,
+    return {'chat': chat, 'model': ALL_MODELS[0], 'instruction': instruction, 'conv_id': conv_id,
             'turns': turns, 'subject': subject, 'difficulty': difficulty}
 
 
@@ -710,29 +740,37 @@ def streak():
 def get_history_sessions(user_id):
     with get_db() as conn:
         rows = conn.execute(
-            'SELECT subject, difficulty, role, message, session_date FROM conversation_logs '
+            'SELECT subject, difficulty, role, message, session_date, session_id FROM conversation_logs '
             'WHERE user_id = ? ORDER BY id',
             (user_id,)
         ).fetchall()
         completed_rows = conn.execute(
-            'SELECT subject, completed_at FROM session_logs WHERE user_id = ?',
+            'SELECT subject, completed_at, session_id FROM session_logs WHERE user_id = ?',
             (user_id,)
         ).fetchall()
 
-    # 「会話終了」まで到達した（＝完了記録がある）日付×科目の組み合わせ
-    completed_keys = {f"{str(r['completed_at'])[:10]}|{r['subject']}" for r in completed_rows}
+    # 「会話終了」まで到達した（＝完了記録がある）会話。session_idがあればそれで、
+    # 過去データ（session_id無し）は日付×科目でまとめて判定する
+    completed_conv_ids = {r['session_id'] for r in completed_rows if r['session_id']}
+    completed_legacy_keys = {f"{str(r['completed_at'])[:10]}|{r['subject']}" for r in completed_rows if not r['session_id']}
 
     grouped = {}
     order = []
     for row in rows:
-        key = f"{row['session_date']}|{row['subject']}"
+        # session_idがある会話は「開始した回」ごとに独立させ、無い過去データは日付×科目でまとめる
+        key = row['session_id'] or f"{row['session_date']}|{row['subject']}"
         if key not in grouped:
+            if row['session_id']:
+                completed = row['session_id'] in completed_conv_ids
+            else:
+                completed = key in completed_legacy_keys
             grouped[key] = {
+                'session_id': row['session_id'],
                 'date':       row['session_date'],
                 'subject':    row['subject'],
                 'difficulty': row['difficulty'],
                 'messages':   [],
-                'completed':  key in completed_keys,
+                'completed':  completed,
             }
             order.append(key)
         grouped[key]['messages'].append({'role': row['role'], 'message': row['message']})
@@ -740,7 +778,7 @@ def get_history_sessions(user_id):
     # Feynの最初の問いを見ただけで一度も返信していないセッションは「学習」とみなさず除外する
     order = [k for k in order if any(m['role'] == 'user' for m in grouped[k]['messages'])]
 
-    # 新しい日付が先頭に来るように逆順で返す
+    # 新しい方が先頭に来るように逆順で返す
     return [grouped[k] for k in reversed(order)]
 
 
@@ -762,32 +800,50 @@ def resume():
     data         = request.get_json()
     subject      = data.get('subject', '')
     target_date  = data.get('date', '')
+    conv_id      = data.get('session_id') or None
     teacher_name = session.get('user_name', '先生')
 
     if subject not in SUBJECTS or not target_date:
         return jsonify({'error': '再開する学習が見つかりません'}), 400
 
     with get_db() as conn:
-        completed_rows = conn.execute(
-            'SELECT completed_at FROM session_logs WHERE user_id = ? AND subject = ?',
-            (session['user_id'], subject)
-        ).fetchall()
-    if any(str(r['completed_at'])[:10] == target_date for r in completed_rows):
+        if conv_id:
+            already_done = conn.execute(
+                'SELECT 1 FROM session_logs WHERE user_id = ? AND session_id = ?',
+                (session['user_id'], conv_id)
+            ).fetchone()
+        else:
+            # session_idが無い過去データへの後方互換（日付+科目で判定）
+            completed_rows = conn.execute(
+                'SELECT completed_at FROM session_logs WHERE user_id = ? AND subject = ?',
+                (session['user_id'], subject)
+            ).fetchall()
+            already_done = any(str(r['completed_at'])[:10] == target_date for r in completed_rows)
+    if already_done:
         return jsonify({'error': 'この学習はすでに完了しています'}), 400
 
     session_key = f"{session['user_id']}_{subject}"
-    restored = restore_chat_session(session_key, session['user_id'], teacher_name, target_date=target_date)
+    restored = restore_chat_session(session_key, session['user_id'], teacher_name,
+                                     target_date=target_date, conv_id=conv_id)
     if restored is None:
         return jsonify({'error': '再開する学習が見つかりません'}), 404
 
     chat_sessions[session_key] = restored
+    resolved_conv_id = restored.get('conv_id')
 
     with get_db() as conn:
-        rows = conn.execute(
-            'SELECT role, message FROM conversation_logs '
-            'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
-            (session['user_id'], subject, target_date)
-        ).fetchall()
+        if resolved_conv_id:
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs '
+                'WHERE user_id = ? AND subject = ? AND session_id = ? ORDER BY id',
+                (session['user_id'], subject, resolved_conv_id)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs '
+                'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
+                (session['user_id'], subject, target_date)
+            ).fetchall()
 
     return jsonify({
         'session_key': session_key,
@@ -840,15 +896,21 @@ def complete():
     difficulty    = data.get('difficulty', '')
     gap_id        = data.get('gap_id')
     assignment_id = data.get('assignment_id')
+    session_key   = data.get('session_key') or ''
 
     if not subject:
         return jsonify({'error': '科目が指定されていません'}), 400
 
+    # 他人のセッションキーを指定できないようにする
+    conv_id = None
+    if session_key.startswith(f"{session['user_id']}_") and session_key in chat_sessions:
+        conv_id = chat_sessions[session_key].get('conv_id')
+
     today = str(date.today())
     with get_db() as conn:
         conn.execute(
-            'INSERT INTO session_logs (user_id, subject, difficulty) VALUES (?, ?, ?)',
-            (session['user_id'], subject, difficulty)
+            'INSERT INTO session_logs (user_id, subject, difficulty, session_id) VALUES (?, ?, ?, ?)',
+            (session['user_id'], subject, difficulty, conv_id)
         )
         # 課題として出されていたセッションの完了を記録する
         if assignment_id:
@@ -872,16 +934,26 @@ def complete():
                     'review_count = ?, next_review = ? WHERE id = ? AND user_id = ?',
                     (count, str(date.today() + timedelta(days=interval)), gap_id, session['user_id'])
                 )
-        rows = conn.execute(
-            'SELECT role, message FROM conversation_logs '
-            'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
-            (session['user_id'], subject, today)
-        ).fetchall()
+        if conv_id:
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs '
+                'WHERE user_id = ? AND subject = ? AND session_id = ? ORDER BY id',
+                (session['user_id'], subject, conv_id)
+            ).fetchall()
+        else:
+            # conv_idが分からない場合（後方互換）は従来どおり日付+科目でまとめて取得する
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs '
+                'WHERE user_id = ? AND subject = ? AND session_date = ? ORDER BY id',
+                (session['user_id'], subject, today)
+            ).fetchall()
         topic_rows = conn.execute(
             'SELECT topic FROM topic_progress WHERE user_id = ? AND subject = ?',
             (session['user_id'], subject)
         ).fetchall()
         conn.commit()
+
+    chat_sessions.pop(session_key, None)
 
     # 対話履歴からナレッジギャップを自動分析（失敗しても完了記録は成立させる）
     analysis = None
@@ -1173,6 +1245,8 @@ def start():
             return jsonify({'error': '本日のAPI利用上限に達しました。'}), 429
         return jsonify({'error': 'AIサーバーが混み合っています。少し待ってからもう一度試してください。'}), 503
 
+    # 同じ科目でも「今回の会話」を後から識別できるよう、開始ごとに新しいIDを振る
+    conv_id = uuid.uuid4().hex[:12]
     chat_sessions[session_key] = {
         'chat':        chat,
         'model':       used_model,
@@ -1180,6 +1254,7 @@ def start():
         'turns':       0,
         'subject':     subject,
         'difficulty':  difficulty,
+        'conv_id':     conv_id,
     }
 
     reply = response.text or ''
@@ -1190,8 +1265,9 @@ def start():
                 "UPDATE knowledge_gaps SET status = 'reviewing' WHERE id = ?", (gap['id'],)
             )
         conn.execute(
-            'INSERT INTO conversation_logs (user_id, subject, difficulty, role, message, session_date) VALUES (?, ?, ?, ?, ?, ?)',
-            (session['user_id'], subject, difficulty, 'feyn', reply, today)
+            'INSERT INTO conversation_logs (user_id, subject, difficulty, role, message, session_date, session_id) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (session['user_id'], subject, difficulty, 'feyn', reply, today, conv_id)
         )
         conn.commit()
     return jsonify({'reply': reply, 'session_key': session_key, 'subject': subject})
@@ -1227,6 +1303,7 @@ def chat():
     today = str(date.today())
     subject    = sess.get('subject', '')
     difficulty = sess.get('difficulty', '')
+    conv_id    = sess.get('conv_id')
 
     retries = 0
     while True:
@@ -1266,17 +1343,19 @@ def chat():
         sess['turns'] = min(sess['turns'] + 1, 3)
     progress = 100 if is_done else sess['turns'] * 25
 
-    if is_done:
-        chat_sessions.pop(session_key, None)
+    # is_done時にここでchat_sessionsを消すと/api/completeがconv_idを取得できなくなるため、
+    # 後始末（pop）は完了記録を書き終えた/api/complete側で行う
 
     with get_db() as conn:
         conn.execute(
-            'INSERT INTO conversation_logs (user_id, subject, difficulty, role, message, session_date) VALUES (?, ?, ?, ?, ?, ?)',
-            (session['user_id'], subject, difficulty, 'user', message, today)
+            'INSERT INTO conversation_logs (user_id, subject, difficulty, role, message, session_date, session_id) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (session['user_id'], subject, difficulty, 'user', message, today, conv_id)
         )
         conn.execute(
-            'INSERT INTO conversation_logs (user_id, subject, difficulty, role, message, session_date) VALUES (?, ?, ?, ?, ?, ?)',
-            (session['user_id'], subject, difficulty, 'feyn', reply, today)
+            'INSERT INTO conversation_logs (user_id, subject, difficulty, role, message, session_date, session_id) '
+            'VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (session['user_id'], subject, difficulty, 'feyn', reply, today, conv_id)
         )
         conn.commit()
 

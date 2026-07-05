@@ -696,6 +696,9 @@ def get_history_sessions(user_id):
             order.append(key)
         grouped[key]['messages'].append({'role': row['role'], 'message': row['message']})
 
+    # Feynの最初の問いを見ただけで一度も返信していないセッションは「学習」とみなさず除外する
+    order = [k for k in order if any(m['role'] == 'user' for m in grouped[k]['messages'])]
+
     # 新しい日付が先頭に来るように逆順で返す
     return [grouped[k] for k in reversed(order)]
 

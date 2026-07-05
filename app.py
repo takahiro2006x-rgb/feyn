@@ -134,6 +134,16 @@ def init_db():
                 FOREIGN KEY (student_id) REFERENCES users(id)
             )
         ''')
+        # クラス分け（塾・組織）の下地。招待コードで先生・生徒を束ねる想定だが、
+        # 実際に複数の先生が使うようになるまでは全員を1つのデフォルト組織に入れておく
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS schools (
+                id {pk},
+                name TEXT NOT NULL,
+                join_code TEXT NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
 
         # 2. 全テーブルが存在する状態で、あとから追加したカラムをマイグレーションする
         db.add_column_if_missing(conn, 'users', "role TEXT NOT NULL DEFAULT 'student'")
@@ -142,10 +152,27 @@ def init_db():
         db.add_column_if_missing(conn, 'knowledge_gaps', 'review_count INTEGER NOT NULL DEFAULT 0')
         db.add_column_if_missing(conn, 'knowledge_gaps', 'next_review TEXT')
         db.add_column_if_missing(conn, 'users', 'last_login TIMESTAMP')
+        db.add_column_if_missing(conn, 'users', 'school_id INTEGER')
 
         conn.commit()
 
 init_db()
+
+
+def ensure_default_school():
+    """デフォルト組織を用意し、まだどの組織にも属していないユーザーを入れる（既存の挙動を維持するため）"""
+    with get_db() as conn:
+        row = conn.execute("SELECT id FROM schools WHERE join_code = 'DEFAULT'").fetchone()
+        if row is None:
+            conn.execute("INSERT INTO schools (name, join_code) VALUES (?, ?)", ('デフォルト', 'DEFAULT'))
+            conn.commit()
+            row = conn.execute("SELECT id FROM schools WHERE join_code = 'DEFAULT'").fetchone()
+        default_id = row['id']
+        conn.execute('UPDATE users SET school_id = ? WHERE school_id IS NULL', (default_id,))
+        conn.commit()
+        return default_id
+
+DEFAULT_SCHOOL_ID = ensure_default_school()
 
 
 # --- Gemini クライアント ---
@@ -355,17 +382,18 @@ def signup():
     try:
         with get_db() as conn:
             conn.execute(
-                'INSERT INTO users (email, name, password_hash, role, security_question, security_answer_hash, last_login) '
-                'VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
+                'INSERT INTO users (email, name, password_hash, role, security_question, security_answer_hash, last_login, school_id) '
+                'VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)',
                 (email, name, generate_password_hash(password), role,
-                 security_question, generate_password_hash(security_answer))
+                 security_question, generate_password_hash(security_answer), DEFAULT_SCHOOL_ID)
             )
             conn.commit()
             user = conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
-            session.permanent     = True
-            session['user_id']   = user['id']
-            session['user_name'] = name
-            session['user_role'] = role
+            session.permanent      = True
+            session['user_id']    = user['id']
+            session['user_name']  = name
+            session['user_role']  = role
+            session['school_id']  = DEFAULT_SCHOOL_ID
         return jsonify({'ok': True, 'name': name, 'role': role})
     except db.IntegrityError:
         return jsonify({'error': 'そのメールアドレスはすでに登録されています'}), 409
@@ -387,10 +415,11 @@ def login():
         conn.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', (user['id'],))
         conn.commit()
 
-    session.permanent    = True
-    session['user_id']   = user['id']
-    session['user_name'] = user['name']
-    session['user_role'] = user['role']
+    session.permanent     = True
+    session['user_id']    = user['id']
+    session['user_name']  = user['name']
+    session['user_role']  = user['role']
+    session['school_id']  = user['school_id'] or DEFAULT_SCHOOL_ID
     return jsonify({'ok': True, 'name': user['name'], 'role': user['role']})
 
 
@@ -485,10 +514,11 @@ def dashboard_student(student_id):
     if session.get('user_role') != 'teacher':
         return jsonify({'error': '権限がありません'}), 403
 
+    school_id = session.get('school_id', DEFAULT_SCHOOL_ID)
     with get_db() as conn:
         student = conn.execute(
-            "SELECT id, name, email FROM users WHERE id = ? AND role = 'student'",
-            (student_id,)
+            "SELECT id, name, email FROM users WHERE id = ? AND role = 'student' AND school_id = ?",
+            (student_id, school_id)
         ).fetchone()
         if not student:
             return jsonify({'error': '生徒が見つかりません'}), 404
@@ -540,11 +570,12 @@ def create_assignment():
     if not student_ids:
         return jsonify({'error': '生徒を選択してください'}), 400
 
+    school_id = session.get('school_id', DEFAULT_SCHOOL_ID)
     with get_db() as conn:
         placeholders = ','.join('?' * len(student_ids))
         valid_rows = conn.execute(
-            f"SELECT id FROM users WHERE role = 'student' AND id IN ({placeholders})",
-            student_ids
+            f"SELECT id FROM users WHERE role = 'student' AND school_id = ? AND id IN ({placeholders})",
+            [school_id] + list(student_ids)
         ).fetchall()
         valid_ids = [r['id'] for r in valid_rows]
         if not valid_ids:
@@ -569,13 +600,14 @@ def teacher_reset_password():
 
     data       = request.get_json()
     student_id = data.get('student_id')
+    school_id  = session.get('school_id', DEFAULT_SCHOOL_ID)
 
     temp_pass = 'Feyn' + ''.join(random.choices(string.digits, k=4))
 
     with get_db() as conn:
         updated = conn.execute(
-            "UPDATE users SET password_hash = ? WHERE id = ? AND role = 'student'",
-            (generate_password_hash(temp_pass), student_id)
+            "UPDATE users SET password_hash = ? WHERE id = ? AND role = 'student' AND school_id = ?",
+            (generate_password_hash(temp_pass), student_id, school_id)
         ).rowcount
         conn.commit()
 
@@ -981,9 +1013,12 @@ def dashboard_api():
     if session.get('user_role') != 'teacher':
         return jsonify({'error': '権限がありません'}), 403
 
+    school_id = session.get('school_id', DEFAULT_SCHOOL_ID)
     with get_db() as conn:
         students_rows = conn.execute(
-            "SELECT id, name, email, created_at, last_login FROM users WHERE role = 'student' ORDER BY created_at DESC"
+            "SELECT id, name, email, created_at, last_login FROM users "
+            "WHERE role = 'student' AND school_id = ? ORDER BY created_at DESC",
+            (school_id,)
         ).fetchall()
         count_rows = conn.execute(
             'SELECT user_id, subject, COUNT(*) as cnt FROM session_logs GROUP BY user_id, subject'

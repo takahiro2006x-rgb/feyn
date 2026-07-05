@@ -527,28 +527,37 @@ def create_assignment():
     if session.get('user_role') != 'teacher':
         return jsonify({'error': '権限がありません'}), 403
 
-    data       = request.get_json()
-    student_id = data.get('student_id')
-    subject    = data.get('subject', '')
-    unit       = (data.get('unit') or '').strip() or None
+    data        = request.get_json()
+    student_ids = data.get('student_ids')
+    if not student_ids:
+        single_id   = data.get('student_id')
+        student_ids = [single_id] if single_id else []
+    subject = data.get('subject', '')
+    unit    = (data.get('unit') or '').strip() or None
 
     if subject not in SUBJECTS:
         return jsonify({'error': '科目を指定してください'}), 400
+    if not student_ids:
+        return jsonify({'error': '生徒を選択してください'}), 400
 
     with get_db() as conn:
-        student = conn.execute(
-            "SELECT id FROM users WHERE id = ? AND role = 'student'", (student_id,)
-        ).fetchone()
-        if not student:
+        placeholders = ','.join('?' * len(student_ids))
+        valid_rows = conn.execute(
+            f"SELECT id FROM users WHERE role = 'student' AND id IN ({placeholders})",
+            student_ids
+        ).fetchall()
+        valid_ids = [r['id'] for r in valid_rows]
+        if not valid_ids:
             return jsonify({'error': '生徒が見つかりません'}), 404
 
-        conn.execute(
-            'INSERT INTO assignments (teacher_id, student_id, subject, unit) VALUES (?, ?, ?, ?)',
-            (session['user_id'], student_id, subject, unit)
-        )
+        for sid in valid_ids:
+            conn.execute(
+                'INSERT INTO assignments (teacher_id, student_id, subject, unit) VALUES (?, ?, ?, ?)',
+                (session['user_id'], sid, subject, unit)
+            )
         conn.commit()
 
-    return jsonify({'ok': True})
+    return jsonify({'ok': True, 'count': len(valid_ids)})
 
 
 @app.route('/api/dashboard/reset-password', methods=['POST'])

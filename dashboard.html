@@ -501,7 +501,10 @@
     <!-- 生徒テーブル -->
     <div class="section-header">
       <div class="section-title">生徒一覧</div>
-      <div class="student-count" id="studentCount">—</div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="assign-btn" id="bulkAssignBtn" disabled>📋 選択した生徒に課題を出す（<span id="bulkAssignCount">0</span>人）</button>
+        <div class="student-count" id="studentCount">—</div>
+      </div>
     </div>
     <div class="table-wrap" id="tableWrap">
       <div class="loading">読み込み中...</div>
@@ -576,6 +579,7 @@
     let allStudents = [];
     let sortKey     = 'total';
     let sortDir     = 'desc';
+    const selectedStudentIds = new Set(); // 課題一括アサイン用の選択状態（文字列のstudent_idを保持）
 
     function formatDate(str) {
       if (!str) return '—';
@@ -697,6 +701,7 @@
 
         return `
           <tr>
+            <td><input type="checkbox" class="student-select" data-id="${s.id}" data-name="${escHtml(s.name)}" ${selectedStudentIds.has(String(s.id)) ? 'checked' : ''}></td>
             <td>
               <a class="td-name" href="/dashboard/student/${s.id}" style="text-decoration:none;color:inherit;">
                 <div class="td-name-main">${escHtml(s.name)}</div>
@@ -715,10 +720,13 @@
         `;
       }).join('');
 
+      const allChecked = sorted.length > 0 && sorted.every(s => selectedStudentIds.has(String(s.id)));
+
       document.getElementById('tableWrap').innerHTML = `
         <table>
           <thead>
             <tr>
+              <th><input type="checkbox" id="selectAllStudents" ${allChecked ? 'checked' : ''}></th>
               <th class="${thClass('name')}" data-key="name">生徒名</th>
               ${headerCells}
               <th class="${thClass('total')}" data-key="total">合計</th>
@@ -740,8 +748,24 @@
         btn.addEventListener('click', () => { window.location.href = `/dashboard/student/${btn.dataset.id}`; });
       });
 
-      document.querySelectorAll('.assign-btn').forEach(btn => {
-        btn.addEventListener('click', () => showAssignModal(btn.dataset.id, btn.dataset.name));
+      document.querySelectorAll('.assign-btn[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => showAssignModal([{ id: btn.dataset.id, name: btn.dataset.name }]));
+      });
+
+      document.querySelectorAll('.student-select').forEach(cb => {
+        cb.addEventListener('change', () => {
+          if (cb.checked) selectedStudentIds.add(cb.dataset.id);
+          else selectedStudentIds.delete(cb.dataset.id);
+          updateBulkAssignButton();
+        });
+      });
+
+      document.getElementById('selectAllStudents').addEventListener('change', (e) => {
+        sorted.forEach(s => {
+          if (e.target.checked) selectedStudentIds.add(String(s.id));
+          else selectedStudentIds.delete(String(s.id));
+        });
+        renderTable(allStudents);
       });
 
       document.querySelectorAll('th.sortable').forEach(th => {
@@ -756,6 +780,14 @@
           renderTable(allStudents);
         });
       });
+
+      updateBulkAssignButton();
+    }
+
+    function updateBulkAssignButton() {
+      const btn = document.getElementById('bulkAssignBtn');
+      document.getElementById('bulkAssignCount').textContent = selectedStudentIds.size;
+      btn.disabled = selectedStudentIds.size === 0;
     }
 
     function escHtml(str) {
@@ -825,17 +857,20 @@
     }
 
 
-    // ===== 課題アサイン =====
-    function showAssignModal(studentId, studentName) {
+    // ===== 課題アサイン（1人〜複数人まとめて対応） =====
+    function showAssignModal(students) {
       const overlay = document.createElement('div');
       overlay.className = 'modal-overlay';
 
       const subjectOptions = SUBJECTS.map(s => `<option value="${s}">${SUBJECT_EMOJIS[s]} ${s}</option>`).join('');
+      const whoLabel = students.length === 1
+        ? `${escHtml(students[0].name)} さん`
+        : `選択した${students.length}人（${students.map(s => escHtml(s.name)).join('、')}）`;
 
       overlay.innerHTML = `
         <div class="modal">
           <div class="modal-title">📋 課題を出す</div>
-          <div class="modal-desc">${escHtml(studentName)} さんに課題を出します</div>
+          <div class="modal-desc">${whoLabel}に課題を出します</div>
           <div>
             <label>科目</label>
             <select id="assignSubject">${subjectOptions}</select>
@@ -879,7 +914,7 @@
         const res = await fetch('/api/dashboard/assignments', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            student_id: parseInt(studentId),
+            student_ids: students.map(s => parseInt(s.id)),
             subject: subjectSelect.value,
             unit: unitSelect.value,
           }),
@@ -890,9 +925,14 @@
           btn.disabled = false;
           return;
         }
+        // アサイン済みの生徒は選択状態をクリアして一覧を再描画する
+        students.forEach(s => selectedStudentIds.delete(String(s.id)));
+        renderTable(allStudents);
+
+        const unitLabel = unitSelect.value ? '・' + escHtml(unitSelect.value) : '';
         overlay.querySelector('.modal').innerHTML = `
           <div class="modal-title">✅ 課題を出しました</div>
-          <div class="modal-desc">${escHtml(studentName)} さんに「${escHtml(subjectSelect.value)}${unitSelect.value ? '・' + escHtml(unitSelect.value) : ''}」を課題として出しました。</div>
+          <div class="modal-desc">${whoLabel}に「${escHtml(subjectSelect.value)}${unitLabel}」を課題として出しました。</div>
           <button class="modal-close" id="assignDone">閉じる</button>
         `;
         document.getElementById('assignDone').addEventListener('click', () => overlay.remove());
@@ -946,6 +986,13 @@
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await fetch('/api/logout', { method: 'POST' });
       window.location.href = '/login';
+    });
+
+    document.getElementById('bulkAssignBtn').addEventListener('click', () => {
+      const students = allStudents
+        .filter(s => selectedStudentIds.has(String(s.id)))
+        .map(s => ({ id: s.id, name: s.name }));
+      if (students.length > 0) showAssignModal(students);
     });
 
     init();

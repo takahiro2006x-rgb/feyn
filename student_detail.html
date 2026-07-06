@@ -365,6 +365,14 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // 会話ログの見出し: 科目[単元]「テーマ」（単元・テーマは分かる場合のみ）
+    function sessionTitle(s) {
+      let title = escHtml(s.subject);
+      if (s.unit) title += `[${escHtml(s.unit)}]`;
+      if (s.topic) title += `「${escHtml(s.topic)}」`;
+      return title;
+    }
+
     const MATH_DELIMITERS = [
       { left: '$$', right: '$$', display: true },
       { left: '\\[', right: '\\]', display: true },
@@ -500,7 +508,7 @@
           <button class="session-head">
             <span class="session-emoji">${emoji}</span>
             <span class="session-info">
-              <span class="session-subject">${escHtml(s.subject)}</span>
+              <span class="session-subject">${sessionTitle(s)}</span>
               <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
             </span>
             ${badge}

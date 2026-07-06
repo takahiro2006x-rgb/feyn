@@ -371,6 +371,20 @@ def dashboard_student_page(student_id):
 # DBや.envを外部に配信しないよう、公開ファイルはホワイトリスト方式にする
 ALLOWED_STATIC = {'style.css', 'script.js'}
 
+# ===== PWA用ファイル =====
+# sw.jsはルート直下（/sw.js）で配信することで、スコープをアプリ全体にする
+@app.route('/manifest.json')
+def manifest():
+    return send_from_directory('.', 'manifest.json')
+
+@app.route('/sw.js')
+def service_worker():
+    return send_from_directory('.', 'sw.js')
+
+@app.route('/icons/<path:filename>')
+def icons(filename):
+    return send_from_directory('icons', filename)
+
 @app.route('/<path:path>')
 def static_files(path):
     if path not in ALLOWED_STATIC:

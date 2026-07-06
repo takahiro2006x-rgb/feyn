@@ -1,3 +1,8 @@
+// ===== PWA: サービスワーカー登録 =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
 // ===== テーマ切り替え =====
 const themeToggle = document.getElementById('themeToggle');
 

@@ -386,6 +386,7 @@ function showUnitPicker(subject) {
   const categories = Object.keys(UNIT_CURRICULUM[subject] || {});
   const buttons = [
     { label: '🎲 Feynにおまかせ', onClick: () => startSession() },
+    { label: '📷 今解いてる問題を見せる', onClick: () => showPhotoUploadPrompt() },
     ...categories.map(cat => ({ label: cat, onClick: () => showUnitSubPicker(subject, cat) })),
   ];
   renderPicker('今日はどの単元を教えてくれる？📖', buttons);
@@ -420,6 +421,90 @@ async function startSession(unit) {
   const thinkingEl = addThinking();
   const settings   = getSettings();
   if (unit) settings.unit = unit;
+
+  try {
+    const response = await fetch('/api/start', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(settings),
+      signal,
+    });
+    const data = await response.json();
+    thinkingEl.remove();
+    if (data.error) { addMessage('feyn', `⚠️ ${data.error}`); return; }
+    sessionKey = data.session_key;
+    hintBtn.disabled   = false;
+    revealBtn.disabled = false;
+    addMessage('feyn', data.reply);
+  } catch (e) {
+    if (e.name !== 'AbortError') {
+      thinkingEl.remove();
+      addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+    } else {
+      thinkingEl.remove();
+    }
+  } finally {
+    startInFlight = false;
+  }
+}
+
+
+// ===== 写真アップロード（自分が今解いてる問題について質問してもらう） =====
+function showPhotoUploadPrompt() {
+  const input = document.getElementById('photoUploadInput');
+  input.value = ''; // 同じファイルを選び直しても change が発火するようにする
+  input.click();
+}
+
+document.getElementById('photoUploadInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => showPhotoConfirm(reader.result.split(',')[1], file.type, reader.result);
+  reader.readAsDataURL(file);
+});
+
+function showPhotoConfirm(base64, mimeType, dataUrl) {
+  messagesEl.innerHTML = '';
+  const el = document.createElement('div');
+  el.classList.add('message', 'feyn', 'pop-in');
+  el.innerHTML = `
+    <div class="avatar">${currentEmoji}</div>
+    <div class="bubble">
+      この写真でよければ質問するね！
+      <div class="photo-preview"><img src="${dataUrl}" alt="アップロードした問題"></div>
+      <div class="quick-replies">
+        <button class="quick-reply" id="photoSendBtn">🚀 これで質問してもらう</button>
+        <button class="quick-reply" id="photoRetryBtn">↩️ 選び直す</button>
+      </div>
+    </div>
+  `;
+  messagesEl.appendChild(el);
+  document.getElementById('photoSendBtn').addEventListener('click', () => {
+    el.querySelectorAll('.quick-reply').forEach(b => b.disabled = true);
+    startSessionWithPhoto(base64, mimeType);
+  });
+  document.getElementById('photoRetryBtn').addEventListener('click', () => showPhotoUploadPrompt());
+  el.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function startSessionWithPhoto(base64, mimeType) {
+  if (startInFlight) return;
+  startInFlight = true;
+
+  if (startAbortCtrl) startAbortCtrl.abort();
+  startAbortCtrl = new AbortController();
+  const signal = startAbortCtrl.signal;
+
+  messagesEl.innerHTML = '';
+  sessionKey = null;
+  resetXP();
+  setExpression('normal');
+
+  const thinkingEl = addThinking();
+  const settings   = getSettings();
+  settings.photo      = base64;
+  settings.photo_mime = mimeType;
 
   try {
     const response = await fetch('/api/start', {

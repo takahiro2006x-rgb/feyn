@@ -8,6 +8,7 @@ import time
 import random
 import string
 import uuid
+import base64
 from datetime import date, timedelta
 from dotenv import load_dotenv
 
@@ -1216,6 +1217,21 @@ def start():
     unit          = (data.get('unit') or '').strip() or None
     gap_id        = data.get('gap_id')
     assignment_id = data.get('assignment_id')
+    photo_b64     = data.get('photo')
+    photo_mime    = data.get('photo_mime', 'image/jpeg')
+
+    # 写真モード: 自分が今解いている問題の写真をアップロードして、それについて質問してもらう
+    photo_bytes = None
+    if photo_b64:
+        if photo_mime not in ('image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'):
+            return jsonify({'error': '対応していない画像形式です。写真（jpg/png等）を選んでください。'}), 400
+        try:
+            photo_bytes = base64.b64decode(photo_b64)
+        except Exception:
+            return jsonify({'error': '画像の読み込みに失敗しました。もう一度試してください。'}), 400
+        if len(photo_bytes) > 8 * 1024 * 1024:
+            return jsonify({'error': '画像サイズが大きすぎます（8MBまで）。'}), 400
+        unit = '写真の問題'
 
     # 復習モード: 過去に特定した知識ギャップを狙い撃ちする
     # （解決済みでも忘却曲線の「復習どき」に再挑戦できるよう、statusでは弾かない）
@@ -1244,20 +1260,29 @@ def start():
         unit    = assignment['unit']
 
     session_key = f"{session['user_id']}_{subject}"
-    if gap:
+    if photo_bytes:
+        instruction = tutoring.build_photo_instruction(subject, difficulty, teacher_name)
+        kickoff     = tutoring.build_photo_kickoff()
+    elif gap:
         instruction = tutoring.build_review_instruction(subject, difficulty, teacher_name, gap)
         kickoff     = tutoring.build_review_kickoff(gap)
     else:
         instruction = tutoring.build_instruction(subject, difficulty, teacher_name, unit=unit)
         kickoff     = tutoring.build_kickoff(subject, unit=unit)
 
+    # 写真モードは画像を読める必要があるため、画像非対応のGroqにはフォールバックしない
+    models_to_try = GEMINI_MODELS if photo_bytes else ALL_MODELS
+
     response   = None
     used_model = None
     quota_only = True
-    for model in ALL_MODELS:
+    for model in models_to_try:
         try:
             chat = create_chat(model, instruction)
-            response = chat.send_message(kickoff)
+            if photo_bytes:
+                response = chat.send_message(kickoff, image=(photo_bytes, photo_mime))
+            else:
+                response = chat.send_message(kickoff)
             used_model = model
             log_api_call(model, 'start', True)
             break

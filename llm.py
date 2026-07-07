@@ -25,7 +25,14 @@ class GeminiChatSession:
     def __init__(self, native_chat):
         self._chat = native_chat
 
-    def send_message(self, text):
+    def send_message(self, text, image=None):
+        # image: (bytes, mime_type) のタプル。写真モード（自分の問題をアップロード）用。
+        if image:
+            data, mime_type = image
+            parts = [genai_types.Part.from_bytes(data=data, mime_type=mime_type)]
+            if text:
+                parts.append(genai_types.Part.from_text(text=text))
+            return self._chat.send_message(parts)
         return self._chat.send_message(text)
 
     def get_history(self):
@@ -46,7 +53,8 @@ class GroqChatSession:
         self._instruction = instruction
         self._history      = list(history) if history else []
 
-    def send_message(self, text):
+    def send_message(self, text, image=None):
+        # Groqのモデルは画像非対応（写真モードは常にGeminiだけを使うため呼ばれない想定）
         messages = [{'role': 'system', 'content': self._instruction}]
         for h in self._history:
             role = 'user' if h['role'] == 'user' else 'assistant'

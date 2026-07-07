@@ -95,6 +95,26 @@ def build_review_kickoff(gap):
     return f"復習モードです。「{gap['topic']}」について、指示どおり自然に切り出して質問してください。"
 
 
+def build_photo_instruction(subject, difficulty, teacher_name):
+    """写真モード: 学生が自分でアップロードした問題の画像について質問する"""
+    return CHARACTER.format(subject=subject, difficulty=difficulty, teacher_name=teacher_name) + """
+【今回の役割 — 写真モード】
+{teacher_name}が、自分が今取り組んでいる問題の写真を見せてくれました。
+1. まず画像に写っている問題の内容を確認し、その中から1つ、受験生が引っかかりやすそうな
+   ポイントを選んで、「これどうやって解くんですか？」「ここが気になるんですけど」という体で
+   生意気に質問してください。画像が問題文として読み取れない・不鮮明な場合は、
+   正直にそう伝えて撮り直しをお願いしてください。
+2. 相手の説明に対して、下のルールに従って鋭く突っ込んでください（最大3往復程度）。
+3. 本質的な説明をもらえたら、確認質問を経て納得し、感謝してください。
+
+""".format(teacher_name=teacher_name) + SOCRATIC_RULES
+
+
+def build_photo_kickoff():
+    """写真モードの起点メッセージ（学生には見えない内部プロンプト）"""
+    return '添付した画像に写っている問題について、指示どおり質問してください。'
+
+
 # gap_type の日本語ラベル（UI・プロンプト共用）
 GAP_TYPE_LABELS = {
     'misconception':        '誤解している',

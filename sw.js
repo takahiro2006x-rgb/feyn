@@ -1,8 +1,9 @@
 // Feyn PWA用サービスワーカー
 // 方針: API通信・ページ遷移は常にネットワークから取得し、キャッシュしない
 //       （チャットは動的なやりとりなので、古い応答を返してしまうと事故になる）
-//       静的アセット（CSS/JS）だけキャッシュファーストにする
-const CACHE_NAME = 'feyn-static-v1';
+//       静的アセット（CSS/JS）は「ネットワース優先・失敗時のみキャッシュ」にする
+//       （開発中に頻繁に更新されるため、キャッシュファーストだと古い版が残り続けてしまう）
+const CACHE_NAME = 'feyn-static-v2';
 const STATIC_ASSETS = ['/style.css', '/script.js'];
 
 self.addEventListener('install', (event) => {
@@ -29,8 +30,14 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 静的アセットのみキャッシュファースト
+  // 静的アセットはネットワーク優先。オフライン時だけキャッシュにフォールバックする
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((res) => {
+        const clone = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

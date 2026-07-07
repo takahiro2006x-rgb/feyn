@@ -444,6 +444,19 @@ body {
   margin-top: 12px;
 }
 
+/* ===== 写真アップロードのプレビュー ===== */
+.photo-preview {
+  margin-top: 10px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--card-border);
+  max-width: 260px;
+}
+.photo-preview img {
+  display: block;
+  width: 100%;
+}
+
 .quick-reply {
   padding: 8px 16px;
   border-radius: 99px;

@@ -277,6 +277,17 @@
       box-shadow: 0 3px 0 var(--green-dark);
     }
 
+    .plan-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .plan-tag.free { background: var(--bg); color: var(--subtext); border: 2px solid var(--border); }
+    .plan-tag.active { background: linear-gradient(135deg, #FFC940, #E6A700); color: white; }
+
     th.sortable {
       cursor: pointer;
       user-select: none;
@@ -656,6 +667,9 @@
           va = a.last_active || ''; vb = b.last_active || '';
         } else if (sortKey === 'last_login') {
           va = a.last_login || ''; vb = b.last_login || '';
+        } else if (sortKey === 'subscription_status') {
+          va = a.subscription_status === 'active' ? 1 : 0;
+          vb = b.subscription_status === 'active' ? 1 : 0;
         } else if (SUBJECTS.includes(sortKey)) {
           va = a.subjects[sortKey] || 0; vb = b.subjects[sortKey] || 0;
         } else {
@@ -708,6 +722,7 @@
                 <div class="td-name-email">${escHtml(s.email)}</div>
               </a>
             </td>
+            <td>${s.subscription_status === 'active' ? '<span class="plan-tag active">👑 有料</span>' : '<span class="plan-tag free">🆓 無料</span>'}</td>
             ${subjectCells}
             <td><span class="count-badge ${s.total > 0 ? 'total' : ''}">${s.total > 0 ? s.total + '回' : '0'}</span></td>
             <td class="td-date">${s.last_active ? '🟢 ' + formatDate(s.last_active) : '未学習'}</td>
@@ -728,6 +743,7 @@
             <tr>
               <th><input type="checkbox" id="selectAllStudents" ${allChecked ? 'checked' : ''}></th>
               <th class="${thClass('name')}" data-key="name">生徒名</th>
+              <th class="${thClass('subscription_status')}" data-key="subscription_status">プラン</th>
               ${headerCells}
               <th class="${thClass('total')}" data-key="total">合計</th>
               <th class="${thClass('last_active')}" data-key="last_active">最終学習</th>

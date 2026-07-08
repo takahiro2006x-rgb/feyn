@@ -65,8 +65,14 @@
 
     .header-logo { font-size: 22px; font-weight: 800; color: var(--green); letter-spacing: 2px; }
     .header-divider { width: 2px; height: 24px; background: var(--border); }
-    .header-title { font-size: 16px; font-weight: 800; color: var(--text); }
+    .header-title { font-size: 16px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; }
     .header-email { font-size: 12px; font-weight: 700; color: var(--subtext); }
+    .plan-tag {
+      display: inline-block; padding: 4px 10px; border-radius: 99px;
+      font-size: 11px; font-weight: 800; white-space: nowrap;
+    }
+    .plan-tag.free { background: var(--bg); color: var(--subtext); border: 2px solid var(--border); }
+    .plan-tag.active { background: linear-gradient(135deg, #FFC940, #E6A700); color: white; }
     .header-titles { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .header-right { display: flex; align-items: center; gap: 12px; }
 
@@ -536,7 +542,10 @@
         if (!res.ok) throw new Error('not found');
         const data = await res.json();
 
-        document.getElementById('headerName').textContent  = `👤 ${data.student.name}`;
+        const planTag = data.student.subscription_status === 'active'
+          ? '<span class="plan-tag active">👑 有料</span>'
+          : '<span class="plan-tag free">🆓 無料</span>';
+        document.getElementById('headerName').innerHTML = `👤 ${escHtml(data.student.name)} ${planTag}`;
         document.getElementById('headerEmail').textContent = data.student.email;
         document.title = `Feyn - ${data.student.name}さんの記録`;
 

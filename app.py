@@ -577,7 +577,7 @@ def dashboard_student(student_id):
     school_id = session.get('school_id', DEFAULT_SCHOOL_ID)
     with get_db() as conn:
         student = conn.execute(
-            "SELECT id, name, email FROM users WHERE id = ? AND role = 'student' AND school_id = ?",
+            "SELECT id, name, email, subscription_status FROM users WHERE id = ? AND role = 'student' AND school_id = ?",
             (student_id, school_id)
         ).fetchone()
         if not student:
@@ -1254,7 +1254,7 @@ def dashboard_api():
     school_id = session.get('school_id', DEFAULT_SCHOOL_ID)
     with get_db() as conn:
         students_rows = conn.execute(
-            "SELECT id, name, email, created_at, last_login FROM users "
+            "SELECT id, name, email, created_at, last_login, subscription_status FROM users "
             "WHERE role = 'student' AND school_id = ? ORDER BY created_at DESC",
             (school_id,)
         ).fetchall()
@@ -1288,6 +1288,7 @@ def dashboard_api():
             'created_at': s['created_at'],
             'last_active': last_by_user.get(s['id']),
             'last_login': s['last_login'],
+            'subscription_status': s['subscription_status'],
             'subjects':   counts,
             'total':      sum(counts.values()),
         })

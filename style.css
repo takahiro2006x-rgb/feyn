@@ -40,6 +40,7 @@ body {
   color: var(--text);
   height: 100vh;
   height: 100dvh; /* iOSでソフトキーボードの開閉後にレイアウトが崩れて余白が残るのを防ぐ */
+  height: var(--app-height, 100dvh); /* JSで実測した高さを最優先にする（環境によるvh/dvhのズレ対策） */
   overflow: hidden;
   transition: background 0.3s, color 0.3s;
 }
@@ -49,6 +50,7 @@ body {
   display: flex;
   height: 100vh;
   height: 100dvh;
+  height: var(--app-height, 100dvh);
 }
 
 /* ===== サイドバー ===== */
@@ -861,10 +863,11 @@ body {
 /* ===== モバイル対応 ===== */
 @media (max-width: 768px) {
   /* モバイルブラウザのアドレスバーで下部が隠れないよう dvh を使う */
-  body { height: 100dvh; }
+  body { height: 100dvh; height: var(--app-height, 100dvh); }
   .app {
     flex-direction: column;
     height: 100dvh;
+    height: var(--app-height, 100dvh);
   }
 
   /* サイドバー → 上部のコンパクトな2段バー（科目 / ユーザー操作） */

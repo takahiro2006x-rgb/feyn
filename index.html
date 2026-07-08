@@ -15,6 +15,21 @@
     document.documentElement.setAttribute('data-theme',
       localStorage.getItem('feynTheme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+
+    // 100vh/100dvhがブラウザによって実際のウィンドウ高さとズレて下に余白が残ることがあるため、
+    // JSで実測した高さをCSS変数として持たせて確実に一致させる。
+    // iOSのソフトキーボード開閉はwindowのresizeではなくvisualViewportのresizeで通知されることが
+    // 多いため、両方を監視する。
+    function setAppHeight() {
+      const h = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', h + 'px');
+    }
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    window.addEventListener('orientationchange', setAppHeight);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', setAppHeight);
+    }
   </script>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">

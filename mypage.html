@@ -86,6 +86,41 @@
     }
     .btn:hover { border-color: var(--green); color: var(--green); }
 
+    /* ===== プランカード ===== */
+    .plan-card-wrap {
+      max-width: 800px;
+      margin: 16px auto 0;
+      padding: 0 24px;
+      width: 100%;
+    }
+    .plan-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 4px 0 var(--border);
+    }
+    .plan-card-info { flex: 1; min-width: 160px; }
+    .plan-card-title { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .plan-card-desc { font-size: 12px; font-weight: 700; color: var(--subtext); margin-top: 4px; line-height: 1.5; }
+    .plan-badge {
+      font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 99px; white-space: nowrap;
+    }
+    .plan-badge.free { background: var(--bg); color: var(--subtext); border: 2px solid var(--border); }
+    .plan-badge.active { background: var(--purple); color: white; }
+    .plan-btn {
+      padding: 10px 18px; border-radius: 12px; border: none; font-size: 13px; font-weight: 800;
+      font-family: inherit; cursor: pointer; white-space: nowrap; transition: all 0.1s;
+      background: var(--green); color: white; box-shadow: 0 4px 0 var(--green-dark);
+    }
+    .plan-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .plan-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .plan-btn.manage { background: var(--card); color: var(--text); border: 2px solid var(--border); box-shadow: none; }
+
     /* ===== タブ ===== */
     .tab-bar {
       position: sticky;
@@ -365,6 +400,10 @@
       <a href="/" class="btn">← アプリへ戻る</a>
     </div>
   </header>
+
+  <div class="plan-card-wrap">
+    <div class="plan-card" id="planCard"><div class="loading">読み込み中...</div></div>
+  </div>
 
   <div class="tab-bar">
     <button class="tab-btn" data-tab="hensachi">📊 偏差値</button>
@@ -708,9 +747,107 @@
       }
     }
 
+    // ===== プラン（Stripe課金） =====
+    function renderPlanCard(status) {
+      const card = document.getElementById('planCard');
+      if (status === 'active') {
+        card.innerHTML = `
+          <div class="plan-card-info">
+            <div class="plan-card-title">⭐ 有料プラン <span class="plan-badge active">利用中</span></div>
+            <div class="plan-card-desc">AI対話・ヒント・答えを見るが無制限で使えます</div>
+          </div>
+          <button class="plan-btn manage" id="planManageBtn">プランを管理する</button>
+        `;
+        document.getElementById('planManageBtn').addEventListener('click', openBillingPortal);
+      } else {
+        card.innerHTML = `
+          <div class="plan-card-info">
+            <div class="plan-card-title">🆓 無料プラン <span class="plan-badge free">Free</span></div>
+            <div class="plan-card-desc">有料プランなら月額¥980でAI対話が使い放題になります</div>
+          </div>
+          <button class="plan-btn" id="planUpgradeBtn">⭐ 有料プランにする（¥980/月）</button>
+        `;
+        document.getElementById('planUpgradeBtn').addEventListener('click', startCheckout);
+      }
+    }
+
+    async function loadPlan() {
+      try {
+        const res = await fetch('/api/me');
+        if (res.status === 401) { window.location.href = '/login'; return; }
+        const data = await res.json();
+        renderPlanCard(data.subscription_status || 'free');
+      } catch (e) {
+        document.getElementById('planCard').innerHTML = '<div class="plan-card-desc">プラン情報の読み込みに失敗しました</div>';
+      }
+    }
+
+    async function startCheckout() {
+      const btn = document.getElementById('planUpgradeBtn');
+      btn.disabled = true;
+      btn.textContent = '準備中...';
+      try {
+        const res = await fetch('/api/billing/create-checkout-session', { method: 'POST' });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          btn.disabled = false;
+          btn.textContent = '⭐ 有料プランにする（¥980/月）';
+          alert(data.error || '決済ページの作成に失敗しました');
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '⭐ 有料プランにする（¥980/月）';
+        alert('接続エラーが発生しました');
+      }
+    }
+
+    async function openBillingPortal() {
+      const btn = document.getElementById('planManageBtn');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/billing/portal', { method: 'POST' });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          btn.disabled = false;
+          alert(data.error || 'プラン管理ページの作成に失敗しました');
+        }
+      } catch (e) {
+        btn.disabled = false;
+        alert('接続エラーが発生しました');
+      }
+    }
+
+    async function handleCheckoutRedirect() {
+      const params = new URLSearchParams(location.search);
+      const checkout = params.get('checkout');
+      if (!checkout) return;
+
+      if (checkout === 'success') {
+        const sessionId = params.get('session_id');
+        const card = document.getElementById('planCard');
+        card.innerHTML = '<div class="loading">お支払いを確認しています...</div>';
+        try {
+          await fetch('/api/billing/confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+        } catch (e) {}
+      }
+      // URLからcheckoutパラメータを消してリロード時の二重確認を防ぐ
+      params.delete('checkout');
+      params.delete('session_id');
+      const query = params.toString();
+      history.replaceState(null, '', `/mypage${query ? '?' + query : ''}`);
+    }
+
     // ===== 起動 =====
     const initialTab = new URLSearchParams(location.search).get('tab') || 'hensachi';
     activateTab(initialTab);
+    handleCheckoutRedirect().then(loadPlan);
   </script>
 </body>
 </html>

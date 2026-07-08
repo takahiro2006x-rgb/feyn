@@ -482,13 +482,23 @@ function showPhotoConfirm(base64, mimeType, dataUrl) {
   messagesEl.appendChild(el);
   document.getElementById('photoSendBtn').addEventListener('click', () => {
     el.querySelectorAll('.quick-reply').forEach(b => b.disabled = true);
-    startSessionWithPhoto(base64, mimeType);
+    startSessionWithPhoto(base64, mimeType, dataUrl);
   });
   document.getElementById('photoRetryBtn').addEventListener('click', () => showPhotoUploadPrompt());
   el.scrollIntoView({ behavior: 'smooth' });
 }
 
-async function startSessionWithPhoto(base64, mimeType) {
+// アップロードした写真を会話に残しておく（あとで見返せるように）
+function addImageMessage(dataUrl) {
+  const el = document.createElement('div');
+  el.classList.add('message', 'user', 'pop-in');
+  el.innerHTML = `<div class="bubble"><div class="photo-preview" style="margin-top:0;"><img src="${dataUrl}" alt="アップロードした問題"></div></div>`;
+  messagesEl.appendChild(el);
+  el.scrollIntoView({ behavior: 'smooth' });
+  return el;
+}
+
+async function startSessionWithPhoto(base64, mimeType, dataUrl) {
   if (startInFlight) return;
   startInFlight = true;
 
@@ -500,6 +510,7 @@ async function startSessionWithPhoto(base64, mimeType) {
   sessionKey = null;
   resetXP();
   setExpression('normal');
+  addImageMessage(dataUrl);
 
   const thinkingEl = addThinking();
   const settings   = getSettings();

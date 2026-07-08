@@ -343,6 +343,11 @@ def landing_page():
     # ログイン中でもLPを見られるようにする（LP側でログイン状態に応じてCTAを出し分ける）
     return send_from_directory('.', 'landing.html')
 
+@app.route('/tokushoho')
+def tokushoho_page():
+    # 特定商取引法に基づく表記。ログイン有無に関わらず誰でも見られる
+    return send_from_directory('.', 'tokushoho.html')
+
 @app.route('/login')
 def login_page():
     if session.get('user_id'):

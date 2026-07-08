@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>特定商取引法に基づく表記 - Feyn</title>
+  <script>
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --green:   #58CC02;
+      --text:    #3C3C3C;
+      --subtext: #AFAFAF;
+      --bg:      #F0F4F8;
+      --card:    #FFFFFF;
+      --border:  #E5E5E5;
+      --red:     #FF4B4B;
+    }
+    [data-theme="dark"] {
+      --text:    #E2E8F0;
+      --subtext: #6E7681;
+      --bg:      #0D1117;
+      --card:    #161B22;
+      --border:  #30363D;
+    }
+
+    body {
+      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .header {
+      background: var(--card);
+      border-bottom: 2px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-logo { font-size: 20px; font-weight: 800; color: var(--green); text-decoration: none; }
+    .header-title { font-size: 14px; font-weight: 800; color: var(--subtext); flex: 1; }
+    .back-link {
+      font-size: 13px; font-weight: 700; color: var(--subtext); text-decoration: none;
+    }
+    .back-link:hover { color: var(--text); }
+
+    .container { max-width: 720px; margin: 0 auto; padding: 32px 24px 64px; }
+    .page-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .page-note {
+      font-size: 12px; font-weight: 700; color: var(--subtext); margin-bottom: 28px; line-height: 1.7;
+    }
+
+    .todo-banner {
+      background: #FFF3CD; border: 2px solid #FFE28A; color: #8A6D00;
+      border-radius: 14px; padding: 14px 18px; font-size: 12px; font-weight: 700;
+      line-height: 1.7; margin-bottom: 28px;
+    }
+    [data-theme="dark"] .todo-banner { background: #3A2E00; border-color: #6B5300; color: #FFD966; }
+
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 16px; overflow: hidden; border: 2px solid var(--border); }
+    tr { border-bottom: 2px solid var(--border); }
+    tr:last-child { border-bottom: none; }
+    th, td {
+      text-align: left; padding: 16px 20px; font-size: 13px; font-weight: 700; vertical-align: top; line-height: 1.7;
+    }
+    th { width: 34%; color: var(--subtext); background: var(--bg); white-space: nowrap; }
+    td { color: var(--text); }
+    .fill-in { color: var(--red); }
+
+    @media (max-width: 600px) {
+      th, td { display: block; width: 100%; padding: 10px 16px; }
+      th { padding-bottom: 2px; }
+      td { padding-top: 0; padding-bottom: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <a href="/landing" class="header-logo">🎓 Feyn</a>
+    <div class="header-title">特定商取引法に基づく表記</div>
+    <a href="/mypage" class="back-link">← マイページへ戻る</a>
+  </header>
+
+  <div class="container">
+    <div class="page-title">特定商取引法に基づく表記</div>
+    <div class="page-note">
+      特定商取引に関する法律第11条に基づき、以下のとおり表示します。
+    </div>
+
+    <div class="todo-banner">
+      ⚠️ このページは雛形です。<span class="fill-in">赤字</span>の項目は実際の情報に差し替えてから公開してください。
+      個人事業主の場合、所在地・電話番号は請求があった際に遅滞なく開示する形にすることが一般的に認められていますが、
+      最終的な要否はご自身でも確認してください（当方は法律の専門家ではありません）。
+    </div>
+
+    <table>
+      <tr>
+        <th>販売事業者</th>
+        <td class="fill-in">【ここに氏名（個人事業の場合は本名）を記入してください】</td>
+      </tr>
+      <tr>
+        <th>運営統括責任者</th>
+        <td class="fill-in">【上記と同じ場合は「同上」と記入】</td>
+      </tr>
+      <tr>
+        <th>所在地</th>
+        <td>ご請求をいただいた場合には、遅滞なく開示いたします。</td>
+      </tr>
+      <tr>
+        <th>電話番号</th>
+        <td>ご請求をいただいた場合には、遅滞なく開示いたします。</td>
+      </tr>
+      <tr>
+        <th>メールアドレス</th>
+        <td class="fill-in">【ここに連絡先メールアドレスを記入してください】</td>
+      </tr>
+      <tr>
+        <th>運営サイト</th>
+        <td>Feyn（フェイン）<br>https://feyn-28kg.onrender.com</td>
+      </tr>
+      <tr>
+        <th>販売価格</th>
+        <td>受験生プラン: 月額980円（税込）</td>
+      </tr>
+      <tr>
+        <th>商品代金以外の必要料金</th>
+        <td>インターネット接続料金・通信料金はお客様のご負担となります。</td>
+      </tr>
+      <tr>
+        <th>お支払い方法</th>
+        <td>クレジットカード決済（Stripe社の決済システムを利用）</td>
+      </tr>
+      <tr>
+        <th>お支払い時期</th>
+        <td>ご登録時に初回分を決済し、以降は毎月同日に自動更新・自動決済されます。</td>
+      </tr>
+      <tr>
+        <th>サービスの提供時期</th>
+        <td>決済完了後、直ちにご利用いただけます。</td>
+      </tr>
+      <tr>
+        <th>返品・キャンセルについて</th>
+        <td>
+          デジタルサービスの性質上、購入後の返金には対応しておりません。<br>
+          解約はマイページからいつでも行えます。解約した場合、当月分の解約日以降は課金されませんが、
+          既に決済済みの当月分の日割り返金は行いません。
+        </td>
+      </tr>
+      <tr>
+        <th>動作環境</th>
+        <td>最新版のGoogle Chrome、Safari、Microsoft Edgeなど、主要なモダンブラウザでのご利用を推奨します。</td>
+      </tr>
+    </table>
+  </div>
+
+</body>
+</html>

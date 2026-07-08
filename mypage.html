@@ -94,32 +94,68 @@
       width: 100%;
     }
     .plan-card {
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 16px;
-      padding: 16px 20px;
+      border-radius: 22px;
+      padding: 24px 28px;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 24px;
       flex-wrap: wrap;
+      position: relative;
+      overflow: hidden;
+      background: var(--card);
+      border: 2px solid var(--border);
       box-shadow: 0 4px 0 var(--border);
     }
-    .plan-card-info { flex: 1; min-width: 160px; }
-    .plan-card-title { font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
-    .plan-card-desc { font-size: 12px; font-weight: 700; color: var(--subtext); margin-top: 4px; line-height: 1.5; }
+
+    /* ---- 無料プラン（アップグレード訴求バナー） ---- */
+    .plan-card.free {
+      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
+      color: white;
+      box-shadow: 0 6px 0 var(--purple-dark);
+    }
+    .plan-card.free::after {
+      content: '';
+      position: absolute;
+      right: -40px; top: -40px;
+      width: 160px; height: 160px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 50%;
+    }
+    .plan-eyebrow { font-size: 11px; font-weight: 800; opacity: 0.85; letter-spacing: 1px; text-transform: uppercase; }
+    .plan-price-row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
+    .plan-price { font-size: 32px; font-weight: 800; line-height: 1; }
+    .plan-price-unit { font-size: 13px; font-weight: 700; opacity: 0.85; }
+    .plan-features {
+      list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 6px;
+    }
+    .plan-features li { font-size: 12px; font-weight: 700; opacity: 0.95; display: flex; align-items: center; gap: 6px; }
+
+    /* ---- 有料プラン（利用中） ---- */
+    .plan-card.active {
+      background: linear-gradient(135deg, #FFC940, #E6A700);
+      color: white;
+      box-shadow: 0 6px 0 #B8860B;
+    }
+    .plan-card.active .plan-card-title { font-size: 18px; font-weight: 800; }
+    .plan-card.active .plan-card-desc { font-size: 13px; font-weight: 700; opacity: 0.9; margin-top: 6px; line-height: 1.6; }
+
+    .plan-card-info { flex: 1; min-width: 200px; position: relative; z-index: 1; }
+    .plan-card-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .plan-card-desc { font-size: 12px; font-weight: 700; opacity: 0.9; margin-top: 4px; line-height: 1.5; }
     .plan-badge {
       font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 99px; white-space: nowrap;
+      background: rgba(255,255,255,0.25);
     }
-    .plan-badge.free { background: var(--bg); color: var(--subtext); border: 2px solid var(--border); }
-    .plan-badge.active { background: var(--purple); color: white; }
     .plan-btn {
-      padding: 10px 18px; border-radius: 12px; border: none; font-size: 13px; font-weight: 800;
+      padding: 14px 24px; border-radius: 14px; border: none; font-size: 14px; font-weight: 800;
       font-family: inherit; cursor: pointer; white-space: nowrap; transition: all 0.1s;
-      background: var(--green); color: white; box-shadow: 0 4px 0 var(--green-dark);
+      position: relative; z-index: 1;
+      background: white; color: var(--purple-dark); box-shadow: 0 4px 0 rgba(0,0,0,0.15);
     }
-    .plan-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-    .plan-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .plan-btn.manage { background: var(--card); color: var(--text); border: 2px solid var(--border); box-shadow: none; }
+    .plan-btn:hover { filter: brightness(1.05); transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,0.15); }
+    .plan-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+    .plan-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .plan-btn.manage { background: rgba(255,255,255,0.9); color: #8A6D00; }
 
     /* ===== タブ ===== */
     .tab-bar {
@@ -750,22 +786,37 @@
     // ===== プラン（Stripe課金） =====
     function renderPlanCard(status) {
       const card = document.getElementById('planCard');
+      card.classList.remove('free', 'active');
+
       if (status === 'active') {
+        card.classList.add('active');
         card.innerHTML = `
           <div class="plan-card-info">
-            <div class="plan-card-title">⭐ 有料プラン <span class="plan-badge active">利用中</span></div>
-            <div class="plan-card-desc">AI対話・ヒント・答えを見るが無制限で使えます</div>
+            <div class="plan-card-title">👑 有料プラン <span class="plan-badge">利用中</span></div>
+            <div class="plan-card-desc">
+              いつも応援ありがとうございます！<br>
+              AI対話・ヒント・答えを見る、すべて無制限で使えます。
+            </div>
           </div>
-          <button class="plan-btn manage" id="planManageBtn">プランを管理する</button>
+          <button class="plan-btn manage" id="planManageBtn">⚙️ プランを管理する</button>
         `;
         document.getElementById('planManageBtn').addEventListener('click', openBillingPortal);
       } else {
+        card.classList.add('free');
         card.innerHTML = `
           <div class="plan-card-info">
-            <div class="plan-card-title">🆓 無料プラン <span class="plan-badge free">Free</span></div>
-            <div class="plan-card-desc">有料プランなら月額¥980でAI対話が使い放題になります</div>
+            <div class="plan-eyebrow">⭐ Feyn 受験生プラン</div>
+            <div class="plan-price-row">
+              <span class="plan-price">¥980</span>
+              <span class="plan-price-unit">/ 月</span>
+            </div>
+            <ul class="plan-features">
+              <li>✅ AI対話が無制限</li>
+              <li>✅ ヒント・答えを見るが無制限</li>
+              <li>✅ 復習リマインダーが届く</li>
+            </ul>
           </div>
-          <button class="plan-btn" id="planUpgradeBtn">⭐ 有料プランにする（¥980/月）</button>
+          <button class="plan-btn" id="planUpgradeBtn">今すぐアップグレード →</button>
         `;
         document.getElementById('planUpgradeBtn').addEventListener('click', startCheckout);
       }

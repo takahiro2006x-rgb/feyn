@@ -29,6 +29,9 @@ CORS(app, supports_credentials=True)
 TEACHER_CODE = os.environ.get('TEACHER_CODE', 'FEYN_TEACHER_2024')
 SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史']
 
+# 無料プランの生徒が1日に開始できる会話の回数（先生アカウントは対象外）
+FREE_DAILY_STARTS = 1
+
 # 忘却曲線ベースの復習間隔（日）。復習に成功するたびに次の間隔へ進む
 REVIEW_INTERVALS = [1, 3, 7, 14, 30]
 SECURITY_QUESTIONS = [
@@ -232,6 +235,41 @@ def log_api_call(model, endpoint, success):
             conn.commit()
     except Exception:
         pass  # 記録の失敗が本来の処理を止めないようにする
+
+
+def check_free_tier_start_limit(user_id):
+    """無料プランの生徒が本日すでに上限回数の会話を開始していないか確認する。
+    先生アカウントや有料プランは対象外。上限に達していればエラーメッセージを返す（Noneなら開始可）。
+
+    「session_dateが今日の行がある」ではなく「そのsession_idの一番最初の行が今日」で数える。
+    そうしないと、前日の未完了セッションを今日再開しただけで1回消費したと誤判定してしまう。
+    """
+    with get_db() as conn:
+        user = conn.execute(
+            'SELECT role, subscription_status FROM users WHERE id = ?', (user_id,)
+        ).fetchone()
+        if not user or user['role'] != 'student' or user['subscription_status'] == 'active':
+            return None
+
+        rows = conn.execute(
+            'SELECT session_id, session_date FROM conversation_logs '
+            'WHERE user_id = ? AND session_id IS NOT NULL ORDER BY id',
+            (user_id,)
+        ).fetchall()
+
+    first_date_by_session = {}
+    for row in rows:
+        first_date_by_session.setdefault(row['session_id'], row['session_date'])
+
+    today = str(date.today())
+    starts_today = sum(1 for d in first_date_by_session.values() if d == today)
+
+    if starts_today >= FREE_DAILY_STARTS:
+        return (
+            f'無料プランでは1日{FREE_DAILY_STARTS}回まで会話を開始できます。'
+            '今日はもう使い切ったので、続きは明日か、有料プランにアップグレードしてください。'
+        )
+    return None
 
 
 def generate_once(instruction, message, endpoint_name):
@@ -1349,6 +1387,10 @@ def dashboard_usage():
 def start():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
+
+    limit_error = check_free_tier_start_limit(session['user_id'])
+    if limit_error:
+        return jsonify({'error': limit_error, 'upgrade_required': True}), 403
 
     data          = request.get_json()
     subject       = data.get('subject', '物理')

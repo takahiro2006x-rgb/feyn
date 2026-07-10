@@ -178,6 +178,28 @@ function addHelpMessage(kind, label, text) {
 }
 
 
+// ===== 無料枠上限メッセージ（アップグレード導線つき） =====
+function showUpgradePrompt(message) {
+  const el = document.createElement('div');
+  el.classList.add('message', 'feyn', 'pop-in');
+  el.innerHTML = `
+    <div class="avatar">${currentEmoji}</div>
+    <div class="bubble">
+      🔒 ${escText(message)}
+      <div class="quick-replies">
+        <button class="quick-reply" id="upgradeFromLimitBtn">⭐ 有料プランを見る</button>
+      </div>
+    </div>
+  `;
+  messagesEl.appendChild(el);
+  document.getElementById('upgradeFromLimitBtn').addEventListener('click', () => {
+    window.location.href = '/mypage';
+  });
+  el.scrollIntoView({ behavior: 'smooth' });
+  return el;
+}
+
+
 // ===== 考え中アニメーション =====
 function addThinking() {
   const el = document.createElement('div');
@@ -431,7 +453,11 @@ async function startSession(unit) {
     });
     const data = await response.json();
     thinkingEl.remove();
-    if (data.error) { addMessage('feyn', `⚠️ ${data.error}`); return; }
+    if (data.error) {
+      if (data.upgrade_required) showUpgradePrompt(data.error);
+      else addMessage('feyn', `⚠️ ${data.error}`);
+      return;
+    }
     sessionKey = data.session_key;
     hintBtn.disabled   = false;
     revealBtn.disabled = false;
@@ -526,7 +552,11 @@ async function startSessionWithPhoto(base64, mimeType, dataUrl) {
     });
     const data = await response.json();
     thinkingEl.remove();
-    if (data.error) { addMessage('feyn', `⚠️ ${data.error}`); return; }
+    if (data.error) {
+      if (data.upgrade_required) showUpgradePrompt(data.error);
+      else addMessage('feyn', `⚠️ ${data.error}`);
+      return;
+    }
     sessionKey = data.session_key;
     hintBtn.disabled   = false;
     revealBtn.disabled = false;

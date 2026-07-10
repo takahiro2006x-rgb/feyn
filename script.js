@@ -453,6 +453,7 @@ async function startSession(unit) {
     });
     const data = await response.json();
     thinkingEl.remove();
+    refreshLives();
     if (data.error) {
       if (data.upgrade_required) showUpgradePrompt(data.error);
       else addMessage('feyn', `⚠️ ${data.error}`);
@@ -552,6 +553,7 @@ async function startSessionWithPhoto(base64, mimeType, dataUrl) {
     });
     const data = await response.json();
     thinkingEl.remove();
+    refreshLives();
     if (data.error) {
       if (data.upgrade_required) showUpgradePrompt(data.error);
       else addMessage('feyn', `⚠️ ${data.error}`);
@@ -981,6 +983,43 @@ async function fetchStreak() {
   } catch (e) {}
 }
 
+// ===== 無料プランのライフ表示（❤️3個・2時間で1回復） =====
+function renderLivesDisplay(status) {
+  const el = document.getElementById('livesDisplay');
+  if (!el) return;
+
+  if (!status) {
+    el.innerHTML = '<div class="lives-hearts">👑 無制限</div>';
+    el.style.display = 'block';
+    return;
+  }
+
+  const hearts = Array.from({ length: status.max_lives }, (_, i) =>
+    i < status.lives ? '❤️' : '🖤'
+  ).join('');
+
+  let timerHtml = '';
+  if (status.next_recovery_seconds != null) {
+    const mins = Math.max(1, Math.ceil(status.next_recovery_seconds / 60));
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    const timerText = h > 0 ? `次の回復まで${h}時間${m}分` : `次の回復まで${m}分`;
+    timerHtml = `<div class="lives-timer">${timerText}</div>`;
+  }
+
+  el.innerHTML = `<div class="lives-hearts">${hearts}</div>${timerHtml}`;
+  el.style.display = 'block';
+}
+
+async function refreshLives() {
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderLivesDisplay(data.lives_status);
+  } catch (e) {}
+}
+
 
 // ===== 起動 =====
 applySubjectColor(currentSubject);
@@ -995,6 +1034,8 @@ async function init() {
     updateStatus(user.total_clears || 0);
     subjectStats = user.subject_clears || {};
     updateGapsBadge(user.due_reviews || 0);
+    renderLivesDisplay(user.lives_status);
+    setInterval(refreshLives, 60000);
 
     if (!user.has_security_question) {
       document.getElementById('securityBtn').style.display = 'block';

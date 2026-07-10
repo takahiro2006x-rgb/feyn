@@ -9,7 +9,7 @@ import random
 import string
 import uuid
 import base64
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from dotenv import load_dotenv
 
 import db
@@ -29,8 +29,10 @@ CORS(app, supports_credentials=True)
 TEACHER_CODE = os.environ.get('TEACHER_CODE', 'FEYN_TEACHER_2024')
 SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史']
 
-# 無料プランの生徒が1日に開始できる会話の回数（先生アカウントは対象外）
-FREE_DAILY_STARTS = 1
+# 無料プランの生徒のライフ制（先生アカウント・有料プランは対象外）
+# 新しい会話を開始するたびに1つ消費、0になると一定時間ごとに1つ回復する
+MAX_LIVES = 3
+LIFE_RECOVERY_HOURS = 2
 
 # 忘却曲線ベースの復習間隔（日）。復習に成功するたびに次の間隔へ進む
 REVIEW_INTERVALS = [1, 3, 7, 14, 30]
@@ -169,6 +171,9 @@ def init_db():
         db.add_column_if_missing(conn, 'users', "subscription_status TEXT NOT NULL DEFAULT 'free'")
         db.add_column_if_missing(conn, 'users', 'stripe_customer_id TEXT')
         db.add_column_if_missing(conn, 'users', 'stripe_subscription_id TEXT')
+        # 無料プランのライフ制（3個スタート、0になると2時間ごとに1回復）
+        db.add_column_if_missing(conn, 'users', 'lives INTEGER NOT NULL DEFAULT 3')
+        db.add_column_if_missing(conn, 'users', 'last_life_lost_at TIMESTAMP')
 
         conn.commit()
 
@@ -237,39 +242,82 @@ def log_api_call(model, endpoint, success):
         pass  # 記録の失敗が本来の処理を止めないようにする
 
 
-def check_free_tier_start_limit(user_id):
-    """無料プランの生徒が本日すでに上限回数の会話を開始していないか確認する。
-    先生アカウントや有料プランは対象外。上限に達していればエラーメッセージを返す（Noneなら開始可）。
+def _recover_lives(lives, last_life_lost_at):
+    """満タンでない間だけ進んでいる回復タイマーから、経過時間分のライフを回復させる。
+    戻り値は (回復後のライフ数, 更新後のタイマー起点 or 満タンならNone)。"""
+    if lives >= MAX_LIVES or not last_life_lost_at:
+        return MAX_LIVES, None
 
-    「session_dateが今日の行がある」ではなく「そのsession_idの一番最初の行が今日」で数える。
-    そうしないと、前日の未完了セッションを今日再開しただけで1回消費したと誤判定してしまう。
-    """
+    anchor = datetime.fromisoformat(last_life_lost_at)
+    recovered = int((datetime.now() - anchor).total_seconds() // (LIFE_RECOVERY_HOURS * 3600))
+    if recovered <= 0:
+        return lives, last_life_lost_at
+
+    new_lives = min(MAX_LIVES, lives + recovered)
+    if new_lives >= MAX_LIVES:
+        return new_lives, None
+    # 消費した回復分だけタイマーの起点を進める（余り時間は次の回復に引き継ぐ）
+    new_anchor = anchor + timedelta(hours=LIFE_RECOVERY_HOURS * recovered)
+    return new_lives, new_anchor.isoformat()
+
+
+def check_and_consume_life(user_id):
+    """無料プランの生徒のライフを確認し、残っていれば1つ消費する。
+    先生アカウントや有料プランは対象外。ライフが無ければエラーメッセージを返す（Noneなら開始可）。"""
     with get_db() as conn:
         user = conn.execute(
-            'SELECT role, subscription_status FROM users WHERE id = ?', (user_id,)
+            'SELECT role, subscription_status, lives, last_life_lost_at FROM users WHERE id = ?',
+            (user_id,)
         ).fetchone()
         if not user or user['role'] != 'student' or user['subscription_status'] == 'active':
             return None
 
-        rows = conn.execute(
-            'SELECT session_id, session_date FROM conversation_logs '
-            'WHERE user_id = ? AND session_id IS NOT NULL ORDER BY id',
-            (user_id,)
-        ).fetchall()
+        lives, last_life_lost_at = _recover_lives(user['lives'], user['last_life_lost_at'])
 
-    first_date_by_session = {}
-    for row in rows:
-        first_date_by_session.setdefault(row['session_id'], row['session_date'])
+        if lives <= 0:
+            anchor = datetime.fromisoformat(last_life_lost_at)
+            remaining = anchor + timedelta(hours=LIFE_RECOVERY_HOURS) - datetime.now()
+            minutes_left = max(1, int(remaining.total_seconds() // 60) + 1)
+            conn.execute('UPDATE users SET lives = ?, last_life_lost_at = ? WHERE id = ?',
+                         (lives, last_life_lost_at, user_id))
+            conn.commit()
+            return (
+                f'ライフがなくなりました。あと{minutes_left}分で1つ回復します。'
+                '今すぐ続けるには、有料プランにアップグレードしてください。'
+            )
 
-    today = str(date.today())
-    starts_today = sum(1 for d in first_date_by_session.values() if d == today)
-
-    if starts_today >= FREE_DAILY_STARTS:
-        return (
-            f'無料プランでは1日{FREE_DAILY_STARTS}回まで会話を開始できます。'
-            '今日はもう使い切ったので、続きは明日か、有料プランにアップグレードしてください。'
-        )
+        was_full = lives >= MAX_LIVES
+        new_lives = lives - 1
+        new_anchor = datetime.now().isoformat() if was_full else last_life_lost_at
+        conn.execute('UPDATE users SET lives = ?, last_life_lost_at = ? WHERE id = ?',
+                     (new_lives, new_anchor, user_id))
+        conn.commit()
     return None
+
+
+def get_lives_status(user_id):
+    """フロント表示用に、現在のライフ数と次に回復するまでの秒数を返す。
+    先生・有料プランはNoneを返し、フロントは「無制限」表示に切り替える。"""
+    with get_db() as conn:
+        user = conn.execute(
+            'SELECT role, subscription_status, lives, last_life_lost_at FROM users WHERE id = ?',
+            (user_id,)
+        ).fetchone()
+    if not user or user['role'] != 'student' or user['subscription_status'] == 'active':
+        return None
+
+    lives, last_life_lost_at = _recover_lives(user['lives'], user['last_life_lost_at'])
+    next_recovery_seconds = None
+    if lives < MAX_LIVES and last_life_lost_at:
+        anchor = datetime.fromisoformat(last_life_lost_at)
+        remaining = anchor + timedelta(hours=LIFE_RECOVERY_HOURS) - datetime.now()
+        next_recovery_seconds = max(0, int(remaining.total_seconds()))
+
+    return {
+        'lives': lives,
+        'max_lives': MAX_LIVES,
+        'next_recovery_seconds': next_recovery_seconds,
+    }
 
 
 def generate_once(instruction, message, endpoint_name):
@@ -759,6 +807,7 @@ def me():
         'due_reviews':           due,
         'open_assignments':      open_assignments,
         'subscription_status':   user['subscription_status'] if user else 'free',
+        'lives_status':          get_lives_status(session['user_id']),
     })
 
 
@@ -1388,7 +1437,7 @@ def start():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
 
-    limit_error = check_free_tier_start_limit(session['user_id'])
+    limit_error = check_and_consume_life(session['user_id'])
     if limit_error:
         return jsonify({'error': limit_error, 'upgrade_required': True}), 403
 

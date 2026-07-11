@@ -827,19 +827,19 @@ body {
 /* ===== 無料プランのライフ表示 ===== */
 .lives-display {
   text-align: center;
-  padding: 8px 10px;
+  padding: 4px 14px;
   background: var(--input-bg);
-  border-radius: 14px;
+  border-radius: 99px;
   border: 2px solid var(--card-border);
 }
 
 .lives-hearts {
-  font-size: 16px;
-  letter-spacing: 4px;
+  font-size: 15px;
+  letter-spacing: 3px;
 }
 
 .lives-timer {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--subtext);
   margin-top: 2px;
@@ -932,12 +932,6 @@ body {
   }
   .user-name-display { display: none; }
 
-  .lives-display {
-    padding: 4px 8px;
-    flex-shrink: 0;
-  }
-  .lives-hearts { font-size: 13px; letter-spacing: 2px; }
-  .lives-timer { display: none; }
   .logout-btn {
     white-space: nowrap;
     flex-shrink: 0;
@@ -972,6 +966,10 @@ body {
   .xp-area { flex: 1; min-width: 0; margin: 0; gap: 4px; }
   .xp-bar { height: 12px; }
   .xp-label { font-size: 11px; }
+
+  .lives-display { padding: 3px 10px; flex-shrink: 0; }
+  .lives-hearts { font-size: 12px; letter-spacing: 2px; }
+  .lives-timer { display: none; }
 
   /* チャット領域を最大化 */
   .messages { padding: 14px; gap: 12px; }

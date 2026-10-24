@@ -7,8 +7,17 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import core
 import db
+import ratelimit
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def _too_many_attempts(scope, account=None):
+    """失敗が続いて制限中ならエラー応答を返す（問題なければNone）"""
+    wait = ratelimit.check(scope, ratelimit.client_ip(), account)
+    if wait:
+        return jsonify({'error': ratelimit.wait_message(wait)}), 429
+    return None
 
 
 @auth_bp.route('/api/signup', methods=['POST'])
@@ -30,8 +39,14 @@ def signup():
         return jsonify({'error': 'ニックネームは20文字以内にしてください'}), 400
     if len(password) < 8:
         return jsonify({'error': 'パスワードは8文字以上にしてください'}), 400
-    if teacher_code and teacher_code != core.TEACHER_CODE:
-        return jsonify({'error': '先生コードが正しくありません'}), 400
+    if teacher_code:
+        # 先生コードの総当たりを防ぐため、間違いが続いたら一定時間受け付けない
+        blocked = _too_many_attempts('teacher-code')
+        if blocked:
+            return blocked
+        if teacher_code != core.TEACHER_CODE:
+            ratelimit.record_failure('teacher-code', ratelimit.client_ip())
+            return jsonify({'error': '先生コードが正しくありません'}), 400
     if not security_question or security_question not in core.SECURITY_QUESTIONS:
         return jsonify({'error': '秘密の質問を選んでください'}), 400
     if not security_answer:
@@ -66,12 +81,18 @@ def login():
     email    = data.get('email', '').strip().lower()
     password = data.get('password', '')
 
+    blocked = _too_many_attempts('login', email)
+    if blocked:
+        return blocked
+
     with core.get_db() as conn:
         user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
 
     if not user or not check_password_hash(user['password_hash'], password):
+        ratelimit.record_failure('login', ratelimit.client_ip(), email)
         return jsonify({'error': 'メールアドレスまたはパスワードが違います'}), 401
 
+    ratelimit.record_success('login', ratelimit.client_ip(), email)
     with core.get_db() as conn:
         conn.execute('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', (user['id'],))
         conn.commit()
@@ -151,13 +172,20 @@ def reset_password():
     if len(new_password) < 8:
         return jsonify({'error': 'パスワードは8文字以上にしてください'}), 400
 
+    # 秘密の質問の答えを総当たりで当てられないよう、間違いが続いたら一定時間受け付けない
+    blocked = _too_many_attempts('reset', email)
+    if blocked:
+        return blocked
+
     with core.get_db() as conn:
         user = conn.execute('SELECT * FROM users WHERE email = ?', (email,)).fetchone()
 
     if not user or not user['security_answer_hash']:
         return jsonify({'error': 'このメールアドレスではリセットできません。メールアドレスを確認するか、先生に相談してください'}), 404
     if not check_password_hash(user['security_answer_hash'], answer):
+        ratelimit.record_failure('reset', ratelimit.client_ip(), email)
         return jsonify({'error': '答えが正しくありません'}), 401
+    ratelimit.record_success('reset', ratelimit.client_ip(), email)
 
     with core.get_db() as conn:
         conn.execute(

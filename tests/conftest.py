@@ -17,6 +17,7 @@ import core
 import db as db_module
 import gap_analyzer as gap_analyzer_module
 import llm as llm_module
+import ratelimit
 
 
 class FakeChatSession:
@@ -50,6 +51,7 @@ def app(monkeypatch, tmp_path):
 
     core.init_db()
     core.chat_sessions.clear()
+    ratelimit.limiter.reset_all()  # テスト間でログイン失敗の記録が残らないようにする
     return app_module
 
 

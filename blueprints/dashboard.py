@@ -238,6 +238,17 @@ def dashboard_api():
     })
 
 
+@dashboard_bp.route('/api/dashboard/stumble-map')
+def dashboard_stumble_map():
+    """つまずきマップ: テーマごとに、何割の生徒の苦手ノートに（未解決で）入っているか"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+    if session.get('user_role') != 'teacher':
+        return jsonify({'error': '権限がありません'}), 403
+    school_id = session.get('school_id', core.default_school_id())
+    return jsonify(core.compute_stumble_map(school_id))
+
+
 @dashboard_bp.route('/api/dashboard/students.csv')
 def dashboard_students_csv():
     """担当生徒の進捗・クリア数をCSVで書き出す（会話本文は含めない）"""

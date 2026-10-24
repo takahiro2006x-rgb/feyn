@@ -467,6 +467,45 @@ def compute_usage_metrics(school_id, days=30, now=None):
 
 
 # ========================================
+# つまずきマップ（テーマごとに、何割の生徒の苦手ノートに入っているか）
+# ========================================
+STUMBLE_MAP_LIMIT = 20
+
+
+def compute_stumble_map(school_id, limit=STUMBLE_MAP_LIMIT):
+    """組織の生徒について、苦手ノートに「未解決」で残っているテーマを、生徒の割合が高い順に返す。
+    テーマ名は会話の分析時に既存の名前へそろえているので、それを単元のまとまりとして扱う"""
+    joined = "JOIN users u ON u.id = {col} WHERE u.school_id = ? AND u.role = 'student'"
+    with get_db() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM users WHERE school_id = ? AND role = 'student'", (school_id,)
+        ).fetchone()['cnt']
+        gap_rows = conn.execute(
+            'SELECT g.subject, g.topic, COUNT(DISTINCT g.user_id) AS students FROM knowledge_gaps g '
+            + joined.format(col='g.user_id') + " AND g.status != 'resolved' GROUP BY g.subject, g.topic",
+            (school_id,)
+        ).fetchall()
+        studied_rows = conn.execute(
+            'SELECT t.subject, t.topic, COUNT(DISTINCT t.user_id) AS students FROM topic_progress t '
+            + joined.format(col='t.user_id') + ' GROUP BY t.subject, t.topic',
+            (school_id,)
+        ).fetchall()
+
+    studied = {(r['subject'], r['topic']): r['students'] for r in studied_rows}
+    topics = []
+    for r in gap_rows:
+        topics.append({
+            'subject':  r['subject'],
+            'topic':    r['topic'],
+            'students': r['students'],
+            'studied':  max(studied.get((r['subject'], r['topic']), 0), r['students']),
+            'rate':     round(r['students'] / total * 100) if total else 0,
+        })
+    topics.sort(key=lambda t: (-t['students'], t['subject'], t['topic']))
+    return {'total_students': total, 'topics': topics[:limit], 'more': max(0, len(topics) - limit)}
+
+
+# ========================================
 # 先生向けCSV出力（生徒ごとの進捗・クリア数。会話本文は含めない）
 # ========================================
 CSV_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')

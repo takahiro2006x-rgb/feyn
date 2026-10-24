@@ -483,12 +483,19 @@
     .dropout-bar { height: 12px; border-radius: 99px; background: var(--border); overflow: hidden; }
     .dropout-fill { height: 100%; border-radius: 99px; background: var(--yellow); }
     .dropout-count { text-align: right; color: var(--subtext); }
+    .stumble-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 2fr 110px; align-items: center; gap: 12px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .stumble-topic { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stumble-topic small { color: var(--subtext); font-weight: 700; }
+    .stumble-fill { height: 100%; border-radius: 99px; }
+    .stumble-count { text-align: right; color: var(--subtext); font-size: 12px; }
 
     /* ===== レスポンシブ ===== */
     @media (max-width: 768px) {
       .summary { grid-template-columns: 1fr; }
       .metrics-grid { grid-template-columns: repeat(2, 1fr); }
       .dropout-row { grid-template-columns: 96px 1fr 40px; }
+      .stumble-row { grid-template-columns: 1fr 90px; }
+      .stumble-row .dropout-bar { grid-column: 1 / -1; grid-row: 2; }
       .header  { height: auto; flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
       .header-divider { display: none; }
       .header-user { display: none; }
@@ -524,6 +531,14 @@
       <div class="section-title">📈 利用状況（直近30日）</div>
     </div>
     <div class="metrics-box" id="metricsWrap">
+      <div class="loading">読み込み中...</div>
+    </div>
+
+    <!-- つまずきマップ -->
+    <div class="section-header">
+      <div class="section-title">🗺️ つまずきマップ（苦手ノートに残っている生徒の割合）</div>
+    </div>
+    <div class="metrics-box" id="stumbleWrap">
       <div class="loading">読み込み中...</div>
     </div>
 
@@ -903,6 +918,38 @@
       }
     }
 
+    // ===== つまずきマップ =====
+    // 割合が高いほど濃い色にする（多くの生徒がつまずいているテーマが一目で分かるように）
+    function stumbleColor(rate) {
+      if (rate >= 50) return '#FF4B4B';
+      if (rate >= 25) return '#FF9600';
+      return '#FFC200';
+    }
+
+    async function loadStumbleMap() {
+      const wrap = document.getElementById('stumbleWrap');
+      try {
+        const res = await fetch('/api/dashboard/stumble-map');
+        const data = await res.json();
+        if (!res.ok) { wrap.innerHTML = `<div class="loading">${escHtml(data.error || '読み込みに失敗しました')}</div>`; return; }
+        if (data.topics.length === 0) {
+          wrap.innerHTML = '<div class="loading">苦手ノートに残っているテーマはまだありません</div>';
+          return;
+        }
+        const rows = data.topics.map(t => `
+          <div class="stumble-row">
+            <span class="stumble-topic" title="${escHtml(t.subject)}：${escHtml(t.topic)}">${SUBJECT_EMOJIS[t.subject] || '📚'} ${escHtml(t.topic)} <small>${escHtml(t.subject)}</small></span>
+            <div class="dropout-bar"><div class="stumble-fill" style="width:${Number(t.rate)}%; background:${stumbleColor(Number(t.rate))}"></div></div>
+            <span class="stumble-count">${Number(t.rate)}%（${Number(t.students)}人 / ${Number(data.total_students)}人）</span>
+          </div>`).join('');
+        const more = data.more > 0 ? `<div class="metrics-note">ほかに ${Number(data.more)} テーマあります（人数の多い順に上位を表示）</div>` : '';
+        wrap.innerHTML = rows + more + `
+          <div class="metrics-note">苦手ノートに「未解決」で残っている生徒の数です。復習で解決すると数から外れます。テーマ名は会話の分析でAIが付けたものです。</div>`;
+      } catch (e) {
+        wrap.innerHTML = '<div class="loading">読み込みに失敗しました</div>';
+      }
+    }
+
     // ===== API使用量 =====
     async function loadUsage() {
       const wrap = document.getElementById('usageWrap');
@@ -954,6 +1001,7 @@
         renderSubmissions(data.recent_submissions);
         renderTable(allStudents);
         loadMetrics();
+        loadStumbleMap();
         loadUsage();
       } catch (e) {
         document.getElementById('tableWrap').innerHTML = `

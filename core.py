@@ -6,9 +6,10 @@ Flaskのルート定義は持たない。blueprints/ 配下の各Blueprintと ap
 import base64
 import os
 import re
+import threading
 import time
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 
@@ -20,7 +21,66 @@ import tutoring
 
 load_dotenv()
 
-TEACHER_CODE = os.environ.get('TEACHER_CODE', 'FEYN_TEACHER_2024')
+DEFAULT_TEACHER_CODE = 'FEYN_TEACHER_2024'
+TEACHER_CODE = os.environ.get('TEACHER_CODE') or DEFAULT_TEACHER_CODE
+
+
+def is_production():
+    """Renderで動いているか（RenderはRENDER=trueを自動で設定する）"""
+    return bool(os.environ.get('RENDER'))
+
+
+def teacher_signup_enabled():
+    """先生アカウントの新規登録を受け付けてよいか。
+    先生コードの既定値はGitHubに公開されているので、本番で既定値のままだと誰でも先生になれて
+    全生徒の会話やメールアドレスを見られてしまう。本番では独自の値が設定されているときだけ受け付ける"""
+    return not is_production() or TEACHER_CODE != DEFAULT_TEACHER_CODE
+
+
+# --- 日付・時刻（日本時間） ---
+# サーバー（Render）の時計はUTCなので、date.today() だと日本時間の0〜9時が「前日」扱いになる。
+# 学習日・復習日・連続学習日数など、利用者に見える「日付」はすべて日本時間で数える。
+JST = timezone(timedelta(hours=9))
+
+
+def today_jst():
+    return datetime.now(JST).date()
+
+
+def today_jst_str():
+    return today_jst().isoformat()
+
+
+def _as_utc_datetime(value):
+    """DBの CURRENT_TIMESTAMP（UTCで記録される）を、タイムゾーン付きのdatetimeにする。
+    SQLiteは 'YYYY-MM-DD HH:MM:SS' の文字列、Postgresはdatetimeで返ってくるので両方に対応する"""
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    elif isinstance(value, date):
+        return None
+    else:
+        try:
+            dt = datetime.fromisoformat(str(value).strip().replace('Z', '+00:00'))
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def to_jst_date(value):
+    """DBに記録された時刻（UTC）が、日本時間で何日にあたるか"""
+    dt = _as_utc_datetime(value)
+    return dt.astimezone(JST).date() if dt else None
+
+
+def to_jst_str(value):
+    """DBに記録された時刻（UTC）を、画面表示用の日本時間 'YYYY-MM-DD HH:MM' にする"""
+    dt = _as_utc_datetime(value)
+    return dt.astimezone(JST).strftime('%Y-%m-%d %H:%M') if dt else None
+
 
 # 「aiue@okaki」のようにドメインにドットが無いものは、Stripeなど外部サービスに拒否される
 _EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$')
@@ -273,10 +333,15 @@ def _recover_lives(lives, last_life_lost_at):
     return new_lives, new_anchor.isoformat()
 
 
+# gunicornはスレッドで同時に処理するので、ライフの「読んで→減らす/戻す」が重ならないようにする
+# （連打で同時に2回始めたときに、1つ分しか減らない・マイナスになる、といったずれを防ぐ）
+_lives_lock = threading.Lock()
+
+
 def check_and_consume_life(user_id):
     """無料プランの生徒のライフを確認し、残っていれば1つ消費する。
     先生アカウントや有料プランは対象外。ライフが無ければエラーメッセージを返す（Noneなら開始可）。"""
-    with get_db() as conn:
+    with _lives_lock, get_db() as conn:
         user = conn.execute(
             'SELECT role, subscription_status, lives, last_life_lost_at FROM users WHERE id = ?',
             (user_id,)
@@ -305,6 +370,25 @@ def check_and_consume_life(user_id):
                      (new_lives, new_anchor, user_id))
         conn.commit()
     return None
+
+
+def refund_life(user_id):
+    """check_and_consume_life で消費したライフを1つ戻す（AIの呼び出しに失敗して会話を始められなかったとき用）。
+    消費の対象外（先生・有料プラン）なら何もしない"""
+    with _lives_lock, get_db() as conn:
+        user = conn.execute(
+            'SELECT role, subscription_status, lives, last_life_lost_at FROM users WHERE id = ?',
+            (user_id,)
+        ).fetchone()
+        if not user or user['role'] != 'student' or user['subscription_status'] == 'active':
+            return
+        lives, last_life_lost_at = _recover_lives(user['lives'], user['last_life_lost_at'])
+        new_lives = min(MAX_LIVES, lives + 1)
+        # 満タンに戻ったら回復タイマーも止める（消費前の状態に戻す）
+        new_anchor = None if new_lives >= MAX_LIVES else last_life_lost_at
+        conn.execute('UPDATE users SET lives = ?, last_life_lost_at = ? WHERE id = ?',
+                     (new_lives, new_anchor, user_id))
+        conn.commit()
 
 
 def get_lives_status(user_id):
@@ -374,7 +458,7 @@ def restore_chat_session(session_key, user_id, teacher_name, target_date=None, c
     if subject not in SUBJECTS:
         return None
 
-    target_date = target_date or str(date.today())
+    target_date = target_date or today_jst_str()
     with get_db() as conn:
         if conv_id:
             rows = conn.execute(
@@ -420,11 +504,21 @@ def restore_chat_session(session_key, user_id, teacher_name, target_date=None, c
             'message': row['message'],
         })
 
+    # すでに完了記録がある会話なら「終わった会話」として復元する（続きの発言や二重の完了を受け付けない）
+    done = False
+    if conv_id:
+        with get_db() as conn:
+            done = conn.execute(
+                'SELECT 1 FROM session_logs WHERE user_id = ? AND session_id = ?', (user_id, conv_id)
+            ).fetchone() is not None
+
     instruction = tutoring.build_instruction(subject, difficulty, teacher_name)
     chat = create_chat(ALL_MODELS[0], instruction, history=history)
     turns = min(sum(1 for row in rows if row['role'] == 'user'), 3)
     return {'chat': chat, 'model': ALL_MODELS[0], 'instruction': instruction, 'conv_id': conv_id,
-            'turns': turns, 'subject': subject, 'difficulty': difficulty, 'unit': unit}
+            'turns': turns, 'subject': subject, 'difficulty': difficulty, 'unit': unit,
+            # 復習・課題のIDはメモリにしか持っていないので、復元した会話では引き継がない
+            'gap_id': None, 'assignment_id': None, 'done': done}
 
 
 # ========================================

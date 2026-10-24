@@ -2,7 +2,6 @@
 """先生ダッシュボードAPI（生徒一覧・生徒詳細・課題出題・パスワード再発行・使用量）"""
 import random
 import string
-from datetime import date
 
 from flask import Blueprint, jsonify, request, session
 from werkzeug.security import generate_password_hash
@@ -45,12 +44,19 @@ def dashboard_student(student_id):
             (student_id,)
         ).fetchall()
 
+    assignments = []
+    for r in assignment_rows:
+        a = dict(r)
+        a['created_at']   = core.to_jst_str(a['created_at'])
+        a['completed_at'] = core.to_jst_str(a['completed_at'])
+        assignments.append(a)
+
     return jsonify({
         'student':     dict(student),
         'gaps':        [dict(r) for r in gap_rows],
         'progress':    [dict(r) for r in progress_rows],
         'sessions':    core.get_history_sessions(student_id),
-        'assignments': [dict(r) for r in assignment_rows],
+        'assignments': assignments,
         'labels':      tutoring.GAP_TYPE_LABELS,
     })
 
@@ -159,13 +165,14 @@ def dashboard_api():
     for s in students_rows:
         user_counts = counts_by_user.get(s['id'], {})
         counts = {subj: user_counts.get(subj, 0) for subj in core.SUBJECTS}
+        # DBの時刻はUTCなので、先生に見せる前に日本時間 'YYYY-MM-DD HH:MM' にそろえる
         result.append({
             'id':         s['id'],
             'name':       s['name'],
             'email':      s['email'],
-            'created_at': s['created_at'],
-            'last_active': last_by_user.get(s['id']),
-            'last_login': s['last_login'],
+            'created_at': core.to_jst_str(s['created_at']),
+            'last_active': core.to_jst_str(last_by_user.get(s['id'])),
+            'last_login': core.to_jst_str(s['last_login']),
             'subscription_status': s['subscription_status'],
             'subjects':   counts,
             'total':      sum(counts.values()),
@@ -181,7 +188,7 @@ def dashboard_api():
             'total_clears':   total_clears,
             'top_subject':    top_subject,
         },
-        'recent_submissions': [dict(r) for r in submission_rows],
+        'recent_submissions': [dict(r, completed_at=core.to_jst_str(r['completed_at'])) for r in submission_rows],
     })
 
 
@@ -193,14 +200,14 @@ def dashboard_usage():
     if session.get('user_role') != 'teacher':
         return jsonify({'error': '権限がありません'}), 403
 
-    today = str(date.today())
+    today = core.today_jst()
     with core.get_db() as conn:
         rows = conn.execute(
             'SELECT model, endpoint, success, created_at FROM api_calls ORDER BY id DESC LIMIT 2000'
         ).fetchall()
 
-    # created_atはSQLiteでは文字列、Postgresではdatetimeで返るため str() で先頭10文字を比較する
-    today_rows = [r for r in rows if str(r['created_at'])[:10] == today]
+    # created_atはUTCで記録されている（SQLiteは文字列、Postgresはdatetime）ので、日本時間の日付で比べる
+    today_rows = [r for r in rows if core.to_jst_date(r['created_at']) == today]
 
     by_model = {}
     for r in today_rows:
@@ -208,7 +215,7 @@ def dashboard_usage():
         m['success' if r['success'] else 'fail'] += 1
 
     return jsonify({
-        'date':        today,
+        'date':        today.isoformat(),
         'total_calls': len(today_rows),
         'by_model':    by_model,
         'models_order': core.ALL_MODELS,

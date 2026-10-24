@@ -13,8 +13,27 @@ from blueprints.dashboard import dashboard_bp
 from blueprints.pages import pages_bp
 from blueprints.progress import progress_bp
 
+DEV_SECRET_KEY = 'feyn-dev-secret-2024'
+
+
+def load_secret_key(environ, is_production):
+    """ログイン情報（クッキー）の署名に使う秘密鍵を決める。
+    開発用の既定値はGitHubに公開されているので、本番で使うと誰でも「先生としてログイン中」などの
+    クッキーを偽造できてしまう。本番で未設定（または既定値のまま）なら、起動を止めて気づけるようにする"""
+    key = (environ.get('FLASK_SECRET_KEY') or '').strip()
+    if is_production and (not key or key == DEV_SECRET_KEY):
+        raise RuntimeError(
+            'FLASK_SECRET_KEY が設定されていません。Renderの Environment に、ランダムな文字列を設定してください'
+            '（生成例: python -c "import secrets; print(secrets.token_hex(32))"）'
+        )
+    return key or DEV_SECRET_KEY
+
+
+# RenderはRENDER=trueを設定する
+IS_PRODUCTION = core.is_production()
+
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'feyn-dev-secret-2024')
+app.secret_key = load_secret_key(os.environ, IS_PRODUCTION)
 # ブラウザを閉じるたびに再ログインを求めないよう、ログインセッションを30日間保持する
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 
@@ -23,9 +42,12 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 # Stripeから戻ってくる画面遷移（外部サイト→/mypageへのGET）はLaxでもクッキーが付くので影響しない。
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-# RenderはRENDER=trueを設定する。本番（HTTPS）でだけSecureにして、ローカルのhttp開発は妨げない
-IS_PRODUCTION = bool(os.environ.get('RENDER'))
+# 本番（HTTPS）でだけSecureにして、ローカルのhttp開発は妨げない
 app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION
+
+# 先生コードが既定値のままなら、起動時のログで知らせる（先生の新規登録は止まる。auth.py参照）
+if not core.teacher_signup_enabled():
+    app.logger.error('TEACHER_CODE が設定されていないため、先生アカウントの新規登録を停止しています')
 
 # Renderのプロキシ越しでも、接続元のIPアドレス（ログイン試行回数の制限に使う）を正しく取る
 if IS_PRODUCTION:

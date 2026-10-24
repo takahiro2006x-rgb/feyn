@@ -151,7 +151,20 @@ def billing_webhook():
     obj        = event['data']['object']
 
     with core.get_db() as conn:
-        if event_type in ('customer.subscription.updated', 'customer.subscription.created'):
+        if event_type == 'checkout.session.completed':
+            # 決済画面から戻ってくる前にタブを閉じると /api/billing/confirm が呼ばれず、
+            # 「払ったのに無料のまま」になってしまう。Stripeからの通知でも同じ反映を行う。
+            # どの利用者の決済かは、決済ページを作るときに渡した client_reference_id（ユーザーID）で分かる
+            user_id = str(_field(obj, 'client_reference_id') or '')
+            if (_field(obj, 'mode') == 'subscription' and _field(obj, 'status') == 'complete'
+                    and user_id.isdigit()):
+                conn.execute(
+                    'UPDATE users SET subscription_status = ?, stripe_customer_id = ?, stripe_subscription_id = ?, '
+                    'subscription_cancel_at = NULL WHERE id = ?',
+                    ('active', _field(obj, 'customer'), _field(obj, 'subscription'), int(user_id))
+                )
+                conn.commit()
+        elif event_type in ('customer.subscription.updated', 'customer.subscription.created'):
             status = 'active' if obj['status'] in ('active', 'trialing') else 'free'
             # 有料のままで解約だけ予約されている場合は、いつまで使えるかを覚えておく（再開されたらNULLに戻る）
             cancel_at = scheduled_cancel_date(obj) if status == 'active' else None

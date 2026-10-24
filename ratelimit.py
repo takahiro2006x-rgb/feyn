@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """失敗回数の制限（ブルートフォース対策）。
 
-プロセス内のメモリで数えるだけの簡易版。gunicornを単一ワーカーで動かす前提で、
+プロセス内のメモリで数えるだけの簡易版。gunicornを単一プロセス（複数スレッド）で動かす前提で、
 再起動すると記録は消える（chat_sessionsと同じ前提）。複数ワーカーにする場合はDBやRedisに移す必要がある。
 """
 import os
+import threading
 import time
 from collections import deque
 
@@ -18,6 +19,8 @@ class FailureLimiter:
     def __init__(self, clock=time.monotonic):
         self._clock = clock
         self._failures = {}  # key -> 失敗した時刻のdeque
+        # gunicornはスレッドで同時に処理するので、記録の読み書きが重ならないようにする
+        self._lock = threading.Lock()
 
     def _prune(self, key, window):
         q = self._failures.get(key)
@@ -33,23 +36,27 @@ class FailureLimiter:
 
     def retry_after(self, key, limit, window):
         """limit回以上失敗していれば、あと何秒待てばよいかを返す（制限中でなければ0）"""
-        q = self._prune(key, window)
-        if q is None or len(q) < limit:
-            return 0
-        # 古い失敗が窓から外れて、limit未満に戻るまでの時間
-        release_at = q[len(q) - limit] + window
-        return max(1, int(release_at - self._clock()) + 1)
+        with self._lock:
+            q = self._prune(key, window)
+            if q is None or len(q) < limit:
+                return 0
+            # 古い失敗が窓から外れて、limit未満に戻るまでの時間
+            release_at = q[len(q) - limit] + window
+            return max(1, int(release_at - self._clock()) + 1)
 
     def record_failure(self, key):
-        if len(self._failures) >= _MAX_KEYS:
-            self._failures.clear()
-        self._failures.setdefault(key, deque()).append(self._clock())
+        with self._lock:
+            if len(self._failures) >= _MAX_KEYS:
+                self._failures.clear()
+            self._failures.setdefault(key, deque()).append(self._clock())
 
     def reset(self, key):
-        self._failures.pop(key, None)
+        with self._lock:
+            self._failures.pop(key, None)
 
     def reset_all(self):
-        self._failures.clear()
+        with self._lock:
+            self._failures.clear()
 
 
 # 画面の入力ミスで引っかからず、機械的な総当たりは止まる程度の値

@@ -3,7 +3,7 @@
 import base64
 import time
 import uuid
-from datetime import date, timedelta
+from datetime import timedelta
 
 from flask import Blueprint, jsonify, request, session
 
@@ -19,11 +19,7 @@ def start():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
 
-    limit_error = core.check_and_consume_life(session['user_id'])
-    if limit_error:
-        return jsonify({'error': limit_error, 'upgrade_required': True}), 403
-
-    data          = request.get_json()
+    data          = request.get_json() or {}
     subject       = data.get('subject', '物理')
     difficulty    = data.get('difficulty', '大学受験')
     teacher_name  = data.get('teacher_name', session.get('user_name', '先生'))
@@ -61,6 +57,7 @@ def start():
         unit    = gap['topic']  # 復習モードでは会話ログの見出しに「何を復習したか」が分かるようにする
 
     # 課題モード: 先生が指定した科目・単元で開始する
+    assignment = None
     if assignment_id:
         with core.get_db() as conn:
             assignment = conn.execute(
@@ -82,6 +79,11 @@ def start():
     else:
         instruction = tutoring.build_instruction(subject, difficulty, teacher_name, unit=unit)
         kickoff     = tutoring.build_kickoff(subject, unit=unit)
+
+    # 入力のチェックがすべて通ってから、AIを呼ぶ直前にライフを消費する
+    limit_error = core.check_and_consume_life(session['user_id'])
+    if limit_error:
+        return jsonify({'error': limit_error, 'upgrade_required': True}), 403
 
     # 写真モードは画像を読める必要があるため、画像非対応のGroqにはフォールバックしない
     models_to_try = core.GEMINI_MODELS if photo_bytes else core.ALL_MODELS
@@ -108,9 +110,13 @@ def start():
             if '503' in err or 'UNAVAILABLE' in err:
                 quota_only = False
                 continue
-            return jsonify({'error': 'AIサーバーが混み合っています。少し待ってからもう一度試してください。'}), 503
+            # それ以外の想定外のエラーは、他のモデルを試さずに打ち切る
+            quota_only = False
+            break
 
     if response is None:
+        # 会話を始められなかったので、消費したライフを返す
+        core.refund_life(session['user_id'])
         if quota_only:
             return jsonify({'error': '本日のAPI利用上限に達しました。'}), 429
         return jsonify({'error': 'AIサーバーが混み合っています。少し待ってからもう一度試してください。'}), 503
@@ -126,10 +132,14 @@ def start():
         'difficulty':  difficulty,
         'conv_id':     conv_id,
         'unit':        unit,
+        # 完了時にブラウザから送られた値ではなく、ここで確認済みの値を使う
+        'gap_id':        gap['id'] if gap else None,
+        'assignment_id': assignment['id'] if assignment else None,
+        'done':          False,  # Feynが【会話終了】を出したらTrueになる
     }
 
     reply = response.text or ''
-    today = str(date.today())
+    today = core.today_jst_str()
     with core.get_db() as conn:
         if gap:
             conn.execute(
@@ -167,8 +177,10 @@ def chat():
         core.chat_sessions[session_key] = restored
 
     sess = core.chat_sessions[session_key]
+    if sess.get('done'):
+        return jsonify({'error': 'この会話はもう終わっています。新しい会話を始めてください。'}), 400
 
-    today = str(date.today())
+    today = core.today_jst_str()
     subject    = sess.get('subject', '')
     difficulty = sess.get('difficulty', '')
     conv_id    = sess.get('conv_id')
@@ -212,10 +224,18 @@ def chat():
         sess['turns'] = min(sess['turns'] + 1, 3)
     progress = 100 if is_done else sess['turns'] * 25
 
-    # is_done時にここでchat_sessionsを消すと/api/completeがconv_idを取得できなくなるため、
-    # 後始末（pop）は完了記録を書き終えた/api/complete側で行う
+    # 「Feynが納得した」ことはサーバーだけが知っている。完了の記録はここで行い、
+    # /api/complete はこの印が付いた会話にだけ、課題の完了・苦手の解決・分析を行う。
+    # chat_sessionsの後始末（pop）は/api/complete側で行う
+    if is_done:
+        sess['done'] = True
 
     with core.get_db() as conn:
+        if is_done:
+            conn.execute(
+                'INSERT INTO session_logs (user_id, subject, difficulty, session_id) VALUES (?, ?, ?, ?)',
+                (session['user_id'], subject, difficulty, conv_id)
+            )
         conn.execute(
             'INSERT INTO conversation_logs (user_id, subject, difficulty, role, message, session_date, session_id, unit) '
             'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
@@ -298,27 +318,30 @@ def complete():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
 
-    data          = request.get_json()
-    subject       = data.get('subject', '')
-    difficulty    = data.get('difficulty', '')
-    gap_id        = data.get('gap_id')
-    assignment_id = data.get('assignment_id')
-    session_key   = data.get('session_key') or ''
-
-    if not subject:
-        return jsonify({'error': '科目が指定されていません'}), 400
+    data        = request.get_json() or {}
+    session_key = data.get('session_key') or ''
 
     # 他人のセッションキーを指定できないようにする
-    conv_id = None
-    if session_key.startswith(f"{session['user_id']}_") and session_key in core.chat_sessions:
-        conv_id = core.chat_sessions[session_key].get('conv_id')
+    if not session_key.startswith(f"{session['user_id']}_"):
+        return jsonify({'error': 'セッションが見つかりません'}), 400
 
-    today = str(date.today())
+    # 科目・復習・課題などはブラウザから送られた値を信じず、サーバーが覚えている値を使う。
+    # 先に取り出しておくことで、同じ会話の完了が二重に処理されることも防ぐ
+    sess = core.chat_sessions.pop(session_key, None)
+    if sess is None or not sess.get('done'):
+        if sess is not None:
+            core.chat_sessions.setdefault(session_key, sess)  # 途中の会話は消さずに戻す
+        return jsonify({'error': 'この会話はまだ終わっていません'}), 400
+
+    subject       = sess.get('subject', '')
+    difficulty    = sess.get('difficulty', '')
+    gap_id        = sess.get('gap_id')
+    assignment_id = sess.get('assignment_id')
+    conv_id       = sess.get('conv_id')
+
+    today = core.today_jst_str()
     with core.get_db() as conn:
-        conn.execute(
-            'INSERT INTO session_logs (user_id, subject, difficulty, session_id) VALUES (?, ?, ?, ?)',
-            (session['user_id'], subject, difficulty, conv_id)
-        )
+        # 完了の記録（session_logs）は、Feynが納得した時点で /api/chat が書き込み済み
         # 課題として出されていたセッションの完了を記録する
         if assignment_id:
             conn.execute(
@@ -339,7 +362,7 @@ def complete():
                 conn.execute(
                     "UPDATE knowledge_gaps SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP, "
                     'review_count = ?, next_review = ? WHERE id = ? AND user_id = ?',
-                    (count, str(date.today() + timedelta(days=interval)), gap_id, session['user_id'])
+                    (count, str(core.today_jst() + timedelta(days=interval)), gap_id, session['user_id'])
                 )
         if conv_id:
             rows = conn.execute(
@@ -359,8 +382,6 @@ def complete():
             (session['user_id'], subject)
         ).fetchall()
         conn.commit()
-
-    core.chat_sessions.pop(session_key, None)
 
     # 対話履歴からナレッジギャップを自動分析（失敗しても完了記録は成立させる）
     analysis = None

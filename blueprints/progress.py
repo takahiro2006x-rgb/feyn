@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """生徒の学習進捗系API（ストリーク・学習履歴・苦手ノート・偏差値・自分の課題一覧）"""
-from datetime import date, timedelta
+from datetime import timedelta
 
 from flask import Blueprint, jsonify, request, session
 
@@ -34,15 +34,16 @@ def streak():
 
     with core.get_db() as conn:
         rows = conn.execute(
-            "SELECT DISTINCT date(completed_at) as day FROM session_logs WHERE user_id = ? ORDER BY day DESC",
+            'SELECT completed_at FROM session_logs WHERE user_id = ?',
             (session['user_id'],)
         ).fetchall()
 
-    if not rows:
+    # completed_at はUTCで記録されているので、日本時間の日付に直してから数える
+    days = sorted({d for d in (core.to_jst_date(row['completed_at']) for row in rows) if d}, reverse=True)
+    if not days:
         return jsonify({'streak': 0})
 
-    today = date.today()
-    days = [date.fromisoformat(row['day']) for row in rows]
+    today = core.today_jst()
 
     if days[0] < today - timedelta(days=1):
         return jsonify({'streak': 0})
@@ -69,7 +70,7 @@ def gaps_api():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
 
-    today = str(date.today())
+    today = core.today_jst_str()
     with core.get_db() as conn:
         gap_rows = conn.execute(
             "SELECT id, subject, topic, gap_type, description, evidence, suggested_question, "

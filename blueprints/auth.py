@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """認証API（signup/login/logout/パスワードリセット/自分の情報取得）"""
-from datetime import date
-
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, request, session
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import core
@@ -42,6 +40,10 @@ def signup():
     if len(password) < 8:
         return jsonify({'error': 'パスワードは8文字以上にしてください'}), 400
     if teacher_code:
+        if not core.teacher_signup_enabled():
+            # 本番でTEACHER_CODEが既定値のまま。設定漏れに気づけるようログに残す
+            current_app.logger.error('TEACHER_CODE is not set (or is the public default); teacher signup is disabled')
+            return jsonify({'error': '先生アカウントの登録は現在受け付けていません'}), 503
         # 先生コードの総当たりを防ぐため、間違いが続いたら一定時間受け付けない
         blocked = _too_many_attempts('teacher-code')
         if blocked:
@@ -222,7 +224,7 @@ def logout():
 def me():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしていません'}), 401
-    today = str(date.today())
+    today = core.today_jst_str()
     with core.get_db() as conn:
         user = conn.execute(
             'SELECT security_question, subscription_status, onboarded, subscription_cancel_at FROM users WHERE id = ?',

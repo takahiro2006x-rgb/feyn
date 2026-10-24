@@ -92,8 +92,15 @@ def test_chat_happy_path_returns_reply_and_progress(student_client):
     assert data['progress'] == 25
 
 
-def test_complete_records_session_in_db(student_client, app):
+def test_complete_records_session_in_db(student_client, app, monkeypatch):
     start_data = _start(student_client, '物理').get_json()
+    # Feynが納得して【会話終了】を出したところまで進める
+    monkeypatch.setattr(FakeChatSession, 'default_reply', 'なるほど、納得した！【会話終了】')
+    chat_resp = student_client.post('/api/chat', json={
+        'message': '説明します', 'session_key': start_data['session_key'],
+    })
+    assert chat_resp.get_json()['is_done'] is True
+
     resp = student_client.post('/api/complete', json={
         'subject': '物理', 'difficulty': '大学受験', 'session_key': start_data['session_key'],
     })

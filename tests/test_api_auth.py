@@ -121,3 +121,23 @@ def test_password_reset_flow(client):
 def test_security_question_lookup_does_not_leak_unknown_email(client):
     resp = client.post('/api/security-question', json={'email': 'nobody@example.com'})
     assert resp.status_code == 404
+
+
+
+def test_signup_accepts_loose_emails_on_purpose(client):
+    # 友達に試してもらうとき本物のメールを入れるのをためらわれないよう、形のチェックは緩くしている
+    for i, loose in enumerate(['aiue@okaki', 'a@b', 'test@test']):
+        resp = client.post('/api/signup', json={
+            'name': 'テスト太郎', 'email': loose, 'password': 'testpass123',
+            'security_question': '好きな食べ物は？', 'security_answer': 'apple',
+        })
+        assert resp.status_code == 200, loose
+        client.post('/api/logout')
+
+
+def test_signup_still_requires_an_at_sign(client):
+    resp = client.post('/api/signup', json={
+        'name': 'テスト太郎', 'email': 'no-at-sign', 'password': 'testpass123',
+        'security_question': '好きな食べ物は？', 'security_answer': 'apple',
+    })
+    assert resp.status_code == 400

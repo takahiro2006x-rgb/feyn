@@ -33,6 +33,8 @@ def signup():
 
     if not email or not name or not password:
         return jsonify({'error': 'すべての項目を入力してください'}), 400
+    # メールは確認用ではなくログインIDとして使うだけなので、友達に試してもらうときに本物を入れるのを
+    # ためらわれないよう、わざと形のチェックを緩くしている（Stripeに渡すときだけ別途チェックする）
     if '@' not in email:
         return jsonify({'error': '正しいメールアドレスを入力してください'}), 400
     if len(name) > 20:

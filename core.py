@@ -5,6 +5,7 @@ Flaskのルート定義は持たない。blueprints/ 配下の各Blueprintと ap
 """
 import base64
 import os
+import re
 import time
 import uuid
 from datetime import date, datetime, timedelta
@@ -20,6 +21,13 @@ import tutoring
 load_dotenv()
 
 TEACHER_CODE = os.environ.get('TEACHER_CODE', 'FEYN_TEACHER_2024')
+
+# 「aiue@okaki」のようにドメインにドットが無いものは、Stripeなど外部サービスに拒否される
+_EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$')
+
+
+def looks_like_email(value):
+    return bool(value and _EMAIL_RE.match(value))
 SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史']
 
 # 無料プランの生徒のライフ制（先生アカウント・有料プランは対象外）

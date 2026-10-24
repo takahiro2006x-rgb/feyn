@@ -27,7 +27,10 @@ def create_checkout_session():
             mode='subscription',
             line_items=[{'price': core.STRIPE_PRICE_ID, 'quantity': 1}],
             customer=user['stripe_customer_id'] or None,
-            customer_email=(user['email'] if not user['stripe_customer_id'] else None),
+            # 形が正しくないメールはStripeに拒否されるので渡さない（決済画面でStripeが入力を求める）。
+            # 過去に緩いチェックで登録された既存アカウントでも、決済に進めるようにするため
+            customer_email=(user['email'] if not user['stripe_customer_id']
+                            and core.looks_like_email(user['email']) else None),
             client_reference_id=str(session['user_id']),
             success_url=f'{base_url}/mypage?checkout=success&session_id={{CHECKOUT_SESSION_ID}}',
             cancel_url=f'{base_url}/mypage?checkout=cancel',

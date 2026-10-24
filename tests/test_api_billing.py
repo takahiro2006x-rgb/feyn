@@ -143,3 +143,32 @@ def test_unsigned_webhook_is_rejected_in_production_when_secret_is_missing(stude
     resp = student_client.post('/api/billing/webhook', json=SUB_ACTIVE)
     assert resp.status_code == 400
     assert student_client.get('/api/me').get_json()['subscription_status'] == 'free'
+
+
+# ---------- 決済ページ作成に渡すメールアドレス ----------
+def _capture_checkout_kwargs(monkeypatch):
+    monkeypatch.setattr(core, 'STRIPE_PRICE_ID', 'price_test123')
+    captured = {}
+
+    def fake_create(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(url='https://checkout.stripe.com/test-session')
+
+    monkeypatch.setattr(core.stripe.checkout.Session, 'create', fake_create)
+    return captured
+
+
+def test_checkout_passes_a_valid_email_to_stripe(student_client, monkeypatch):
+    captured = _capture_checkout_kwargs(monkeypatch)
+    assert student_client.post('/api/billing/create-checkout-session').status_code == 200
+    assert captured['customer_email'] == 'test_user@example.com'
+
+
+def test_checkout_omits_an_invalid_legacy_email_instead_of_failing(student_client, monkeypatch):
+    # 以前の緩いチェックで登録された「aiue@okaki」のようなアカウントでも、決済に進める
+    captured = _capture_checkout_kwargs(monkeypatch)
+    with core.get_db() as conn:
+        conn.execute("UPDATE users SET email = 'aiue@okaki' WHERE email = 'test_user@example.com'")
+        conn.commit()
+    assert student_client.post('/api/billing/create-checkout-session').status_code == 200
+    assert captured['customer_email'] is None

@@ -79,6 +79,7 @@
 
       <div class="user-info">
         <div id="userDisplay" class="user-name-display"></div>
+        <button class="logout-btn" id="guideBtn">❓ 使い方</button>
         <button class="logout-btn" id="mypageBtn">📊 マイページ</button>
         <button class="logout-btn" id="securityBtn" style="display:none">🔐 秘密の質問を設定</button>
         <button class="logout-btn" id="logoutBtn">🚪 ログアウト</button>
@@ -104,6 +105,20 @@
         </div>
       </div>
     </aside>
+
+    <!-- ===== 使い方ガイド（初回登録後に3枚のカードで表示。内容はscript.jsのONBOARDING_STEPS） ===== -->
+    <div class="onboarding-overlay" id="onboardingOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+      <div class="onboarding-card">
+        <div class="onboarding-emoji" id="onboardingEmoji"></div>
+        <div class="onboarding-title" id="onboardingTitle"></div>
+        <div class="onboarding-text" id="onboardingText"></div>
+        <div class="onboarding-dots" id="onboardingDots"></div>
+        <div class="onboarding-actions">
+          <button class="onboarding-skip" id="onboardingSkip">スキップ</button>
+          <button class="onboarding-next" id="onboardingNext">次へ →</button>
+        </div>
+      </div>
+    </div>
 
     <!-- ===== キャラクターパネル ===== -->
     <div class="character-panel">

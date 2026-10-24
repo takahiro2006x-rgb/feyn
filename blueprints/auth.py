@@ -58,10 +58,12 @@ def signup():
     try:
         with core.get_db() as conn:
             conn.execute(
-                'INSERT INTO users (email, name, password_hash, role, security_question, security_answer_hash, last_login, school_id) '
-                'VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?)',
+                'INSERT INTO users (email, name, password_hash, role, security_question, security_answer_hash, last_login, school_id, onboarded) '
+                'VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)',
                 (email, name, generate_password_hash(password), role,
-                 security_question, generate_password_hash(security_answer), school_id)
+                 security_question, generate_password_hash(security_answer), school_id,
+                 # 使い方ガイドは生徒にだけ出す（先生は最初から表示済み扱い）
+                 0 if role == 'student' else 1)
             )
             conn.commit()
             user = conn.execute('SELECT id FROM users WHERE email = ?', (email,)).fetchone()
@@ -196,6 +198,18 @@ def reset_password():
     return jsonify({'ok': True})
 
 
+@auth_bp.route('/api/onboarding/complete', methods=['POST'])
+def complete_onboarding():
+    """初回の使い方ガイドを見終わった（またはスキップした）ことを記録する"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    with core.get_db() as conn:
+        conn.execute('UPDATE users SET onboarded = 1 WHERE id = ?', (session['user_id'],))
+        conn.commit()
+    return jsonify({'ok': True})
+
+
 @auth_bp.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
@@ -209,7 +223,7 @@ def me():
     today = str(date.today())
     with core.get_db() as conn:
         user = conn.execute(
-            'SELECT security_question, subscription_status FROM users WHERE id = ?',
+            'SELECT security_question, subscription_status, onboarded FROM users WHERE id = ?',
             (session['user_id'],)
         ).fetchone()
         rows = conn.execute(
@@ -231,6 +245,7 @@ def me():
         'name':                  session['user_name'],
         'role':                  session.get('user_role', 'student'),
         'has_security_question': bool(user and user['security_question']),
+        'show_onboarding':       bool(user and user['onboarded'] == 0),
         'total_clears':          sum(subject_clears.values()),
         'subject_clears':        subject_clears,
         'due_reviews':           due,

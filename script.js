@@ -1028,6 +1028,65 @@ async function refreshLives() {
 }
 
 
+// ===== 使い方ガイド（初回登録後に3枚のカードで表示） =====
+const ONBOARDING_STEPS = [
+  { emoji: '🎓', title: 'Feynに教えよう',
+    text: 'あなたが「先生」役です。Feynが質問してくるので、自分の言葉で説明してみよう。うまく説明できたら、それが本当の理解です。' },
+  { emoji: '💡', title: '納得度100%でクリア',
+    text: 'Feynが納得すると納得度バーが上がって、100%でクリア！困ったときは「ヒント」「答えを見る」が使えるよ。数式は 🧮 から入力できます。' },
+  { emoji: '❤️', title: 'ライフで学べる回数が決まる',
+    text: '新しい会話を始めるたびにライフを1つ使います。3個まで貯まって、2時間で1つ回復。続きから再開するときは減りません。有料プランなら無制限です。' },
+];
+
+const onboardingOverlay = document.getElementById('onboardingOverlay');
+const onboardingNextBtn = document.getElementById('onboardingNext');
+const onboardingSkipBtn = document.getElementById('onboardingSkip');
+let onboardingIndex = 0;
+let onboardingMustSave = false; // 初回表示のときだけ、見終わったことをサーバーに記録する
+
+function renderOnboardingStep() {
+  const step = ONBOARDING_STEPS[onboardingIndex];
+  document.getElementById('onboardingEmoji').textContent = step.emoji;
+  document.getElementById('onboardingTitle').textContent = step.title;
+  document.getElementById('onboardingText').textContent  = step.text;
+  document.getElementById('onboardingDots').innerHTML = ONBOARDING_STEPS
+    .map((_, i) => `<span class="onboarding-dot${i === onboardingIndex ? ' active' : ''}"></span>`).join('');
+  const isLast = onboardingIndex === ONBOARDING_STEPS.length - 1;
+  onboardingNextBtn.textContent = isLast ? 'はじめる 🚀' : '次へ →';
+  onboardingSkipBtn.style.visibility = isLast ? 'hidden' : 'visible';
+}
+
+function openOnboarding({ firstTime = false } = {}) {
+  onboardingIndex = 0;
+  onboardingMustSave = firstTime;
+  renderOnboardingStep();
+  onboardingOverlay.style.display = 'flex';
+  onboardingNextBtn.focus();
+}
+
+function closeOnboarding() {
+  onboardingOverlay.style.display = 'none';
+  if (onboardingMustSave) {
+    onboardingMustSave = false;
+    fetch('/api/onboarding/complete', { method: 'POST' }).catch(() => {});
+  }
+}
+
+onboardingNextBtn.addEventListener('click', () => {
+  if (onboardingIndex < ONBOARDING_STEPS.length - 1) {
+    onboardingIndex++;
+    renderOnboardingStep();
+  } else {
+    closeOnboarding();
+  }
+});
+onboardingSkipBtn.addEventListener('click', closeOnboarding);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && onboardingOverlay.style.display !== 'none') closeOnboarding();
+});
+document.getElementById('guideBtn').addEventListener('click', () => openOnboarding());
+
+
 // ===== 起動 =====
 applySubjectColor(currentSubject);
 
@@ -1043,6 +1102,8 @@ async function init() {
     updateGapsBadge(user.due_reviews || 0);
     renderLivesDisplay(user.lives_status);
     setInterval(refreshLives, 60000);
+
+    if (user.show_onboarding) openOnboarding({ firstTime: true });
 
     if (!user.has_security_question) {
       document.getElementById('securityBtn').style.display = 'block';

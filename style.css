@@ -620,6 +620,86 @@ body {
 }
 .math-btn:hover { border-color: #CB6CE6; color: #CB6CE6; }
 
+/* ===== 使い方ガイド（初回登録後の3枚カード） ===== */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 300;
+}
+
+.onboarding-card {
+  background: var(--card);
+  border: 2px solid var(--card-border);
+  border-radius: 24px;
+  padding: 32px 28px 24px;
+  width: min(400px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+
+.onboarding-emoji { font-size: 52px; line-height: 1; }
+.onboarding-title { font-size: 19px; font-weight: 800; color: var(--text); }
+.onboarding-text {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.8;
+  color: var(--subtext);
+  min-height: 7.2em; /* カードごとに文章の長さが違っても、ボタンの位置が動かないようにする */
+}
+
+.onboarding-dots { display: flex; gap: 8px; margin: 4px 0 6px; }
+.onboarding-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--card-border);
+  transition: background 0.2s, transform 0.2s;
+}
+.onboarding-dot.active { background: #58CC02; transform: scale(1.25); }
+
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.onboarding-skip {
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--subtext);
+  cursor: pointer;
+}
+.onboarding-skip:hover { color: var(--text); }
+
+.onboarding-next {
+  padding: 12px 26px;
+  background: #58CC02;
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #46A302;
+}
+.onboarding-next:active { transform: translateY(2px); box-shadow: 0 2px 0 #46A302; }
+
 .math-modal-overlay {
   position: fixed;
   inset: 0;

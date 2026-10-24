@@ -167,6 +167,9 @@ def init_db():
         # 無料プランのライフ制（3個スタート、0になると2時間ごとに1回復）
         db.add_column_if_missing(conn, 'users', 'lives INTEGER NOT NULL DEFAULT 3')
         db.add_column_if_missing(conn, 'users', 'last_life_lost_at TIMESTAMP')
+        # 初回の使い方ガイドを見終わったか（1=表示済み・不要）。DEFAULT 1なので既存ユーザーには出さず、
+        # 新規登録した生徒だけsignup時に0で入れる
+        db.add_column_if_missing(conn, 'users', 'onboarded INTEGER NOT NULL DEFAULT 1')
 
         conn.commit()
 

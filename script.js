@@ -743,6 +743,8 @@ function addResultReopenButton(result) {
 
 // ===== メッセージ送信 =====
 async function sendMessage() {
+  // 聞き取り中なら止める（止めた後に届く認識結果で、送った文章が入力欄に戻らないようにする）
+  if (micActive) stopVoiceInput();
   const text = textarea.value.trim();
   if (!text || isBusy || !sessionKey) return;
 
@@ -897,6 +899,90 @@ textarea.addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
+
+// ===== 音声入力（ブラウザ標準の Web Speech API） =====
+// 口で説明するほうがファインマン学習法らしいので、話した言葉をそのまま入力欄に入れる。
+// 対応していないブラウザ（Firefoxなど）ではボタンを出さない。
+// 注意: Chromeなどでは、声はブラウザの提供元（Googleなど）の音声認識サービスに送られて文字になる。
+// Feynのサーバーには文字になった結果しか届かない（初回にそのことを知らせる）
+const micBtn = document.getElementById('micBtn');
+let recognition = null;
+let micActive   = false;
+let micBaseText = '';   // 聞き取りを始めたときに入力欄に入っていた文字（その後ろに足していく）
+
+function getSpeechRecognition() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function setMicState(active) {
+  micActive = active;
+  micBtn.classList.toggle('recording', active);
+  micBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  micBtn.title = active ? '音声入力を止める' : '音声で入力';
+}
+
+function showVoiceNoticeOnce() {
+  let shown = false;
+  try { shown = localStorage.getItem('feynVoiceNotice') === '1'; } catch (e) { /* 保存できない環境でも動かす */ }
+  if (shown) return;
+  addMessage('feyn', '🎤 話した声は、ブラウザの音声認識サービス（Chromeの場合はGoogle）で文字に変換されてから入力欄に入るよ。送信する前に、内容を確認してね。');
+  try { localStorage.setItem('feynVoiceNotice', '1'); } catch (e) { /* 次回もう一度出るだけ */ }
+}
+
+function startVoiceInput() {
+  const Ctor = getSpeechRecognition();
+  if (!Ctor || micActive) return;
+  showVoiceNoticeOnce();
+
+  recognition = new Ctor();
+  recognition.lang = 'ja-JP';
+  recognition.interimResults = true;   // 話している途中の文字も見せる
+  recognition.continuous = true;       // 止めるまで聞き続ける
+  micBaseText = textarea.value;
+
+  recognition.onresult = (event) => {
+    let finalText = '';
+    let interimText = '';
+    for (let i = 0; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (result.isFinal) finalText += result[0].transcript;
+      else interimText += result[0].transcript;
+    }
+    textarea.value = micBaseText + finalText + interimText;
+  };
+  recognition.onerror = (event) => {
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      addMessage('feyn', '🎤 マイクが使えないみたい。ブラウザの設定で、このサイトのマイクを許可してね。');
+    } else if (event.error === 'no-speech') {
+      addMessage('feyn', '🎤 声が聞こえなかったよ。もう一度マイクを押して話してみて。');
+    } else if (event.error !== 'aborted') {
+      addMessage('feyn', '🎤 音声入力がうまく動かなかった。文字で入力してみてね。');
+    }
+  };
+  recognition.onend = () => setMicState(false);
+
+  try {
+    recognition.start();
+    setMicState(true);
+  } catch (e) {
+    setMicState(false);
+  }
+}
+
+function stopVoiceInput() {
+  if (recognition) {
+    // 止めた後に遅れて届く結果で入力欄が書き換わらないよう、先に受け取りをやめる
+    recognition.onresult = null;
+    recognition.onerror = null;
+    try { recognition.stop(); } catch (e) { /* すでに止まっている */ }
+  }
+  setMicState(false);
+}
+
+if (getSpeechRecognition() && micBtn) {
+  micBtn.style.display = '';
+  micBtn.addEventListener('click', () => (micActive ? stopVoiceInput() : startVoiceInput()));
+}
 
 // ===== PCでページ全体がずれたら元に戻す =====
 // 画面は「各パネルの中だけがスクロールする」作りなので、ページ全体がスクロールすることはない想定。

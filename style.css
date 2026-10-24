@@ -640,6 +640,28 @@ body {
 }
 .math-btn:hover { border-color: #CB6CE6; color: #CB6CE6; }
 
+/* ===== 音声入力ボタン ===== */
+.mic-btn {
+  flex-shrink: 0;
+  width: 52px;
+  background: var(--card);
+  border: 2px solid var(--card-border);
+  border-radius: 16px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mic-btn:hover { border-color: #FF4B4B; }
+.mic-btn.recording {
+  border-color: #FF4B4B;
+  background: rgba(255, 75, 75, 0.12);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 75, 75, 0); }
+}
+
 /* ===== 使い方ガイド（初回登録後の3枚カード） ===== */
 .onboarding-overlay {
   position: fixed;
@@ -1164,6 +1186,7 @@ body {
   .input-area textarea { height: 56px; padding: 10px 12px; font-size: 16px; }
   .send-btn { padding: 0 16px; font-size: 14px; }
   .math-btn { width: 44px; font-size: 18px; }
+  .mic-btn { width: 44px; font-size: 18px; }
   .math-modal { padding: 20px; }
 
   .start-card {

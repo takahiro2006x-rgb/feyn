@@ -408,7 +408,8 @@ def complete():
         import traceback; traceback.print_exc()
         analysis = None
 
-    return jsonify({'ok': True, 'analysis': analysis})
+    # labels: 結果画面で穴の種類（誤解・曖昧・前提不足）を日本語で出すため
+    return jsonify({'ok': True, 'analysis': analysis, 'labels': tutoring.GAP_TYPE_LABELS})
 
 
 @chat_bp.route('/api/hint', methods=['POST'])

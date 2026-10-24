@@ -625,6 +625,122 @@ async function resumeSession(subject, dateStr, sessionId) {
 }
 
 
+// ===== 会話終了後の結果画面 =====
+// /api/complete が返す分析結果（テーマ・理解度・要約・理解の穴）をカードで見せる。
+// 復習でFeynが聞く問い（suggested_question）は、先に見せると復習の効果が薄れるので出さない
+const resultOverlay = document.getElementById('resultOverlay');
+const resultCard    = document.getElementById('resultCard');
+
+function understandingWord(score) {
+  if (score >= 80) return { word: 'しっかり理解できている', color: '#58CC02' };
+  if (score >= 50) return { word: 'だいたいOK・あと一歩', color: '#FFC200' };
+  return { word: 'まだあやふや', color: '#FF9600' };
+}
+
+function resultHtml(result) {
+  const a      = result.analysis;
+  const labels = result.labels || {};
+  const gaps   = a && Array.isArray(a.gaps) ? a.gaps : [];
+
+  const badges = [];
+  if (result.wasReview)     badges.push('✅ 苦手を解決');
+  if (result.wasAssignment) badges.push('📮 課題を提出');
+
+  let html = `
+    <div class="result-head">
+      <div class="result-emoji">🎉</div>
+      <div class="result-title" id="resultTitle">${escText(result.subject)} クリア！</div>
+      ${a && a.topic ? `<div class="result-topic">テーマ：${escText(a.topic)}</div>` : ''}
+    </div>`;
+  if (badges.length) {
+    html += `<div class="result-badges">${badges.map(b => `<span class="result-badge">${escText(b)}</span>`).join('')}</div>`;
+  }
+
+  if (a) {
+    const score = Math.max(0, Math.min(100, Math.round(Number(a.understanding_score) || 0)));
+    const u = understandingWord(score);
+    html += `
+      <div class="result-section">
+        <div class="result-label">📈 理解度</div>
+        <div class="result-score-row">
+          <span class="result-score">${score}</span><span class="result-score-max">/ 100</span>
+          <span class="result-score-word" style="color:${u.color}">${u.word}</span>
+        </div>
+        <div class="result-meter"><div class="result-meter-fill" style="width:0%; background:${u.color}" data-width="${score}"></div></div>
+        ${a.summary ? `<div class="result-summary">${escText(a.summary)}</div>` : ''}
+      </div>`;
+    if (gaps.length) {
+      html += `
+        <div class="result-section">
+          <div class="result-label">🔍 見つかった理解の穴（${gaps.length}件）</div>
+          ${gaps.map(g => `
+            <div class="result-gap">
+              <div class="result-gap-type">${escText(labels[g.gap_type] || '理解の抜け')}</div>
+              <div class="result-gap-desc">${escText(g.description || '')}</div>
+              ${g.evidence ? `<div class="result-gap-evidence">あなたの説明：「${escText(g.evidence)}」</div>` : ''}
+            </div>`).join('')}
+          <div class="result-note">苦手ノートに記録したよ。復習どきになったら、Feynがもう一度聞きに来る！</div>
+        </div>`;
+    } else {
+      html += `
+        <div class="result-section">
+          <div class="result-label">🔍 理解の穴</div>
+          <div class="result-summary">今回は穴が見つからなかった！ 完璧な説明だったね。</div>
+        </div>`;
+    }
+  } else {
+    html += `
+      <div class="result-section">
+        <div class="result-summary">クリアは記録したよ！ 今回は理解度の分析ができなかった（AIが混み合っていたのかも）。</div>
+      </div>`;
+  }
+
+  const gapsLink = (gaps.length > 0 || result.wasReview)
+    ? '<a class="result-secondary" href="/mypage?tab=gaps">📝 苦手ノートを見る</a>' : '';
+  html += `<div class="result-actions">${gapsLink}<button class="result-primary" id="resultClose">閉じる</button></div>`;
+  return html;
+}
+
+function showResult(result) {
+  resultCard.innerHTML = resultHtml(result);
+  renderMath(resultCard);
+  resultOverlay.style.display = 'flex';
+  resultCard.scrollTop = 0;
+  const closeBtn = document.getElementById('resultClose');
+  closeBtn.addEventListener('click', closeResult);
+  closeBtn.focus();
+  // メーターが0から伸びるように、表示した次のフレームで幅を入れる
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    resultCard.querySelectorAll('.result-meter-fill').forEach(el => { el.style.width = `${el.dataset.width}%`; });
+  }));
+}
+
+function closeResult() {
+  resultOverlay.style.display = 'none';
+}
+
+resultOverlay.addEventListener('click', (e) => { if (e.target === resultOverlay) closeResult(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && resultOverlay.style.display !== 'none') closeResult();
+});
+
+// 結果画面を閉じた後でも、もう一度開けるボタンを会話の中に残す
+function addResultReopenButton(result) {
+  const el = document.createElement('div');
+  el.classList.add('message', 'feyn', 'pop-in');
+  el.innerHTML = `
+    <div class="avatar">${currentEmoji}</div>
+    <div class="bubble">
+      <div class="quick-replies" style="margin-top:0;">
+        <button class="quick-reply">📊 今回の結果をもう一度見る</button>
+      </div>
+    </div>`;
+  el.querySelector('.quick-reply').addEventListener('click', () => showResult(result));
+  messagesEl.appendChild(el);
+  scrollToMessage(el);
+}
+
+
 // ===== メッセージ送信 =====
 async function sendMessage() {
   const text = textarea.value.trim();
@@ -675,6 +791,9 @@ async function sendMessage() {
         launchConfetti();
         playCompleteSound();
       }, 400);
+      // 結果画面は紙吹雪を少し見せてから出す。科目は返事を待つ間に切り替えられても困らないよう、今の値を覚えておく
+      const doneAt = Date.now();
+      const completedSubjectAtDone = currentSubject;
       fetch('/api/complete', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -684,6 +803,7 @@ async function sendMessage() {
           session_key: sessionKey,
         }),
       }).then(async (res) => {
+        const completedSubject = completedSubjectAtDone;
         const wasReview     = !!reviewGapId;
         const wasAssignment = !!assignmentId;
         reviewGapId  = null;
@@ -704,6 +824,16 @@ async function sendMessage() {
             `📝 <strong>今日の気づき</strong>（テーマ: ${escText(c.analysis.topic)}）<br>${items}<br>` +
             `<a href="/mypage?tab=gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`,
             { raw: true });
+        }
+
+        // 結果画面（理解度・理解の穴をカードで表示）
+        if (res.ok) {
+          const result = {
+            subject: completedSubject, analysis: c.analysis || null, labels: c.labels || {},
+            wasReview, wasAssignment,
+          };
+          setTimeout(() => showResult(result), Math.max(0, 1500 - (Date.now() - doneAt)));
+          addResultReopenButton(result);
         }
 
         fetchStreak();

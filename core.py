@@ -314,16 +314,29 @@ def log_api_call(model, endpoint, success):
         pass  # 記録の失敗が本来の処理を止めないようにする
 
 
+def _lives_anchor(value):
+    """回復タイマーの起点を、datetime.now()と比べられるdatetime（サーバー時刻・タイムゾーンなし）にする。
+    SQLiteは文字列、Postgresはdatetimeで返ってくるので両方に対応する
+    （文字列だけを想定して fromisoformat すると、本番のPostgresでエラーになる）"""
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        dt = datetime.fromisoformat(str(value))
+    if dt.tzinfo is not None:
+        dt = dt.astimezone().replace(tzinfo=None)
+    return dt
+
+
 def _recover_lives(lives, last_life_lost_at):
     """満タンでない間だけ進んでいる回復タイマーから、経過時間分のライフを回復させる。
-    戻り値は (回復後のライフ数, 更新後のタイマー起点 or 満タンならNone)。"""
+    戻り値は (回復後のライフ数, 更新後のタイマー起点（ISO文字列） or 満タンならNone)。"""
     if lives >= MAX_LIVES or not last_life_lost_at:
         return MAX_LIVES, None
 
-    anchor = datetime.fromisoformat(last_life_lost_at)
+    anchor = _lives_anchor(last_life_lost_at)
     recovered = int((datetime.now() - anchor).total_seconds() // (LIFE_RECOVERY_HOURS * 3600))
     if recovered <= 0:
-        return lives, last_life_lost_at
+        return lives, anchor.isoformat()
 
     new_lives = min(MAX_LIVES, lives + recovered)
     if new_lives >= MAX_LIVES:
@@ -352,7 +365,7 @@ def check_and_consume_life(user_id):
         lives, last_life_lost_at = _recover_lives(user['lives'], user['last_life_lost_at'])
 
         if lives <= 0:
-            anchor = datetime.fromisoformat(last_life_lost_at)
+            anchor = _lives_anchor(last_life_lost_at)
             remaining = anchor + timedelta(hours=LIFE_RECOVERY_HOURS) - datetime.now()
             minutes_left = max(1, int(remaining.total_seconds() // 60) + 1)
             conn.execute('UPDATE users SET lives = ?, last_life_lost_at = ? WHERE id = ?',
@@ -405,7 +418,7 @@ def get_lives_status(user_id):
     lives, last_life_lost_at = _recover_lives(user['lives'], user['last_life_lost_at'])
     next_recovery_seconds = None
     if lives < MAX_LIVES and last_life_lost_at:
-        anchor = datetime.fromisoformat(last_life_lost_at)
+        anchor = _lives_anchor(last_life_lost_at)
         remaining = anchor + timedelta(hours=LIFE_RECOVERY_HOURS) - datetime.now()
         next_recovery_seconds = max(0, int(remaining.total_seconds()))
 
@@ -598,7 +611,9 @@ def save_analysis(user_id, subject, analysis, today):
             'VALUES (?, ?, ?, ?, 1, ?) '
             'ON CONFLICT(user_id, subject, topic) '
             'DO UPDATE SET understanding = excluded.understanding, '
-            '              sessions_count = sessions_count + 1, '
+            # テーブル名を付けて書く。付けないとPostgresでは「更新前の値」と「入れようとした値」のどちらか
+            # 曖昧だとしてエラーになり、同じ処理内の苦手の保存も取り消されてしまう（SQLiteは許すので気づきにくい）
+            '              sessions_count = topic_progress.sessions_count + 1, '
             '              last_studied = excluded.last_studied',
             (user_id, subject, analysis['topic'], analysis['understanding_score'], today)
         )

@@ -2,9 +2,36 @@
 """課金（Stripe）APIのテスト。実際のStripeネットワーク呼び出しはせず、
 stripeモジュールの該当関数をモックする。Webhookは STRIPE_WEBHOOK_SECRET 未設定時の
 開発用フォールバック（署名検証なし）の経路を検証する。"""
+import hashlib
+import hmac
+import json
+import time
 from types import SimpleNamespace
 
 import core
+
+WEBHOOK_SECRET = 'whsec_test_secret_for_unit_tests'
+
+
+def _signed_webhook(client, event, secret=WEBHOOK_SECRET, timestamp=None):
+    """Stripeと同じ方式（timestamp.payload のHMAC-SHA256）で署名して送る"""
+    payload = json.dumps(event)
+    ts = int(timestamp or time.time())
+    sig = hmac.new(secret.encode(), f'{ts}.{payload}'.encode(), hashlib.sha256).hexdigest()
+    return client.post('/api/billing/webhook', data=payload,
+                       headers={'Content-Type': 'application/json',
+                                'Stripe-Signature': f't={ts},v1={sig}'})
+
+
+def _make_customer(email='test_user@example.com', customer='cus_sig', status='free'):
+    with core.get_db() as conn:
+        conn.execute("UPDATE users SET stripe_customer_id = ?, subscription_status = ? WHERE email = ?",
+                     (customer, status, email))
+        conn.commit()
+
+
+SUB_ACTIVE = {'type': 'customer.subscription.updated',
+              'data': {'object': {'id': 'sub_sig', 'customer': 'cus_sig', 'status': 'active'}}}
 
 
 def test_create_checkout_session_requires_login(client):
@@ -72,3 +99,45 @@ def test_webhook_subscription_deleted_marks_user_free(student_client, app):
 
     me = student_client.get('/api/me').get_json()
     assert me['subscription_status'] == 'free'
+
+
+# ---------- Webhookの署名確認 ----------
+def test_webhook_with_valid_signature_is_accepted(student_client, monkeypatch):
+    monkeypatch.setattr(core, 'STRIPE_WEBHOOK_SECRET', WEBHOOK_SECRET)
+    _make_customer()
+    assert _signed_webhook(student_client, SUB_ACTIVE).status_code == 200
+    assert student_client.get('/api/me').get_json()['subscription_status'] == 'active'
+
+
+def test_webhook_with_wrong_secret_is_rejected(student_client, monkeypatch):
+    monkeypatch.setattr(core, 'STRIPE_WEBHOOK_SECRET', WEBHOOK_SECRET)
+    _make_customer()
+    resp = _signed_webhook(student_client, SUB_ACTIVE, secret='whsec_attacker_guess')
+    assert resp.status_code == 400
+    assert student_client.get('/api/me').get_json()['subscription_status'] == 'free'
+
+
+def test_webhook_without_signature_is_rejected_when_secret_is_set(student_client, monkeypatch):
+    monkeypatch.setattr(core, 'STRIPE_WEBHOOK_SECRET', WEBHOOK_SECRET)
+    _make_customer()
+    resp = student_client.post('/api/billing/webhook', json=SUB_ACTIVE)  # 署名ヘッダーなしの偽通知
+    assert resp.status_code == 400
+    assert student_client.get('/api/me').get_json()['subscription_status'] == 'free'
+
+
+def test_webhook_with_old_timestamp_is_rejected(student_client, monkeypatch):
+    # 過去に盗み見た正規の通知を後から再送されても受け付けない（5分以上前は拒否）
+    monkeypatch.setattr(core, 'STRIPE_WEBHOOK_SECRET', WEBHOOK_SECRET)
+    _make_customer()
+    resp = _signed_webhook(student_client, SUB_ACTIVE, timestamp=time.time() - 3600)
+    assert resp.status_code == 400
+    assert student_client.get('/api/me').get_json()['subscription_status'] == 'free'
+
+
+def test_unsigned_webhook_is_rejected_in_production_when_secret_is_missing(student_client, monkeypatch):
+    monkeypatch.setattr(core, 'STRIPE_WEBHOOK_SECRET', None)
+    monkeypatch.setenv('RENDER', 'true')
+    _make_customer()
+    resp = student_client.post('/api/billing/webhook', json=SUB_ACTIVE)
+    assert resp.status_code == 400
+    assert student_client.get('/api/me').get_json()['subscription_status'] == 'free'

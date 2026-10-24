@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """課金（Stripe）API"""
-from flask import Blueprint, jsonify, request, session
+import os
+
+from flask import Blueprint, current_app, jsonify, request, session
 
 import core
 
@@ -94,11 +96,17 @@ def billing_webhook():
     payload    = request.data
     sig_header = request.headers.get('Stripe-Signature', '')
 
+    if not core.STRIPE_WEBHOOK_SECRET and os.environ.get('RENDER'):
+        # 署名を確認できないWebhookを本番で受け付けると、誰でも偽の通知で有料化・解約を起こせてしまう。
+        # 設定漏れに気づけるよう、ログに残したうえで拒否する
+        current_app.logger.error('STRIPE_WEBHOOK_SECRET is not set; rejecting webhook')
+        return '', 400
+
     try:
         if core.STRIPE_WEBHOOK_SECRET:
             event = core.stripe.Webhook.construct_event(payload, sig_header, core.STRIPE_WEBHOOK_SECRET)
         else:
-            # 開発用フォールバック（本番ではSTRIPE_WEBHOOK_SECRETを必ず設定する）
+            # ローカル開発用フォールバック（署名の確認なし）
             event = core.stripe.Event.construct_from(request.get_json(), core.stripe.api_key)
     except Exception:
         return '', 400

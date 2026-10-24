@@ -76,6 +76,8 @@ def signup():
             session['user_name']  = name
             session['user_role']  = role
             session['school_id']  = school_id
+        if role == 'student':
+            core.log_event('signup', user['id'])
         return jsonify({'ok': True, 'name': name, 'role': role})
     except db.IntegrityError:
         return jsonify({'error': 'そのメールアドレスはすでに登録されています'}), 409

@@ -83,6 +83,7 @@ def start():
     # 入力のチェックがすべて通ってから、AIを呼ぶ直前にライフを消費する
     limit_error = core.check_and_consume_life(session['user_id'])
     if limit_error:
+        core.log_event('life_blocked', session['user_id'], subject=subject)
         return jsonify({'error': limit_error, 'upgrade_required': True}), 403
 
     # 写真モードは画像を読める必要があるため、画像非対応のGroqにはフォールバックしない
@@ -136,6 +137,7 @@ def start():
         'gap_id':        gap['id'] if gap else None,
         'assignment_id': assignment['id'] if assignment else None,
         'done':          False,  # Feynが【会話終了】を出したらTrueになる
+        'user_turns':    0,      # 生徒が返信した回数（turns と違って3で止めない。利用状況の計測用）
     }
 
     reply = response.text or ''
@@ -151,6 +153,9 @@ def start():
             (session['user_id'], subject, difficulty, 'feyn', reply, today, conv_id, unit)
         )
         conn.commit()
+
+    mode = 'photo' if photo_bytes else 'review' if gap else 'assignment' if assignment else 'normal'
+    core.log_event('conversation_started', session['user_id'], conv_id=conv_id, subject=subject, mode=mode)
     return jsonify({'reply': reply, 'session_key': session_key, 'subject': subject})
 
 
@@ -247,6 +252,13 @@ def chat():
             (session['user_id'], subject, difficulty, 'feyn', reply, today, conv_id, unit)
         )
         conn.commit()
+
+    # 利用状況の計測（本文は記録せず、何往復目か・終わったかだけ）
+    sess['user_turns'] = sess.get('user_turns', 0) + 1
+    core.log_event('conversation_turn', session['user_id'], conv_id=conv_id, subject=subject, turn=sess['user_turns'])
+    if is_done:
+        core.log_event('conversation_completed', session['user_id'], conv_id=conv_id, subject=subject,
+                       turn=sess['user_turns'])
 
     return jsonify({'reply': reply, 'is_done': is_done, 'progress': progress})
 

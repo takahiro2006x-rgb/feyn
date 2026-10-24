@@ -236,6 +236,19 @@ def dashboard_api():
     })
 
 
+@dashboard_bp.route('/api/dashboard/metrics')
+def dashboard_metrics():
+    """利用状況（会話の開始・完了・離脱・有料化など）の集計。自分の組織の生徒だけが対象"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+    if session.get('user_role') != 'teacher':
+        return jsonify({'error': '権限がありません'}), 403
+
+    days = request.args.get('days', 30, type=int) or 30
+    school_id = session.get('school_id', core.default_school_id())
+    return jsonify(core.compute_usage_metrics(school_id, days=days))
+
+
 @dashboard_bp.route('/api/dashboard/usage')
 def dashboard_usage():
     """Gemini無料枠の今日の使用状況（モデル別の成功/失敗回数）"""

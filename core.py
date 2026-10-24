@@ -213,6 +213,21 @@ def init_db():
             )
         ''')
 
+        # 利用状況の計測（会話の開始・完了・何往復目で離脱したか・有料化など）。
+        # 会話本文・名前・メールなど、個人を特定できる内容は入れない（log_event を参照）
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS events (
+                id {pk},
+                event_type TEXT NOT NULL,
+                user_id INTEGER,
+                conv_id TEXT,
+                subject TEXT,
+                mode TEXT,
+                turn INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         # 2. 全テーブルが存在する状態で、あとから追加したカラムをマイグレーションする
         db.add_column_if_missing(conn, 'users', "role TEXT NOT NULL DEFAULT 'student'")
         db.add_column_if_missing(conn, 'users', 'security_question TEXT')
@@ -263,6 +278,9 @@ INDEXES = [
     'CREATE INDEX IF NOT EXISTS idx_assignments_teacher_status ON assignments (teacher_id, status)',
     # 先生ダッシュボード: 組織の生徒一覧
     'CREATE INDEX IF NOT EXISTS idx_users_school_role ON users (school_id, role)',
+    # 利用状況の計測: 期間での集計・本人のデータ削除
+    'CREATE INDEX IF NOT EXISTS idx_events_created ON events (created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_events_user ON events (user_id)',
 ]
 
 init_db()
@@ -334,6 +352,118 @@ def log_api_call(model, endpoint, success):
             conn.commit()
     except Exception:
         pass  # 記録の失敗が本来の処理を止めないようにする
+
+
+# ========================================
+# 利用状況の計測
+# ========================================
+# 記録するのは「何が起きたか」だけ。会話本文・名前・メールアドレスなど、個人を特定できる内容は入れない。
+# user_id はアプリ内の番号で、アカウント削除のときに一緒に消す。
+EVENT_TYPES = {
+    'signup',                  # 生徒の新規登録
+    'conversation_started',    # 会話を始めた（mode: normal / review / assignment / photo）
+    'conversation_turn',       # 生徒が1回返信した（turn: 何往復目か）
+    'conversation_completed',  # Feynが納得して会話が終わった（turn: 何往復で終わったか）
+    'life_blocked',            # 無料プランのライフ切れで始められなかった
+    'subscription_started',    # 無料 → 有料になった
+    'subscription_ended',      # 有料 → 無料に戻った（解約・支払い失敗など）
+}
+
+
+def log_event(event_type, user_id=None, conv_id=None, subject=None, mode=None, turn=None):
+    """利用状況のイベントを1件記録する。記録の失敗で本来の処理を止めないよう、例外は外に出さない。
+    DBの接続を自分で開くので、with get_db() の中からは呼ばないこと（接続を二重に使わないため）"""
+    if event_type not in EVENT_TYPES:
+        return
+    try:
+        with get_db() as conn:
+            conn.execute(
+                'INSERT INTO events (event_type, user_id, conv_id, subject, mode, turn) VALUES (?, ?, ?, ?, ?, ?)',
+                (event_type, user_id, conv_id, subject, mode, turn)
+            )
+            conn.commit()
+    except Exception:
+        pass
+
+
+# 始めてからこの時間が経っていない会話は「まだ続いているかもしれない」ので、離脱の集計に入れない
+IN_PROGRESS_HOURS = 1
+
+
+def compute_usage_metrics(school_id, days=30, now=None):
+    """先生ダッシュボード用に、組織の生徒の利用状況を集計する（直近 days 日）"""
+    days = max(1, min(int(days), 365))
+    now = now or datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')   # DBの時刻はUTC
+    in_progress_after = now - timedelta(hours=IN_PROGRESS_HOURS)
+
+    with get_db() as conn:
+        rows = conn.execute(
+            'SELECT e.event_type, e.user_id, e.conv_id, e.mode, e.turn, e.created_at FROM events e '
+            'JOIN users u ON u.id = e.user_id '
+            "WHERE u.school_id = ? AND u.role = 'student' AND e.created_at >= ?",
+            (school_id, since)
+        ).fetchall()
+        plan_rows = conn.execute(
+            "SELECT subscription_status, COUNT(*) AS cnt FROM users WHERE school_id = ? AND role = 'student' "
+            'GROUP BY subscription_status',
+            (school_id,)
+        ).fetchall()
+
+    started = {}          # conv_id -> 始めた時刻
+    completed = {}        # conv_id -> 何往復で終わったか
+    max_turn = {}         # conv_id -> 何往復目まで進んだか
+    modes = {}
+    active_users, blocked_users = set(), set()
+    counts = {t: 0 for t in EVENT_TYPES}
+    for r in rows:
+        counts[r['event_type']] = counts.get(r['event_type'], 0) + 1
+        conv_id = r['conv_id']
+        if r['event_type'] == 'conversation_started':
+            active_users.add(r['user_id'])
+            modes[r['mode'] or 'normal'] = modes.get(r['mode'] or 'normal', 0) + 1
+            if conv_id:
+                started[conv_id] = _as_utc_datetime(r['created_at'])
+        elif r['event_type'] == 'conversation_turn' and conv_id:
+            max_turn[conv_id] = max(max_turn.get(conv_id, 0), r['turn'] or 0)
+        elif r['event_type'] == 'conversation_completed' and conv_id:
+            completed[conv_id] = r['turn'] or 0
+        elif r['event_type'] == 'life_blocked':
+            blocked_users.add(r['user_id'])
+
+    # 離脱: 始めたが終わっていない会話を、何往復目で止まったかで分ける（始めたばかりの会話は除く）
+    dropout = {'0': 0, '1': 0, '2': 0, '3+': 0}
+    in_progress = 0
+    for conv_id, started_at in started.items():
+        if conv_id in completed:
+            continue
+        if started_at and started_at > in_progress_after:
+            in_progress += 1
+            continue
+        turn = max_turn.get(conv_id, 0)
+        dropout['3+' if turn >= 3 else str(turn)] += 1
+
+    finished_started = [c for c in started if c in completed]
+    completed_turns = list(completed.values())
+    plans = {r['subscription_status']: r['cnt'] for r in plan_rows}
+    return {
+        'days':                days,
+        'since':               to_jst_str(since)[:10],
+        'active_students':     len(active_users),
+        'started':             len(started),
+        'completed':           len(finished_started),
+        'completion_rate':     round(len(finished_started) / len(started) * 100) if started else None,
+        'in_progress':         in_progress,
+        'dropout_by_turn':     dropout,
+        'avg_turns_to_complete': round(sum(completed_turns) / len(completed_turns), 1) if completed_turns else None,
+        'started_by_mode':     modes,
+        'signups':             counts['signup'],
+        'subscriptions_started': counts['subscription_started'],
+        'subscriptions_ended': counts['subscription_ended'],
+        'life_blocked':        counts['life_blocked'],
+        'life_blocked_students': len(blocked_users),
+        'plans':               {'free': plans.get('free', 0), 'active': plans.get('active', 0)},
+    }
 
 
 def _lives_anchor(value):
@@ -549,9 +679,10 @@ def restore_chat_session(session_key, user_id, teacher_name, target_date=None, c
 
     instruction = tutoring.build_instruction(subject, difficulty, teacher_name)
     chat = create_chat(ALL_MODELS[0], instruction, history=history)
-    turns = min(sum(1 for row in rows if row['role'] == 'user'), 3)
+    user_turns = sum(1 for row in rows if row['role'] == 'user')
+    turns = min(user_turns, 3)
     return {'chat': chat, 'model': ALL_MODELS[0], 'instruction': instruction, 'conv_id': conv_id,
-            'turns': turns, 'subject': subject, 'difficulty': difficulty, 'unit': unit,
+            'turns': turns, 'user_turns': user_turns, 'subject': subject, 'difficulty': difficulty, 'unit': unit,
             # 復習・課題のIDはメモリにしか持っていないので、復元した会話では引き継がない
             'gap_id': None, 'assignment_id': None, 'done': done}
 

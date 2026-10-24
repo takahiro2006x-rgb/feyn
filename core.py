@@ -466,6 +466,36 @@ def compute_usage_metrics(school_id, days=30, now=None):
     }
 
 
+# ========================================
+# アカウント削除
+# ========================================
+# 本人のデータを、参照している側（子）から順に消す。Postgresは「users を参照している行」が残っていると
+# users を消せないので、この順番を崩さないこと。テーブルを足したときはここにも足す
+USER_DATA_TABLES = [
+    ('conversation_logs', 'user_id'),
+    ('session_logs',      'user_id'),
+    ('knowledge_gaps',    'user_id'),
+    ('topic_progress',    'user_id'),
+    ('assignments',       'student_id'),
+    ('events',            'user_id'),
+]
+
+
+def delete_user_data(user_id):
+    """生徒本人のデータとアカウントを、1つのトランザクションでまとめて削除する（途中で失敗したら全部取り消す）。
+    戻り値は、テーブルごとに消した行数"""
+    deleted = {}
+    with get_db() as conn:
+        for table, column in USER_DATA_TABLES:
+            deleted[table] = conn.execute(f'DELETE FROM {table} WHERE {column} = ?', (user_id,)).rowcount
+        deleted['users'] = conn.execute('DELETE FROM users WHERE id = ?', (user_id,)).rowcount
+        conn.commit()
+    # メモリ上の会話の途中経過も消す
+    for key in [k for k in list(chat_sessions) if k.startswith(f'{user_id}_')]:
+        chat_sessions.pop(key, None)
+    return deleted
+
+
 def _lives_anchor(value):
     """回復タイマーの起点を、datetime.now()と比べられるdatetime（サーバー時刻・タイムゾーンなし）にする。
     SQLiteは文字列、Postgresはdatetimeで返ってくるので両方に対応する

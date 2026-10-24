@@ -40,7 +40,8 @@ body {
   color: var(--text);
   height: 100vh;
   height: 100dvh; /* iOSでソフトキーボードの開閉後にレイアウトが崩れて余白が残るのを防ぐ */
-  height: var(--app-height, 100dvh); /* JSで実測した高さを最優先にする（環境によるvh/dvhのズレ対策） */
+  /* JSで測った --app-height はスマホ（下のメディアクエリ）だけで使う。
+     PCでは測定値が古いまま残ると下に余白が出るため、ブラウザ任せの100dvhにする */
   overflow: hidden;
   transition: background 0.3s, color 0.3s;
 }
@@ -50,7 +51,6 @@ body {
   display: flex;
   height: 100vh;
   height: 100dvh;
-  height: var(--app-height, 100dvh);
 }
 
 /* ===== サイドバー ===== */

@@ -27,6 +27,8 @@
     setAppHeight();
     window.addEventListener('resize', setAppHeight);
     window.addEventListener('orientationchange', setAppHeight);
+    window.addEventListener('pageshow', setAppHeight);
+    document.addEventListener('visibilitychange', setAppHeight);
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', setAppHeight);
     }

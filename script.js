@@ -741,10 +741,17 @@ resetBtn.addEventListener('click', () => {
 });
 
 
-// ===== 送信ボタン / Ctrl+Enter =====
+// ===== 送信ボタン / Enterで送信・Shift+Enterで改行 =====
+// スマホ（タッチ端末）はソフトキーボードにShiftを押しながらのEnterが無いため、
+// Enterは改行のままにして送信は送信ボタンで行う。
+const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
 sendBtn.addEventListener('click', sendMessage);
 textarea.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.ctrlKey) {
+  if (e.key !== 'Enter') return;
+  // 日本語入力の変換を確定するEnterでは送信しない（keyCode 229は一部ブラウザの変換中）
+  if (e.isComposing || e.keyCode === 229) return;
+  const sendWithEnter = !isTouchDevice && !e.shiftKey;
+  if (sendWithEnter || e.ctrlKey || e.metaKey) {
     e.preventDefault();
     sendMessage();
   }

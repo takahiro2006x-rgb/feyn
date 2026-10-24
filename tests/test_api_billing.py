@@ -30,8 +30,10 @@ def _make_customer(email='test_user@example.com', customer='cus_sig', status='fr
         conn.commit()
 
 
-SUB_ACTIVE = {'type': 'customer.subscription.updated',
-              'data': {'object': {'id': 'sub_sig', 'customer': 'cus_sig', 'status': 'active'}}}
+# 本物のStripeの通知と同じく、"object": "event" などを含める（署名確認後にstripeライブラリが読む）
+SUB_ACTIVE = {'id': 'evt_sig', 'object': 'event', 'type': 'customer.subscription.updated',
+              'data': {'object': {'id': 'sub_sig', 'object': 'subscription', 'customer': 'cus_sig',
+                                  'status': 'active'}}}
 
 
 def test_create_checkout_session_requires_login(client):

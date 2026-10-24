@@ -34,6 +34,8 @@ def create_checkout_session():
         )
         return jsonify({'url': checkout_session.url})
     except Exception:
+        # 原因（鍵の誤り・価格IDの不一致など）をRenderのLogsで確認できるようにする
+        current_app.logger.exception('Stripe checkout session creation failed')
         return jsonify({'error': '決済ページの作成に失敗しました。少し待ってからもう一度試してください。'}), 500
 
 
@@ -50,6 +52,7 @@ def confirm_checkout():
     try:
         checkout_session = core.stripe.checkout.Session.retrieve(checkout_session_id)
     except Exception:
+        current_app.logger.exception('Stripe checkout session retrieval failed')
         return jsonify({'error': '確認に失敗しました'}), 400
 
     if checkout_session.client_reference_id != str(session['user_id']):
@@ -87,6 +90,7 @@ def billing_portal():
         )
         return jsonify({'url': portal_session.url})
     except Exception:
+        current_app.logger.exception('Stripe billing portal session creation failed')
         return jsonify({'error': 'プラン管理ページの作成に失敗しました'}), 500
 
 

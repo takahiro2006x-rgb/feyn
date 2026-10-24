@@ -46,6 +46,22 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
+/* PCでは画面全体を動かさない（スクロールするのはチャット欄・サイドバーなど各パネルの中だけ）。
+   ページ全体が上にずれて下に余白が出るのを防ぐ。
+   スマホはソフトキーボードの開閉でブラウザがページを動かすため、ここでは触らない */
+@media (min-width: 769px) {
+  html {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  /* hidden だとプログラムからはスクロールできてしまう。clip はスクロール自体ができない
+     （clip に未対応の古いブラウザは、上の body の overflow: hidden のまま） */
+  body {
+    overflow: clip;
+  }
+}
+
 /* ===== 全体レイアウト ===== */
 .app {
   display: flex;
@@ -363,6 +379,10 @@ body {
 .messages {
   flex: 1;
   overflow-y: auto;
+  /* 数式（KaTeX）は読み上げ用の隠し要素を position: absolute で作る。基準になる要素が無いと
+     ページ全体（body）を基準にしてチャット欄の外にはみ出し、ページが縦に伸びて
+     送信時にページごと上にずれる（下に余白が出る）原因になっていた。チャット欄を基準にして中に収める */
+  position: relative;
   padding: 28px;
   display: flex;
   flex-direction: column;

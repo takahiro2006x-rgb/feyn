@@ -151,6 +151,17 @@ function renderMath(el) {
   }
 }
 
+// ===== チャット欄のスクロール =====
+// scrollIntoView() はチャット欄だけでなくページ全体までスクロールさせることがあり、
+// PCでは送信後にページが上にずれて下に余白が出る原因になっていた。
+// チャット欄（messagesEl）の中だけを動かして、メッセージの先頭が見える位置に合わせる
+// （短いメッセージは一番下までスクロールするだけになる。これまでの見え方と同じ）
+function scrollToMessage(el) {
+  if (!el || !messagesEl.contains(el)) return;
+  const offset = el.getBoundingClientRect().top - messagesEl.getBoundingClientRect().top;
+  messagesEl.scrollTo({ top: messagesEl.scrollTop + offset - 12, behavior: 'smooth' });
+}
+
 // ===== メッセージを追加 =====
 // raw: true の場合のみ text をHTMLとして扱う（開発者が書いた定型文専用。ユーザー入力/AI応答は必ずエスケープする）
 function addMessage(role, text, { raw = false } = {}) {
@@ -162,7 +173,7 @@ function addMessage(role, text, { raw = false } = {}) {
     : `<div class="bubble">${bubbleHtml}</div>`;
   messagesEl.appendChild(el);
   renderMath(el.querySelector('.bubble'));
-  el.scrollIntoView({ behavior: 'smooth' });
+  scrollToMessage(el);
   return el;
 }
 
@@ -173,7 +184,7 @@ function addHelpMessage(kind, label, text) {
   el.innerHTML = `<div class="avatar">${currentEmoji}</div><div class="bubble ${kind}"><strong>${escText(label)}</strong><br>${escText(text)}</div>`;
   messagesEl.appendChild(el);
   renderMath(el.querySelector('.bubble'));
-  el.scrollIntoView({ behavior: 'smooth' });
+  scrollToMessage(el);
   return el;
 }
 
@@ -195,7 +206,7 @@ function showUpgradePrompt(message) {
   document.getElementById('upgradeFromLimitBtn').addEventListener('click', () => {
     window.location.href = '/mypage';
   });
-  el.scrollIntoView({ behavior: 'smooth' });
+  scrollToMessage(el);
   return el;
 }
 
@@ -209,7 +220,7 @@ function addThinking() {
     <div class="bubble thinking"><span></span><span></span><span></span></div>
   `;
   messagesEl.appendChild(el);
-  el.scrollIntoView({ behavior: 'smooth' });
+  scrollToMessage(el);
   return el;
 }
 
@@ -365,7 +376,7 @@ function renderPicker(promptText, buttons, { clear = true } = {}) {
       buttons[i].onClick();
     });
   });
-  el.scrollIntoView({ behavior: 'smooth' });
+  scrollToMessage(el);
 }
 
 // ===== 先生からの課題を受け取る画面 =====
@@ -512,7 +523,7 @@ function showPhotoConfirm(base64, mimeType, dataUrl) {
     startSessionWithPhoto(base64, mimeType, dataUrl);
   });
   document.getElementById('photoRetryBtn').addEventListener('click', () => showPhotoUploadPrompt());
-  el.scrollIntoView({ behavior: 'smooth' });
+  scrollToMessage(el);
 }
 
 // アップロードした写真を会話に残しておく（あとで見返せるように）
@@ -521,7 +532,7 @@ function addImageMessage(dataUrl) {
   el.classList.add('message', 'user', 'pop-in');
   el.innerHTML = `<div class="bubble"><div class="photo-preview" style="margin-top:0;"><img src="${dataUrl}" alt="アップロードした問題"></div></div>`;
   messagesEl.appendChild(el);
-  el.scrollIntoView({ behavior: 'smooth' });
+  scrollToMessage(el);
   return el;
 }
 
@@ -603,7 +614,7 @@ async function resumeSession(subject, dateStr, sessionId) {
     revealBtn.disabled = false;
     data.messages.forEach(m => addMessage(m.role === 'user' ? 'user' : 'feyn', m.message));
     setXP(data.progress || 0);
-    messagesEl.lastElementChild?.scrollIntoView({ behavior: 'smooth' });
+    scrollToMessage(messagesEl.lastElementChild);
     history.replaceState(null, '', '/');
   } catch (e) {
     thinkingEl.remove();
@@ -756,6 +767,19 @@ textarea.addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
+
+// ===== PCでページ全体がずれたら元に戻す =====
+// 画面は「各パネルの中だけがスクロールする」作りなので、ページ全体がスクロールすることはない想定。
+// それでも拡張機能やブラウザの都合でずれると、上が切れて下に余白が出るため、すぐ一番上に戻す。
+// スマホはソフトキーボードの開閉でブラウザがページを動かすので対象外
+if (!isTouchDevice) {
+  const resetPageScroll = () => {
+    if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+    if (document.body.scrollTop !== 0) document.body.scrollTop = 0;
+  };
+  window.addEventListener('scroll', resetPageScroll, { passive: true });
+  document.body.addEventListener('scroll', resetPageScroll, { passive: true });
+}
 
 
 // ===== 数式入力モーダル（MathLiveで組み立ててLaTeXとして挿入） =====

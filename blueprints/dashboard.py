@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 """先生ダッシュボードAPI（生徒一覧・生徒詳細・課題出題・パスワード再発行・使用量）"""
+import csv
+import io
 import random
 import string
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, Response, jsonify, request, session
 from werkzeug.security import generate_password_hash
 
 import core
@@ -233,6 +235,26 @@ def dashboard_api():
             'top_subject':    top_subject,
         },
         'recent_submissions': [dict(r, completed_at=core.to_jst_str(r['completed_at'])) for r in submission_rows],
+    })
+
+
+@dashboard_bp.route('/api/dashboard/students.csv')
+def dashboard_students_csv():
+    """担当生徒の進捗・クリア数をCSVで書き出す（会話本文は含めない）"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+    if session.get('user_role') != 'teacher':
+        return jsonify({'error': '権限がありません'}), 403
+
+    school_id = session.get('school_id', core.default_school_id())
+    buf = io.StringIO()
+    csv.writer(buf, lineterminator='\r\n').writerows(core.build_students_csv_rows(school_id))
+    # 先頭にBOMを付けると、日本語版のExcelでも文字化けせずに開ける
+    body = '\ufeff' + buf.getvalue()
+    filename = f'feyn_students_{core.today_jst().strftime("%Y%m%d")}.csv'
+    return Response(body, mimetype='text/csv', headers={   # charset=utf-8 はFlaskが付ける
+        'Content-Disposition': f'attachment; filename="{filename}"',
+        'Cache-Control': 'no-store',   # 個人情報を含むので、ブラウザや途中の経路に残さない
     })
 
 

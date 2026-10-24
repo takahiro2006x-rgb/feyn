@@ -467,6 +467,95 @@ def compute_usage_metrics(school_id, days=30, now=None):
 
 
 # ========================================
+# 先生向けCSV出力（生徒ごとの進捗・クリア数。会話本文は含めない）
+# ========================================
+CSV_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+
+
+def csv_safe(value):
+    """Excelで開いたときに、=や+で始まる文字（ニックネームなど）が数式として実行されないようにする"""
+    if value is None:
+        return ''
+    text = str(value)
+    if text.startswith(CSV_FORMULA_PREFIXES):
+        return "'" + text
+    return text
+
+
+def build_students_csv_rows(school_id):
+    """組織の生徒ごとに1行の、CSV用の行（見出し行を含む）を返す"""
+    student_filter = "JOIN users u ON u.id = {col} WHERE u.school_id = ? AND u.role = 'student'"
+    with get_db() as conn:
+        students = conn.execute(
+            'SELECT id, name, email, created_at, last_login, subscription_status FROM users '
+            "WHERE school_id = ? AND role = 'student' ORDER BY id",
+            (school_id,)
+        ).fetchall()
+        clears = conn.execute(
+            'SELECT s.user_id, s.subject, COUNT(*) AS cnt, MAX(s.completed_at) AS last_at FROM session_logs s '
+            + student_filter.format(col='s.user_id') + ' GROUP BY s.user_id, s.subject',
+            (school_id,)
+        ).fetchall()
+        topics = conn.execute(
+            'SELECT t.user_id, AVG(t.understanding) AS avg_understanding, COUNT(*) AS cnt FROM topic_progress t '
+            + student_filter.format(col='t.user_id') + ' GROUP BY t.user_id',
+            (school_id,)
+        ).fetchall()
+        gaps = conn.execute(
+            'SELECT g.user_id, g.status, COUNT(*) AS cnt FROM knowledge_gaps g '
+            + student_filter.format(col='g.user_id') + ' GROUP BY g.user_id, g.status',
+            (school_id,)
+        ).fetchall()
+        assignments = conn.execute(
+            'SELECT a.student_id, a.status, COUNT(*) AS cnt FROM assignments a '
+            + student_filter.format(col='a.student_id') + ' GROUP BY a.student_id, a.status',
+            (school_id,)
+        ).fetchall()
+
+    clears_by = {}
+    last_by = {}
+    for r in clears:
+        clears_by.setdefault(r['user_id'], {})[r['subject']] = r['cnt']
+        last = _as_utc_datetime(r['last_at'])
+        if last and (r['user_id'] not in last_by or last > last_by[r['user_id']]):
+            last_by[r['user_id']] = last
+    topics_by = {r['user_id']: r for r in topics}
+    gaps_by = {}
+    for r in gaps:
+        key = 'resolved' if r['status'] == 'resolved' else 'open'
+        gaps_by.setdefault(r['user_id'], {'open': 0, 'resolved': 0})[key] += r['cnt']
+    assign_by = {}
+    for r in assignments:
+        key = 'completed' if r['status'] == 'completed' else 'open'
+        assign_by.setdefault(r['student_id'], {'open': 0, 'completed': 0})[key] += r['cnt']
+
+    header = (['生徒ID', 'ニックネーム', 'メールアドレス', 'プラン', '登録日時', '最終ログイン', '最終学習',
+               '総クリア数'] + [f'{s}クリア数' for s in SUBJECTS]
+              + ['理解度の平均(0-100)', '学習したテーマ数', '苦手（未解決）', '苦手（解決済み）',
+                 '課題（未完了）', '課題（完了）'])
+    rows = [header]
+    for st in students:
+        sid = st['id']
+        per_subject = clears_by.get(sid, {})
+        topic = topics_by.get(sid)
+        # round() は 70.5 を 70 にする（偶数への丸め）ので、一般的な四捨五入にする
+        avg = int(float(topic['avg_understanding']) + 0.5) if topic and topic['avg_understanding'] is not None else ''
+        g = gaps_by.get(sid, {'open': 0, 'resolved': 0})
+        a = assign_by.get(sid, {'open': 0, 'completed': 0})
+        last = last_by.get(sid)
+        rows.append([
+            sid, csv_safe(st['name']), csv_safe(st['email']),
+            '有料' if st['subscription_status'] == 'active' else '無料',
+            to_jst_str(st['created_at']) or '', to_jst_str(st['last_login']) or '',
+            to_jst_str(last) or '',
+            sum(per_subject.values()),
+        ] + [per_subject.get(s, 0) for s in SUBJECTS] + [
+            avg, topic['cnt'] if topic else 0, g['open'], g['resolved'], a['open'], a['completed'],
+        ])
+    return rows
+
+
+# ========================================
 # アカウント削除
 # ========================================
 # 本人のデータを、参照している側（子）から順に消す。Postgresは「users を参照している行」が残っていると

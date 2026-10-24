@@ -382,6 +382,7 @@
       white-space: nowrap;
     }
     .assign-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .csv-btn { text-decoration: none; display: inline-block; }
 
     .modal select {
       width: 100%; padding: 10px 12px;
@@ -546,6 +547,7 @@
     <div class="section-header">
       <div class="section-title">生徒一覧</div>
       <div style="display:flex; align-items:center; gap:8px;">
+        <a class="assign-btn csv-btn" href="/api/dashboard/students.csv" download title="生徒ごとの進捗・クリア数（会話の中身は含みません）">📥 CSVで書き出す</a>
         <button class="assign-btn" id="bulkAssignBtn" disabled>📋 選択した生徒に課題を出す（<span id="bulkAssignCount">0</span>人）</button>
         <div class="student-count" id="studentCount">—</div>
       </div>

@@ -787,19 +787,31 @@
     }
 
     // ===== プラン（Stripe課金） =====
-    function renderPlanCard(status) {
+    // 'YYYY-MM-DD' → '2026年11月25日'
+    function formatJaDate(iso) {
+      const [y, m, d] = iso.split('-').map(Number);
+      return `${y}年${m}月${d}日`;
+    }
+
+    // cancelAt: 解約を予約済みなら、その日（YYYY-MM-DD）まで有料。なければnull
+    function renderPlanCard(status, cancelAt) {
       const card = document.getElementById('planCard');
       card.classList.remove('free', 'active');
 
       if (status === 'active') {
         card.classList.add('active');
+        const badge = cancelAt
+          ? '<span class="plan-badge">解約済み</span>'
+          : '<span class="plan-badge">利用中</span>';
+        const desc = cancelAt
+          ? `<strong>${formatJaDate(cancelAt)}</strong>まで有料プランをご利用いただけます。<br>
+             それ以降は無料プランに戻ります。続ける場合は「プランを管理する」から再開できます。`
+          : `いつも応援ありがとうございます！<br>
+             AI対話・ヒント・答えを見る、すべて無制限で使えます。`;
         card.innerHTML = `
           <div class="plan-card-info">
-            <div class="plan-card-title">👑 有料プラン <span class="plan-badge">利用中</span></div>
-            <div class="plan-card-desc">
-              いつも応援ありがとうございます！<br>
-              AI対話・ヒント・答えを見る、すべて無制限で使えます。
-            </div>
+            <div class="plan-card-title">👑 有料プラン ${badge}</div>
+            <div class="plan-card-desc">${desc}</div>
           </div>
           <button class="plan-btn manage" id="planManageBtn">⚙️ プランを管理する</button>
         `;
@@ -833,7 +845,7 @@
         const res = await fetch('/api/me');
         if (res.status === 401) { window.location.href = '/login'; return; }
         const data = await res.json();
-        renderPlanCard(data.subscription_status || 'free');
+        renderPlanCard(data.subscription_status || 'free', data.subscription_cancel_at || null);
       } catch (e) {
         document.getElementById('planCard').innerHTML = '<div class="plan-card-desc">プラン情報の読み込みに失敗しました</div>';
       }

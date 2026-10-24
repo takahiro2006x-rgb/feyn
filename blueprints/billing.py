@@ -1,12 +1,39 @@
 # -*- coding: utf-8 -*-
 """課金（Stripe）API"""
 import os
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, jsonify, request, session
 
 import core
 
 billing_bp = Blueprint('billing', __name__)
+
+JST = timezone(timedelta(hours=9))
+
+
+def _field(obj, name):
+    """Stripeのオブジェクトから項目を取り出す（無ければNone）"""
+    try:
+        return obj[name]
+    except (KeyError, TypeError):
+        return None
+
+
+def scheduled_cancel_date(subscription):
+    """解約が予約されていれば、「その日まで有料」になる日付（日本時間のYYYY-MM-DD）を返す。無ければNone。
+    APIのバージョンによって予約の表し方が違うため、両方に対応する:
+      - 新: cancel_at に終了日時が入る（cancel_at_period_endはFalseのまま）
+      - 旧: cancel_at_period_end が True で、期間の終わり（current_period_end）が終了日時"""
+    ts = _field(subscription, 'cancel_at')
+    if not ts and _field(subscription, 'cancel_at_period_end'):
+        ts = _field(subscription, 'current_period_end')
+        if not ts:
+            items = _field(_field(subscription, 'items'), 'data') or []
+            ts = _field(items[0], 'current_period_end') if items else None
+    if not ts:
+        return None
+    return datetime.fromtimestamp(ts, JST).date().isoformat()
 
 
 @billing_bp.route('/api/billing/create-checkout-session', methods=['POST'])
@@ -64,8 +91,10 @@ def confirm_checkout():
     status = 'active' if checkout_session.status == 'complete' else 'free'
     if status == 'active':
         with core.get_db() as conn:
+            # 買い直し・再契約のときに、前回の解約予定日が残らないようNULLにする
             conn.execute(
-                'UPDATE users SET subscription_status = ?, stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?',
+                'UPDATE users SET subscription_status = ?, stripe_customer_id = ?, stripe_subscription_id = ?, '
+                'subscription_cancel_at = NULL WHERE id = ?',
                 ('active', checkout_session.customer, checkout_session.subscription, session['user_id'])
             )
             conn.commit()
@@ -124,14 +153,18 @@ def billing_webhook():
     with core.get_db() as conn:
         if event_type in ('customer.subscription.updated', 'customer.subscription.created'):
             status = 'active' if obj['status'] in ('active', 'trialing') else 'free'
+            # 有料のままで解約だけ予約されている場合は、いつまで使えるかを覚えておく（再開されたらNULLに戻る）
+            cancel_at = scheduled_cancel_date(obj) if status == 'active' else None
             conn.execute(
-                'UPDATE users SET subscription_status = ?, stripe_subscription_id = ? WHERE stripe_customer_id = ?',
-                (status, obj['id'], obj['customer'])
+                'UPDATE users SET subscription_status = ?, stripe_subscription_id = ?, subscription_cancel_at = ? '
+                'WHERE stripe_customer_id = ?',
+                (status, obj['id'], cancel_at, obj['customer'])
             )
             conn.commit()
         elif event_type == 'customer.subscription.deleted':
             conn.execute(
-                "UPDATE users SET subscription_status = 'free' WHERE stripe_customer_id = ?",
+                "UPDATE users SET subscription_status = 'free', subscription_cancel_at = NULL "
+                "WHERE stripe_customer_id = ?",
                 (obj['customer'],)
             )
             conn.commit()

@@ -225,7 +225,7 @@ def me():
     today = str(date.today())
     with core.get_db() as conn:
         user = conn.execute(
-            'SELECT security_question, subscription_status, onboarded FROM users WHERE id = ?',
+            'SELECT security_question, subscription_status, onboarded, subscription_cancel_at FROM users WHERE id = ?',
             (session['user_id'],)
         ).fetchone()
         rows = conn.execute(
@@ -253,5 +253,8 @@ def me():
         'due_reviews':           due,
         'open_assignments':      open_assignments,
         'subscription_status':   user['subscription_status'] if user else 'free',
+        # 解約を予約済みなら、その日（YYYY-MM-DD）まで有料。予約なし・無料プランはNone
+        'subscription_cancel_at': (user['subscription_cancel_at']
+                                   if user and user['subscription_status'] == 'active' else None),
         'lives_status':          core.get_lives_status(session['user_id']),
     })

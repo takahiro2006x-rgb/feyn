@@ -172,3 +172,88 @@ def test_checkout_omits_an_invalid_legacy_email_instead_of_failing(student_clien
         conn.commit()
     assert student_client.post('/api/billing/create-checkout-session').status_code == 200
     assert captured['customer_email'] is None
+
+
+# ---------- 解約予定日（「◯月◯日まで有料」の表示用） ----------
+from datetime import datetime, timezone
+
+from blueprints.billing import scheduled_cancel_date
+
+# 2026-11-24 16:58 UTC = 日本時間では 11/25 01:58。UTCのままだと前日になってしまう境目の時刻
+CANCEL_TS = int(datetime(2026, 11, 24, 16, 58, tzinfo=timezone.utc).timestamp())
+
+
+def _subscription_event(**overrides):
+    sub = {'id': 'sub_cx', 'object': 'subscription', 'customer': 'cus_cx', 'status': 'active'}
+    sub.update(overrides)
+    return {'id': 'evt_cx', 'object': 'event', 'type': 'customer.subscription.updated', 'data': {'object': sub}}
+
+
+def test_scheduled_cancel_date_new_api_style_uses_cancel_at():
+    sub = {'cancel_at': CANCEL_TS, 'cancel_at_period_end': False}
+    assert scheduled_cancel_date(sub) == '2026-11-25'   # 日本時間の日付になる
+
+
+def test_scheduled_cancel_date_old_api_style_uses_period_end():
+    sub = {'cancel_at': None, 'cancel_at_period_end': True, 'current_period_end': CANCEL_TS}
+    assert scheduled_cancel_date(sub) == '2026-11-25'
+
+
+def test_scheduled_cancel_date_old_api_style_period_end_on_item():
+    sub = {'cancel_at_period_end': True, 'items': {'data': [{'current_period_end': CANCEL_TS}]}}
+    assert scheduled_cancel_date(sub) == '2026-11-25'
+
+
+def test_scheduled_cancel_date_is_none_when_not_cancelling():
+    assert scheduled_cancel_date({'cancel_at': None, 'cancel_at_period_end': False}) is None
+    assert scheduled_cancel_date({}) is None
+
+
+def test_webhook_saves_cancel_date_and_me_returns_it(student_client):
+    _make_customer(customer='cus_cx', status='active')
+    resp = student_client.post('/api/billing/webhook', json=_subscription_event(cancel_at=CANCEL_TS))
+    assert resp.status_code == 200
+
+    me = student_client.get('/api/me').get_json()
+    assert me['subscription_status'] == 'active'          # 期間の終わりまでは有料のまま
+    assert me['subscription_cancel_at'] == '2026-11-25'
+
+
+def test_webhook_clears_cancel_date_when_subscription_is_resumed(student_client):
+    _make_customer(customer='cus_cx', status='active')
+    student_client.post('/api/billing/webhook', json=_subscription_event(cancel_at=CANCEL_TS))
+    student_client.post('/api/billing/webhook', json=_subscription_event(cancel_at=None))  # 解約を取り消した
+    assert student_client.get('/api/me').get_json()['subscription_cancel_at'] is None
+
+
+def test_webhook_deleted_returns_to_free_and_clears_cancel_date(student_client):
+    _make_customer(customer='cus_cx', status='active')
+    student_client.post('/api/billing/webhook', json=_subscription_event(cancel_at=CANCEL_TS))
+    deleted = _subscription_event(status='canceled')
+    deleted['type'] = 'customer.subscription.deleted'
+    student_client.post('/api/billing/webhook', json=deleted)
+
+    me = student_client.get('/api/me').get_json()
+    assert me['subscription_status'] == 'free'
+    assert me['subscription_cancel_at'] is None
+
+
+def test_free_user_has_no_cancel_date(student_client):
+    assert student_client.get('/api/me').get_json()['subscription_cancel_at'] is None
+
+
+def test_new_checkout_confirmation_clears_a_stale_cancel_date(student_client, monkeypatch):
+    # 解約→再契約したとき、前回の解約予定日が「解約済み」表示として残らない
+    with core.get_db() as conn:
+        conn.execute("UPDATE users SET subscription_cancel_at = '2026-11-25' WHERE email = 'test_user@example.com'")
+        conn.commit()
+    me_id = student_client.get('/api/me').get_json()['id']
+    monkeypatch.setattr(
+        core.stripe.checkout.Session, 'retrieve',
+        lambda sid: SimpleNamespace(client_reference_id=str(me_id), status='complete',
+                                    customer='cus_new', subscription='sub_new'))
+    assert student_client.post('/api/billing/confirm', json={'session_id': 'cs_x'}).status_code == 200
+
+    me = student_client.get('/api/me').get_json()
+    assert me['subscription_status'] == 'active'
+    assert me['subscription_cancel_at'] is None

@@ -178,6 +178,8 @@ def init_db():
         # 初回の使い方ガイドを見終わったか（1=表示済み・不要）。DEFAULT 1なので既存ユーザーには出さず、
         # 新規登録した生徒だけsignup時に0で入れる
         db.add_column_if_missing(conn, 'users', 'onboarded INTEGER NOT NULL DEFAULT 1')
+        # 解約を予約済みの有料会員が「いつまで有料か」を表示するための日付（YYYY-MM-DD。予約なしはNULL）
+        db.add_column_if_missing(conn, 'users', 'subscription_cancel_at TEXT')
 
         conn.commit()
 

@@ -57,6 +57,20 @@ def reject_cross_site_requests():
     return None
 
 
+@app.route('/api/health')
+def health():
+    """死活確認用。データベースに軽い問い合わせを1回だけして、結果を返す（個人情報は返さない）。
+    GitHub Actionsから定期的に呼び、Supabase無料プランの「長期間使われていない」自動停止を防ぐ。
+    DBに繋がらないときは503を返すので、呼び出し側が失敗として気づける"""
+    try:
+        with core.get_db() as conn:
+            conn.execute('SELECT 1').fetchone()
+    except Exception:
+        app.logger.exception('health check: database is unreachable')
+        return jsonify({'ok': False}), 503
+    return jsonify({'ok': True})
+
+
 app.register_blueprint(pages_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(billing_bp)

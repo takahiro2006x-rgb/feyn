@@ -1,0 +1,21 @@
+# Supabase無料プランは、1週間ほど使われないとデータベースが自動で一時停止される。
+# 数日おきにFeynの /api/health を開いて（DBに軽い問い合わせが走る）、停止を防ぐ。
+# 失敗したときはGitHubから通知メールが届くので、サイトが落ちていることにも気づける。
+name: keepalive
+
+on:
+  schedule:
+    - cron: '0 3 */3 * *'   # 3日おき（UTCの3時＝日本時間の12時）
+  workflow_dispatch: {}      # GitHubの画面から手動で実行して試すこともできる
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wake Feyn and touch the database
+        run: |
+          # Renderの無料プランは休止中だと起動に1分前後かかるので、長めに待ってリトライする
+          curl --fail --silent --show-error \
+               --max-time 180 --retry 4 --retry-delay 30 --retry-all-errors \
+               https://feyn-28kg.onrender.com/api/health

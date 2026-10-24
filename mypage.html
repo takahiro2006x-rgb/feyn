@@ -878,33 +878,34 @@
       }
     }
 
-    async function handleCheckoutRedirect() {
-      const params = new URLSearchParams(location.search);
-      const checkout = params.get('checkout');
-      if (!checkout) return;
+    // params: ページを開いた直後のURLのパラメータ。activateTab()がURLを書き換えて
+    // checkout/session_idを消してしまうため、書き換える前に読んだものを受け取る
+    async function handleCheckoutRedirect(params) {
+      if (params.get('checkout') !== 'success') return;
 
-      if (checkout === 'success') {
-        const sessionId = params.get('session_id');
-        const card = document.getElementById('planCard');
-        card.innerHTML = '<div class="loading">お支払いを確認しています...</div>';
-        try {
-          await fetch('/api/billing/confirm', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: sessionId }),
-          });
-        } catch (e) {}
+      const card = document.getElementById('planCard');
+      card.innerHTML = '<div class="loading">お支払いを確認しています...</div>';
+      try {
+        const res = await fetch('/api/billing/confirm', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: params.get('session_id') }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert('お支払いは完了していますが、プランの反映に失敗しました。' +
+                `\n（${data.error || res.status}）\nお手数ですが、時間をおいてもう一度開き直してください。`);
+        }
+      } catch (e) {
+        alert('お支払いの確認中に接続エラーが発生しました。ページを開き直してください。');
       }
-      // URLからcheckoutパラメータを消してリロード時の二重確認を防ぐ
-      params.delete('checkout');
-      params.delete('session_id');
-      const query = params.toString();
-      history.replaceState(null, '', `/mypage${query ? '?' + query : ''}`);
     }
 
     // ===== 起動 =====
-    const initialTab = new URLSearchParams(location.search).get('tab') || 'hensachi';
+    // activateTab()がURLを書き換える前に、決済からの戻りパラメータを読み取っておく
+    const initialParams = new URLSearchParams(location.search);
+    const initialTab = initialParams.get('tab') || 'hensachi';
     activateTab(initialTab);
-    handleCheckoutRedirect().then(loadPlan);
+    handleCheckoutRedirect(initialParams).then(loadPlan);
   </script>
 </body>
 </html>

@@ -241,7 +241,29 @@ def init_db():
         # 解約を予約済みの有料会員が「いつまで有料か」を表示するための日付（YYYY-MM-DD。予約なしはNULL）
         db.add_column_if_missing(conn, 'users', 'subscription_cancel_at TEXT')
 
+        # 3. よく使う検索のためのインデックス（追加のみ。IF NOT EXISTS なので何度実行しても安全）
+        for index_sql in INDEXES:
+            conn.execute(index_sql)
+
         conn.commit()
+
+
+# よく使う検索のためのインデックス。SQLite・Postgresの両方で同じ書き方が使える
+INDEXES = [
+    # 会話ログ: 1つの会話の取得（session_id）・学習のきろくの一覧（user_idで絞って会話ごとにまとめる）
+    'CREATE INDEX IF NOT EXISTS idx_conversation_logs_user_session ON conversation_logs (user_id, session_id)',
+    # 会話ログ: session_id が無い過去データ・再起動後の復元（日付×科目で探す）
+    'CREATE INDEX IF NOT EXISTS idx_conversation_logs_user_subject_date ON conversation_logs (user_id, subject, session_date)',
+    # 完了記録: 連続学習日数・クリア数・完了済みかの確認
+    'CREATE INDEX IF NOT EXISTS idx_session_logs_user_session ON session_logs (user_id, session_id)',
+    # 苦手ノート: 本人の一覧・復習どきの件数・重複チェック
+    'CREATE INDEX IF NOT EXISTS idx_knowledge_gaps_user_subject_topic ON knowledge_gaps (user_id, subject, topic)',
+    # 課題: 生徒の未完了の課題・先生の提出一覧
+    'CREATE INDEX IF NOT EXISTS idx_assignments_student_status ON assignments (student_id, status)',
+    'CREATE INDEX IF NOT EXISTS idx_assignments_teacher_status ON assignments (teacher_id, status)',
+    # 先生ダッシュボード: 組織の生徒一覧
+    'CREATE INDEX IF NOT EXISTS idx_users_school_role ON users (school_id, role)',
+]
 
 init_db()
 
@@ -535,55 +557,105 @@ def restore_chat_session(session_key, user_id, teacher_name, target_date=None, c
 
 
 # ========================================
-# 学習履歴（会話ログを日付×科目でまとめて返す）
+# 学習のきろく（会話ごとの一覧と、1つの会話の中身）
 # ========================================
-def get_history_sessions(user_id):
+# 以前は全会話の全メッセージを毎回読み込んでいたので、使うほど重くなっていた。
+# 一覧は「会話ごとの見出し」だけをページ単位で返し、中身は開いたときに1つずつ取りに行く。
+#
+# 会話の見分け方（key）:
+#   - session_id がある会話（今の形式）: session_id そのもの
+#   - session_id が無い過去データ: 「日付|科目」（同じ日・同じ科目をひとまとめにしていた頃の形式）
+HISTORY_PAGE_SIZE = 20
+_CONV_KEY_SQL = "COALESCE(NULLIF(session_id, ''), session_date || '|' || subject)"
+
+
+def get_history_page(user_id, offset=0, limit=HISTORY_PAGE_SIZE):
+    """学習のきろくの一覧（新しい順）。戻り値は {'sessions': [見出し...], 'has_more': bool}。
+    Feynの最初の問いを見ただけで一度も返信していない会話は「学習」とみなさず除外する"""
+    offset = max(0, int(offset))
+    limit = max(1, min(int(limit), 100))
     with get_db() as conn:
-        rows = conn.execute(
-            'SELECT subject, difficulty, role, message, session_date, session_id, unit FROM conversation_logs '
-            'WHERE user_id = ? ORDER BY id',
-            (user_id,)
+        # SQLite・Postgresの両方で動くよう、まとめ方の式は内側で1回だけ作り、外側で GROUP BY する
+        groups = conn.execute(
+            'SELECT conv_key, MIN(id) AS first_id, COUNT(*) AS message_count '
+            f'FROM (SELECT {_CONV_KEY_SQL} AS conv_key, id, role FROM conversation_logs WHERE user_id = ?) t '
+            'GROUP BY conv_key '
+            "HAVING SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) > 0 "
+            'ORDER BY MIN(id) DESC LIMIT ? OFFSET ?',
+            (user_id, limit + 1, offset)
         ).fetchall()
-        completed_rows = conn.execute(
-            'SELECT subject, completed_at, session_id, topic FROM session_logs WHERE user_id = ?',
-            (user_id,)
+        has_more = len(groups) > limit
+        groups = groups[:limit]
+        if not groups:
+            return {'sessions': [], 'has_more': False}
+
+        # 見出しに使う科目・難易度・単元は、その会話の最初の行から取る
+        first_ids = [g['first_id'] for g in groups]
+        placeholders = ','.join('?' * len(first_ids))
+        first_rows = conn.execute(
+            'SELECT id, subject, difficulty, unit, session_date, session_id FROM conversation_logs '
+            f'WHERE id IN ({placeholders})',
+            first_ids
         ).fetchall()
+        first_by_id = {r['id']: r for r in first_rows}
 
-    # 「会話終了」まで到達した（＝完了記録がある）会話。session_idがあればそれで、
-    # 過去データ（session_id無し）は日付×科目でまとめて判定する
-    completed_conv_ids = {r['session_id'] for r in completed_rows if r['session_id']}
-    completed_legacy_keys = {f"{str(r['completed_at'])[:10]}|{r['subject']}" for r in completed_rows if not r['session_id']}
-    # 分析で分かった具体的なテーマ（会話ログの見出しに使う）
-    topic_by_conv_id = {r['session_id']: r['topic'] for r in completed_rows if r['session_id'] and r['topic']}
+        conv_ids = [r['session_id'] for r in first_rows if r['session_id']]
+        completed_rows = []
+        if conv_ids:
+            placeholders = ','.join('?' * len(conv_ids))
+            completed_rows = conn.execute(
+                f'SELECT session_id, topic FROM session_logs WHERE user_id = ? AND session_id IN ({placeholders})',
+                [user_id] + conv_ids
+            ).fetchall()
+        has_legacy = any(not r['session_id'] for r in first_rows)
+        legacy_rows = conn.execute(
+            'SELECT subject, completed_at FROM session_logs WHERE user_id = ? AND session_id IS NULL',
+            (user_id,)
+        ).fetchall() if has_legacy else []
 
-    grouped = {}
-    order = []
-    for row in rows:
-        # session_idがある会話は「開始した回」ごとに独立させ、無い過去データは日付×科目でまとめる
-        key = row['session_id'] or f"{row['session_date']}|{row['subject']}"
-        if key not in grouped:
-            if row['session_id']:
-                completed = row['session_id'] in completed_conv_ids
-            else:
-                completed = key in completed_legacy_keys
-            grouped[key] = {
-                'session_id': row['session_id'],
-                'date':       row['session_date'],
-                'subject':    row['subject'],
-                'difficulty': row['difficulty'],
-                'unit':       row['unit'],
-                'topic':      topic_by_conv_id.get(row['session_id']),
-                'messages':   [],
-                'completed':  completed,
-            }
-            order.append(key)
-        grouped[key]['messages'].append({'role': row['role'], 'message': row['message']})
+    completed_conv_ids = {r['session_id'] for r in completed_rows}
+    topic_by_conv_id = {r['session_id']: r['topic'] for r in completed_rows if r['topic']}
+    # 過去データ（session_id無し）は日付×科目で完了を判定する
+    completed_legacy_keys = {f"{str(r['completed_at'])[:10]}|{r['subject']}" for r in legacy_rows}
 
-    # Feynの最初の問いを見ただけで一度も返信していないセッションは「学習」とみなさず除外する
-    order = [k for k in order if any(m['role'] == 'user' for m in grouped[k]['messages'])]
+    sessions = []
+    for g in groups:
+        first = first_by_id[g['first_id']]
+        conv_id = first['session_id'] or None
+        sessions.append({
+            'key':           g['conv_key'],
+            'session_id':    conv_id,
+            'date':          first['session_date'],
+            'subject':       first['subject'],
+            'difficulty':    first['difficulty'],
+            'unit':          first['unit'],
+            'topic':         topic_by_conv_id.get(conv_id) if conv_id else None,
+            'message_count': g['message_count'],
+            'completed':     (conv_id in completed_conv_ids) if conv_id else (g['conv_key'] in completed_legacy_keys),
+        })
+    return {'sessions': sessions, 'has_more': has_more}
 
-    # 新しい方が先頭に来るように逆順で返す
-    return [grouped[k] for k in reversed(order)]
+
+def get_history_messages(user_id, key):
+    """1つの会話の中身（古い順）。key は get_history_page が返した 'key'。見つからなければ空のリスト"""
+    key = (key or '').strip()
+    if not key:
+        return []
+    with get_db() as conn:
+        if '|' in key:
+            session_date, subject = key.split('|', 1)
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs '
+                "WHERE user_id = ? AND (session_id IS NULL OR session_id = '') "
+                'AND session_date = ? AND subject = ? ORDER BY id',
+                (user_id, session_date, subject)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs WHERE user_id = ? AND session_id = ? ORDER BY id',
+                (user_id, key)
+            ).fetchall()
+    return [{'role': r['role'], 'message': r['message']} for r in rows]
 
 
 # ========================================

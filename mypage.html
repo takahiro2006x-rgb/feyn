@@ -353,6 +353,7 @@
     }
     .review-btn:hover, .resume-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
     .resume-btn { align-self: flex-start; padding: 10px 20px; }
+    .load-more-btn { display: block; margin: 8px auto 0; }
 
     /* ===== セッションカード（アコーディオン・学習のきろく） ===== */
     .session-card {
@@ -698,8 +699,28 @@
     }
 
     // ===== 学習のきろくタブ =====
+    // 一覧は会話ごとの見出しだけを20件ずつ読み込み、中身はカードを開いたときに取りに行く
+    const MATH_DELIMITERS = [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\[', right: '\\]', display: true },
+      { left: '$', right: '$', display: false },
+      { left: '\\(', right: '\\)', display: false },
+    ];
+    let historyOffset = 0;
+
+    function historyErrorHtml() {
+      return `
+        <div class="empty-state">
+          <div class="empty-emoji">⚠️</div>
+          <div class="empty-title">読み込みに失敗しました</div>
+          <div class="empty-desc">ページを再読み込みしてください</div>
+        </div>
+      `;
+    }
+
     async function loadHistory() {
       const contentEl = document.getElementById('content-history');
+      historyOffset = 0;
       try {
         const res = await fetch('/api/history');
         if (res.status === 401) { window.location.href = '/login'; return; }
@@ -717,72 +738,96 @@
         }
 
         contentEl.innerHTML = '';
+        appendHistoryPage(contentEl, data);
+      } catch (e) {
+        contentEl.innerHTML = historyErrorHtml();
+      }
+    }
 
-        data.sessions.forEach(s => {
-          const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
-          const card = document.createElement('div');
-          card.className = 'session-card';
+    function appendHistoryPage(contentEl, data) {
+      data.sessions.forEach(s => contentEl.appendChild(historyCard(s)));
+      historyOffset += data.sessions.length;
 
-          const bubbles = s.messages.map(m => `
-            <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
-              <div class="bubble">${escHtml(m.message)}</div>
-            </div>
-          `).join('');
-
-          const badge = s.completed ? '' : `<span class="incomplete-badge">⏸ 中断中</span>`;
-          const resumeBtn = s.completed ? '' : `<button class="resume-btn" data-subject="${escHtml(s.subject)}" data-date="${escHtml(s.date)}" data-session-id="${escHtml(s.session_id || '')}">▶️ 続きから再開する</button>`;
-
-          card.innerHTML = `
-            <button class="session-head">
-              <span class="session-emoji">${emoji}</span>
-              <span class="session-info">
-                <span class="session-subject">${sessionTitle(s)}</span>
-                <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
-              </span>
-              ${badge}
-              <span class="session-count">💬 ${s.messages.length}</span>
-              <span class="session-arrow">▶</span>
-            </button>
-            <div class="session-body">${bubbles}${resumeBtn}</div>
-          `;
-
-          card.querySelector('.session-head').addEventListener('click', () => {
-            card.classList.toggle('open');
-          });
-
-          const resumeButtonEl = card.querySelector('.resume-btn');
-          if (resumeButtonEl) {
-            resumeButtonEl.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const subject   = resumeButtonEl.dataset.subject;
-              const date      = resumeButtonEl.dataset.date;
-              const sessionId = resumeButtonEl.dataset.sessionId;
-              const sidParam  = sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : '';
-              window.location.href = `/?resume=${encodeURIComponent(subject)}&date=${encodeURIComponent(date)}${sidParam}`;
-            });
-          }
-
-          contentEl.appendChild(card);
-          if (window.renderMathInElement) {
-            renderMathInElement(card, {
-              delimiters: [
-                { left: '$$', right: '$$', display: true },
-                { left: '\\[', right: '\\]', display: true },
-                { left: '$', right: '$', display: false },
-                { left: '\\(', right: '\\)', display: false },
-              ],
-              throwOnError: false,
-            });
+      if (data.has_more) {
+        const more = document.createElement('button');
+        more.className = 'resume-btn load-more-btn';
+        more.textContent = '⬇️ もっと見る';
+        more.addEventListener('click', async () => {
+          more.disabled = true;
+          more.textContent = '読み込み中...';
+          try {
+            const res = await fetch(`/api/history?offset=${historyOffset}`);
+            const next = await res.json();
+            more.remove();
+            appendHistoryPage(contentEl, next);
+          } catch (e) {
+            more.disabled = false;
+            more.textContent = '⬇️ もっと見る（もう一度）';
           }
         });
-      } catch (e) {
-        contentEl.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-emoji">⚠️</div>
-            <div class="empty-title">読み込みに失敗しました</div>
-            <div class="empty-desc">ページを再読み込みしてください</div>
-          </div>
-        `;
+        contentEl.appendChild(more);
+      }
+    }
+
+    function historyCard(s) {
+      const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+      const card = document.createElement('div');
+      card.className = 'session-card';
+
+      const badge = s.completed ? '' : `<span class="incomplete-badge">⏸ 中断中</span>`;
+      card.innerHTML = `
+        <button class="session-head">
+          <span class="session-emoji">${emoji}</span>
+          <span class="session-info">
+            <span class="session-subject">${sessionTitle(s)}</span>
+            <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
+          </span>
+          ${badge}
+          <span class="session-count">💬 ${Number(s.message_count) || 0}</span>
+          <span class="session-arrow">▶</span>
+        </button>
+        <div class="session-body"></div>
+      `;
+
+      const body = card.querySelector('.session-body');
+      let loaded = false;
+      card.querySelector('.session-head').addEventListener('click', async () => {
+        card.classList.toggle('open');
+        if (loaded || !card.classList.contains('open')) return;
+        loaded = true;
+        body.innerHTML = '<div class="loading">読み込み中...</div>';
+        try {
+          const res = await fetch(`/api/history/messages?key=${encodeURIComponent(s.key)}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'error');
+          renderHistoryBody(body, s, data.messages);
+        } catch (e) {
+          loaded = false;  // もう一度開いたときに取り直す
+          body.innerHTML = '<div class="loading">読み込みに失敗しました。もう一度開いてください</div>';
+        }
+      });
+      return card;
+    }
+
+    function renderHistoryBody(body, s, messages) {
+      const bubbles = messages.map(m => `
+        <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
+          <div class="bubble">${escHtml(m.message)}</div>
+        </div>
+      `).join('');
+      const resumeBtn = s.completed ? '' : `<button class="resume-btn">▶️ 続きから再開する</button>`;
+      body.innerHTML = bubbles + resumeBtn;
+
+      const resumeButtonEl = body.querySelector('.resume-btn');
+      if (resumeButtonEl) {
+        resumeButtonEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const sidParam = s.session_id ? `&session_id=${encodeURIComponent(s.session_id)}` : '';
+          window.location.href = `/?resume=${encodeURIComponent(s.subject)}&date=${encodeURIComponent(s.date)}${sidParam}`;
+        });
+      }
+      if (window.renderMathInElement) {
+        renderMathInElement(body, { delimiters: MATH_DELIMITERS, throwOnError: false });
       }
     }
 

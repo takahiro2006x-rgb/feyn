@@ -44,6 +44,8 @@ def dashboard_student(student_id):
             (student_id,)
         ).fetchall()
 
+    history = core.get_history_page(student_id)
+
     assignments = []
     for r in assignment_rows:
         a = dict(r)
@@ -55,10 +57,52 @@ def dashboard_student(student_id):
         'student':     dict(student),
         'gaps':        [dict(r) for r in gap_rows],
         'progress':    [dict(r) for r in progress_rows],
-        'sessions':    core.get_history_sessions(student_id),
+        # 会話ログは最初の20件の見出しだけ。続きと中身は下の2つのAPIで取りに行く
+        'sessions':    history['sessions'],
+        'sessions_has_more': history['has_more'],
         'assignments': assignments,
         'labels':      tutoring.GAP_TYPE_LABELS,
     })
+
+
+def _teacher_student_or_error(student_id):
+    """先生としてログインしていて、その生徒が同じ組織にいるか確認する。
+    問題なければ (None, 生徒の行)、だめなら (エラー応答, None) を返す"""
+    if not session.get('user_id'):
+        return (jsonify({'error': 'ログインしてください'}), 401), None
+    if session.get('user_role') != 'teacher':
+        return (jsonify({'error': '権限がありません'}), 403), None
+    school_id = session.get('school_id', core.default_school_id())
+    with core.get_db() as conn:
+        student = conn.execute(
+            "SELECT id, name FROM users WHERE id = ? AND role = 'student' AND school_id = ?",
+            (student_id, school_id)
+        ).fetchone()
+    if not student:
+        return (jsonify({'error': '生徒が見つかりません'}), 404), None
+    return None, student
+
+
+@dashboard_bp.route('/api/dashboard/student/<int:student_id>/history')
+def dashboard_student_history(student_id):
+    """先生が見る生徒の会話ログ一覧（続きのページ）"""
+    error, _ = _teacher_student_or_error(student_id)
+    if error:
+        return error
+    offset = request.args.get('offset', 0, type=int) or 0
+    return jsonify(core.get_history_page(student_id, offset=offset))
+
+
+@dashboard_bp.route('/api/dashboard/student/<int:student_id>/history/messages')
+def dashboard_student_history_messages(student_id):
+    """先生が見る生徒の、1つの会話の中身"""
+    error, _ = _teacher_student_or_error(student_id)
+    if error:
+        return error
+    messages = core.get_history_messages(student_id, request.args.get('key', ''))
+    if not messages:
+        return jsonify({'error': '会話が見つかりません'}), 404
+    return jsonify({'messages': messages})
 
 
 @dashboard_bp.route('/api/dashboard/assignments', methods=['POST'])

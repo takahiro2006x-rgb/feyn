@@ -312,12 +312,12 @@ from google import genai  # noqa: E402
 client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 # 無料枠の利用上限（429）はモデルごとに別カウントのため、
-# 上限に達したら次のモデルへ自動で切り替える
+# 上限に達したら次のモデルへ自動で切り替える。
+# gemini-2.0-flash / 2.0-flash-lite は提供終了日（最短 2026-06-01）を過ぎたので外した。
+# 提供終了の予定は https://ai.google.dev/gemini-api/docs/deprecations で確認できる
 GEMINI_MODELS = [
     'gemini-2.5-flash',
-    'gemini-2.0-flash',
     'gemini-2.5-flash-lite',
-    'gemini-2.0-flash-lite',
 ]
 
 # --- Groq クライアント（任意。GROQ_API_KEY未設定なら使わない） ---
@@ -750,8 +750,7 @@ def generate_once(instruction, message, endpoint_name):
             return response.text or ''
         except Exception as e:
             log_api_call(model, endpoint_name, False)
-            err = str(e)
-            if '429' in err or '503' in err or 'UNAVAILABLE' in err:
+            if llm.classify_error(e) in llm.RETRYABLE_ON_NEXT_MODEL:
                 continue
             break
     return None

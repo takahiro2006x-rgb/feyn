@@ -19,6 +19,35 @@ GROQ_MODELS = [
 ]
 
 
+# 呼び出しに失敗したときのエラーの種類。予備のモデルに切り替えるかどうかの判断に使う
+ERROR_QUOTA      = 'quota'       # 無料枠の上限（429）。枠はモデルごとに別なので、次のモデルで試せる
+ERROR_OVERLOADED = 'overloaded'  # 一時的な過負荷（503）。少し待つか、次のモデルで試せる
+ERROR_NOT_FOUND  = 'not_found'   # モデルが見つからない（404）。提供終了など。次のモデルで試せる
+ERROR_OTHER      = 'other'       # それ以外（入力の誤りなど）。次のモデルでも同じ結果になりやすいので打ち切る
+
+# 次のモデルで試す価値があるエラー
+RETRYABLE_ON_NEXT_MODEL = {ERROR_QUOTA, ERROR_OVERLOADED, ERROR_NOT_FOUND}
+
+
+def classify_error(exc):
+    """Gemini（google-genai）・Groq の例外を、上の4種類に分ける。
+    どちらのライブラリも、HTTPの状態コードを属性（code / status_code）か、メッセージの中に持っている"""
+    code = getattr(exc, 'code', None)
+    if not isinstance(code, int):
+        code = getattr(exc, 'status_code', None)
+    text = str(exc)
+    if code == 429 or '429' in text or 'RESOURCE_EXHAUSTED' in text:
+        return ERROR_QUOTA
+    if code == 503 or '503' in text or 'UNAVAILABLE' in text:
+        return ERROR_OVERLOADED
+    # 提供が終わったモデルは「見つからない（404 NOT_FOUND）」になる。
+    # 予備の並びに古いモデルが残っていても、そこで止まらずに次の予備へ進めるようにする
+    if (code == 404 or '404' in text or 'NOT_FOUND' in text
+            or 'is not found' in text or 'no longer available' in text):
+        return ERROR_NOT_FOUND
+    return ERROR_OTHER
+
+
 class GeminiChatSession:
     """google-genaiのネイティブなチャットオブジェクトを共通インターフェースに合わせる"""
 

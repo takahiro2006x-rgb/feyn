@@ -625,8 +625,126 @@ async function resumeSession(subject, dateStr, sessionId) {
 }
 
 
+// ===== 会話終了後の結果画面 =====
+// /api/complete が返す分析結果（テーマ・理解度・要約・理解の穴）をカードで見せる。
+// 復習でFeynが聞く問い（suggested_question）は、先に見せると復習の効果が薄れるので出さない
+const resultOverlay = document.getElementById('resultOverlay');
+const resultCard    = document.getElementById('resultCard');
+
+function understandingWord(score) {
+  if (score >= 80) return { word: 'しっかり理解できている', color: '#58CC02' };
+  if (score >= 50) return { word: 'だいたいOK・あと一歩', color: '#FFC200' };
+  return { word: 'まだあやふや', color: '#FF9600' };
+}
+
+function resultHtml(result) {
+  const a      = result.analysis;
+  const labels = result.labels || {};
+  const gaps   = a && Array.isArray(a.gaps) ? a.gaps : [];
+
+  const badges = [];
+  if (result.wasReview)     badges.push('✅ 苦手を解決');
+  if (result.wasAssignment) badges.push('📮 課題を提出');
+
+  let html = `
+    <div class="result-head">
+      <div class="result-emoji">🎉</div>
+      <div class="result-title" id="resultTitle">${escText(result.subject)} クリア！</div>
+      ${a && a.topic ? `<div class="result-topic">テーマ：${escText(a.topic)}</div>` : ''}
+    </div>`;
+  if (badges.length) {
+    html += `<div class="result-badges">${badges.map(b => `<span class="result-badge">${escText(b)}</span>`).join('')}</div>`;
+  }
+
+  if (a) {
+    const score = Math.max(0, Math.min(100, Math.round(Number(a.understanding_score) || 0)));
+    const u = understandingWord(score);
+    html += `
+      <div class="result-section">
+        <div class="result-label">📈 理解度</div>
+        <div class="result-score-row">
+          <span class="result-score">${score}</span><span class="result-score-max">/ 100</span>
+          <span class="result-score-word" style="color:${u.color}">${u.word}</span>
+        </div>
+        <div class="result-meter"><div class="result-meter-fill" style="width:0%; background:${u.color}" data-width="${score}"></div></div>
+        ${a.summary ? `<div class="result-summary">${escText(a.summary)}</div>` : ''}
+      </div>`;
+    if (gaps.length) {
+      html += `
+        <div class="result-section">
+          <div class="result-label">🔍 見つかった理解の穴（${gaps.length}件）</div>
+          ${gaps.map(g => `
+            <div class="result-gap">
+              <div class="result-gap-type">${escText(labels[g.gap_type] || '理解の抜け')}</div>
+              <div class="result-gap-desc">${escText(g.description || '')}</div>
+              ${g.evidence ? `<div class="result-gap-evidence">あなたの説明：「${escText(g.evidence)}」</div>` : ''}
+            </div>`).join('')}
+          <div class="result-note">苦手ノートに記録したよ。復習どきになったら、Feynがもう一度聞きに来る！</div>
+        </div>`;
+    } else {
+      html += `
+        <div class="result-section">
+          <div class="result-label">🔍 理解の穴</div>
+          <div class="result-summary">今回は穴が見つからなかった！ 完璧な説明だったね。</div>
+        </div>`;
+    }
+  } else {
+    html += `
+      <div class="result-section">
+        <div class="result-summary">クリアは記録したよ！ 今回は理解度の分析ができなかった（AIが混み合っていたのかも）。</div>
+      </div>`;
+  }
+
+  const gapsLink = (gaps.length > 0 || result.wasReview)
+    ? '<a class="result-secondary" href="/mypage?tab=gaps">📝 苦手ノートを見る</a>' : '';
+  html += `<div class="result-actions">${gapsLink}<button class="result-primary" id="resultClose">閉じる</button></div>`;
+  return html;
+}
+
+function showResult(result) {
+  resultCard.innerHTML = resultHtml(result);
+  renderMath(resultCard);
+  resultOverlay.style.display = 'flex';
+  resultCard.scrollTop = 0;
+  const closeBtn = document.getElementById('resultClose');
+  closeBtn.addEventListener('click', closeResult);
+  closeBtn.focus();
+  // メーターが0から伸びるように、表示した次のフレームで幅を入れる
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    resultCard.querySelectorAll('.result-meter-fill').forEach(el => { el.style.width = `${el.dataset.width}%`; });
+  }));
+}
+
+function closeResult() {
+  resultOverlay.style.display = 'none';
+}
+
+resultOverlay.addEventListener('click', (e) => { if (e.target === resultOverlay) closeResult(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && resultOverlay.style.display !== 'none') closeResult();
+});
+
+// 結果画面を閉じた後でも、もう一度開けるボタンを会話の中に残す
+function addResultReopenButton(result) {
+  const el = document.createElement('div');
+  el.classList.add('message', 'feyn', 'pop-in');
+  el.innerHTML = `
+    <div class="avatar">${currentEmoji}</div>
+    <div class="bubble">
+      <div class="quick-replies" style="margin-top:0;">
+        <button class="quick-reply">📊 今回の結果をもう一度見る</button>
+      </div>
+    </div>`;
+  el.querySelector('.quick-reply').addEventListener('click', () => showResult(result));
+  messagesEl.appendChild(el);
+  scrollToMessage(el);
+}
+
+
 // ===== メッセージ送信 =====
 async function sendMessage() {
+  // 聞き取り中なら止める（止めた後に届く認識結果で、送った文章が入力欄に戻らないようにする）
+  if (micActive) stopVoiceInput();
   const text = textarea.value.trim();
   if (!text || isBusy || !sessionKey) return;
 
@@ -675,6 +793,9 @@ async function sendMessage() {
         launchConfetti();
         playCompleteSound();
       }, 400);
+      // 結果画面は紙吹雪を少し見せてから出す。科目は返事を待つ間に切り替えられても困らないよう、今の値を覚えておく
+      const doneAt = Date.now();
+      const completedSubjectAtDone = currentSubject;
       fetch('/api/complete', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -684,6 +805,7 @@ async function sendMessage() {
           session_key: sessionKey,
         }),
       }).then(async (res) => {
+        const completedSubject = completedSubjectAtDone;
         const wasReview     = !!reviewGapId;
         const wasAssignment = !!assignmentId;
         reviewGapId  = null;
@@ -704,6 +826,16 @@ async function sendMessage() {
             `📝 <strong>今日の気づき</strong>（テーマ: ${escText(c.analysis.topic)}）<br>${items}<br>` +
             `<a href="/mypage?tab=gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`,
             { raw: true });
+        }
+
+        // 結果画面（理解度・理解の穴をカードで表示）
+        if (res.ok) {
+          const result = {
+            subject: completedSubject, analysis: c.analysis || null, labels: c.labels || {},
+            wasReview, wasAssignment,
+          };
+          setTimeout(() => showResult(result), Math.max(0, 1500 - (Date.now() - doneAt)));
+          addResultReopenButton(result);
         }
 
         fetchStreak();
@@ -767,6 +899,90 @@ textarea.addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
+
+// ===== 音声入力（ブラウザ標準の Web Speech API） =====
+// 口で説明するほうがファインマン学習法らしいので、話した言葉をそのまま入力欄に入れる。
+// 対応していないブラウザ（Firefoxなど）ではボタンを出さない。
+// 注意: Chromeなどでは、声はブラウザの提供元（Googleなど）の音声認識サービスに送られて文字になる。
+// Feynのサーバーには文字になった結果しか届かない（初回にそのことを知らせる）
+const micBtn = document.getElementById('micBtn');
+let recognition = null;
+let micActive   = false;
+let micBaseText = '';   // 聞き取りを始めたときに入力欄に入っていた文字（その後ろに足していく）
+
+function getSpeechRecognition() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function setMicState(active) {
+  micActive = active;
+  micBtn.classList.toggle('recording', active);
+  micBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  micBtn.title = active ? '音声入力を止める' : '音声で入力';
+}
+
+function showVoiceNoticeOnce() {
+  let shown = false;
+  try { shown = localStorage.getItem('feynVoiceNotice') === '1'; } catch (e) { /* 保存できない環境でも動かす */ }
+  if (shown) return;
+  addMessage('feyn', '🎤 話した声は、ブラウザの音声認識サービス（Chromeの場合はGoogle）で文字に変換されてから入力欄に入るよ。送信する前に、内容を確認してね。');
+  try { localStorage.setItem('feynVoiceNotice', '1'); } catch (e) { /* 次回もう一度出るだけ */ }
+}
+
+function startVoiceInput() {
+  const Ctor = getSpeechRecognition();
+  if (!Ctor || micActive) return;
+  showVoiceNoticeOnce();
+
+  recognition = new Ctor();
+  recognition.lang = 'ja-JP';
+  recognition.interimResults = true;   // 話している途中の文字も見せる
+  recognition.continuous = true;       // 止めるまで聞き続ける
+  micBaseText = textarea.value;
+
+  recognition.onresult = (event) => {
+    let finalText = '';
+    let interimText = '';
+    for (let i = 0; i < event.results.length; i++) {
+      const result = event.results[i];
+      if (result.isFinal) finalText += result[0].transcript;
+      else interimText += result[0].transcript;
+    }
+    textarea.value = micBaseText + finalText + interimText;
+  };
+  recognition.onerror = (event) => {
+    if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      addMessage('feyn', '🎤 マイクが使えないみたい。ブラウザの設定で、このサイトのマイクを許可してね。');
+    } else if (event.error === 'no-speech') {
+      addMessage('feyn', '🎤 声が聞こえなかったよ。もう一度マイクを押して話してみて。');
+    } else if (event.error !== 'aborted') {
+      addMessage('feyn', '🎤 音声入力がうまく動かなかった。文字で入力してみてね。');
+    }
+  };
+  recognition.onend = () => setMicState(false);
+
+  try {
+    recognition.start();
+    setMicState(true);
+  } catch (e) {
+    setMicState(false);
+  }
+}
+
+function stopVoiceInput() {
+  if (recognition) {
+    // 止めた後に遅れて届く結果で入力欄が書き換わらないよう、先に受け取りをやめる
+    recognition.onresult = null;
+    recognition.onerror = null;
+    try { recognition.stop(); } catch (e) { /* すでに止まっている */ }
+  }
+  setMicState(false);
+}
+
+if (getSpeechRecognition() && micBtn) {
+  micBtn.style.display = '';
+  micBtn.addEventListener('click', () => (micActive ? stopVoiceInput() : startVoiceInput()));
+}
 
 // ===== PCでページ全体がずれたら元に戻す =====
 // 画面は「各パネルの中だけがスクロールする」作りなので、ページ全体がスクロールすることはない想定。

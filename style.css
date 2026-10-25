@@ -640,6 +640,28 @@ body {
 }
 .math-btn:hover { border-color: #CB6CE6; color: #CB6CE6; }
 
+/* ===== 音声入力ボタン ===== */
+.mic-btn {
+  flex-shrink: 0;
+  width: 52px;
+  background: var(--card);
+  border: 2px solid var(--card-border);
+  border-radius: 16px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mic-btn:hover { border-color: #FF4B4B; }
+.mic-btn.recording {
+  border-color: #FF4B4B;
+  background: rgba(255, 75, 75, 0.12);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 75, 75, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(255, 75, 75, 0); }
+}
+
 /* ===== 使い方ガイド（初回登録後の3枚カード） ===== */
 .onboarding-overlay {
   position: fixed;
@@ -719,6 +741,89 @@ body {
   box-shadow: 0 4px 0 #46A302;
 }
 .onboarding-next:active { transform: translateY(2px); box-shadow: 0 2px 0 #46A302; }
+
+/* ===== 会話終了後の結果画面 ===== */
+.result-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 300;
+}
+
+.result-card {
+  background: var(--card);
+  border: 2px solid var(--card-border);
+  border-radius: 24px;
+  padding: 24px 22px 18px;
+  width: min(460px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  color: var(--text);
+}
+
+.result-head { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.result-emoji { font-size: 44px; line-height: 1; }
+.result-title { font-size: 20px; font-weight: 800; }
+.result-topic { font-size: 13px; font-weight: 700; color: var(--subtext); }
+
+.result-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.result-badge {
+  font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 99px;
+  background: rgba(88, 204, 2, 0.15); color: #46A302;
+}
+
+.result-section {
+  border: 2px solid var(--card-border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.result-label { font-size: 12px; font-weight: 800; color: var(--subtext); }
+.result-score-row { display: flex; align-items: baseline; gap: 6px; }
+.result-score { font-size: 30px; font-weight: 800; line-height: 1; }
+.result-score-max { font-size: 13px; font-weight: 700; color: var(--subtext); }
+.result-score-word { margin-left: auto; font-size: 13px; font-weight: 800; }
+.result-meter { height: 12px; border-radius: 99px; background: var(--card-border); overflow: hidden; }
+.result-meter-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.25, 1, 0.5, 1); }
+.result-summary { font-size: 14px; font-weight: 700; line-height: 1.7; }
+
+.result-gap {
+  border-left: 4px solid #FF9600;
+  background: var(--input-bg);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.result-gap-type { font-size: 11px; font-weight: 800; color: #FF9600; }
+.result-gap-desc { font-size: 14px; font-weight: 700; line-height: 1.6; }
+.result-gap-evidence { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.5; }
+.result-note { font-size: 12px; font-weight: 700; color: var(--subtext); text-align: center; line-height: 1.6; }
+
+.result-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.result-actions a, .result-actions button {
+  padding: 11px 18px;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+}
+.result-secondary { background: none; border: 2px solid var(--card-border); color: var(--text); }
+.result-primary { background: #58CC02; border: none; color: white; box-shadow: 0 4px 0 #46A302; }
+.result-primary:active { transform: translateY(2px); box-shadow: 0 2px 0 #46A302; }
 
 .math-modal-overlay {
   position: fixed;
@@ -1081,6 +1186,7 @@ body {
   .input-area textarea { height: 56px; padding: 10px 12px; font-size: 16px; }
   .send-btn { padding: 0 16px; font-size: 14px; }
   .math-btn { width: 44px; font-size: 18px; }
+  .mic-btn { width: 44px; font-size: 18px; }
   .math-modal { padding: 20px; }
 
   .start-card {

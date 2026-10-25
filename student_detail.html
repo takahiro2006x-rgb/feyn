@@ -483,7 +483,11 @@
       `).join('');
     }
 
-    function renderSessions(sessions) {
+    // 会話ログは見出しだけを20件ずつ表示し、中身はカードを開いたときに取りに行く
+    const studentIdFromPath = location.pathname.split('/').pop();
+    let sessionsOffset = 0;
+
+    function renderSessions(sessions, hasMore) {
       const contentEl = document.getElementById('content-sessions');
       if (sessions.length === 0) {
         contentEl.innerHTML = `
@@ -495,42 +499,80 @@
         `;
         return;
       }
-
       contentEl.innerHTML = '';
-      sessions.forEach(s => {
-        const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
-        const card = document.createElement('div');
-        card.className = 'session-card';
+      sessionsOffset = 0;
+      appendSessions(contentEl, sessions, hasMore);
+    }
 
-        const bubbles = s.messages.map(m => `
-          <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
-            <div class="bubble">${escHtml(m.message)}</div>
-          </div>
-        `).join('');
+    function appendSessions(contentEl, sessions, hasMore) {
+      sessions.forEach(s => contentEl.appendChild(sessionCard(s)));
+      sessionsOffset += sessions.length;
+      if (!hasMore) return;
 
-        const badge = s.completed ? '' : `<span class="status-badge" style="background:#FF9600;">⏸ 中断中</span>`;
-
-        card.innerHTML = `
-          <button class="session-head">
-            <span class="session-emoji">${emoji}</span>
-            <span class="session-info">
-              <span class="session-subject">${sessionTitle(s)}</span>
-              <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
-            </span>
-            ${badge}
-            <span class="session-count">💬 ${s.messages.length}</span>
-            <span class="session-arrow">▶</span>
-          </button>
-          <div class="session-body">${bubbles}</div>
-        `;
-
-        card.querySelector('.session-head').addEventListener('click', () => {
-          card.classList.toggle('open');
-        });
-
-        contentEl.appendChild(card);
-        renderMath(card);
+      const more = document.createElement('button');
+      more.className = 'session-head load-more-btn';
+      more.style.justifyContent = 'center';
+      more.textContent = '⬇️ もっと見る';
+      more.addEventListener('click', async () => {
+        more.disabled = true;
+        more.textContent = '読み込み中...';
+        try {
+          const res = await fetch(`/api/dashboard/student/${studentIdFromPath}/history?offset=${sessionsOffset}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'error');
+          more.remove();
+          appendSessions(contentEl, data.sessions, data.has_more);
+        } catch (e) {
+          more.disabled = false;
+          more.textContent = '⬇️ もっと見る（もう一度）';
+        }
       });
+      contentEl.appendChild(more);
+    }
+
+    function sessionCard(s) {
+      const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+      const card = document.createElement('div');
+      card.className = 'session-card';
+      const badge = s.completed ? '' : `<span class="status-badge" style="background:#FF9600;">⏸ 中断中</span>`;
+
+      card.innerHTML = `
+        <button class="session-head">
+          <span class="session-emoji">${emoji}</span>
+          <span class="session-info">
+            <span class="session-subject">${sessionTitle(s)}</span>
+            <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
+          </span>
+          ${badge}
+          <span class="session-count">💬 ${Number(s.message_count) || 0}</span>
+          <span class="session-arrow">▶</span>
+        </button>
+        <div class="session-body"></div>
+      `;
+
+      const body = card.querySelector('.session-body');
+      let loaded = false;
+      card.querySelector('.session-head').addEventListener('click', async () => {
+        card.classList.toggle('open');
+        if (loaded || !card.classList.contains('open')) return;
+        loaded = true;
+        body.innerHTML = '<div class="loading">読み込み中...</div>';
+        try {
+          const res = await fetch(`/api/dashboard/student/${studentIdFromPath}/history/messages?key=${encodeURIComponent(s.key)}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'error');
+          body.innerHTML = data.messages.map(m => `
+            <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
+              <div class="bubble">${escHtml(m.message)}</div>
+            </div>
+          `).join('');
+          renderMath(body);
+        } catch (e) {
+          loaded = false;
+          body.innerHTML = '<div class="loading">読み込みに失敗しました。もう一度開いてください</div>';
+        }
+      });
+      return card;
     }
 
     async function init() {
@@ -552,7 +594,7 @@
         renderProgress(data.progress);
         renderGaps(data.gaps, data.labels);
         renderAssignments(data.assignments);
-        renderSessions(data.sessions);
+        renderSessions(data.sessions, data.sessions_has_more);
 
         const initialTab = new URLSearchParams(location.search).get('tab') || 'progress';
         activateTab(initialTab);

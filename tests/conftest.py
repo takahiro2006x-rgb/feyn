@@ -56,6 +56,30 @@ def app(monkeypatch, tmp_path):
 
 
 @pytest.fixture
+def pg_path(app, monkeypatch):
+    """アプリを本番と同じ「Postgres用の経路」（接続プール → _PGConnection）で動かす。
+    データの置き場所はSQLiteのまま（tests/fake_pg.py）。テーブル作成は app フィクスチャで済んでいる。
+    acquire_timeout を短くしてあるので、返却漏れがあれば待ち続けずにエラーで気づける"""
+    import psycopg2
+    import psycopg2.extras  # noqa: F401  (_PGConnection が RealDictCursor を参照する)
+    from fake_pg import FakePGConnection
+
+    created = []
+
+    def connect():
+        conn = FakePGConnection(db_module.DB_PATH)
+        created.append(conn)
+        return conn
+
+    pool = db_module.ConnectionPool(connect, max_size=5, acquire_timeout=2)
+    monkeypatch.setattr(db_module, 'USE_POSTGRES', True)
+    monkeypatch.setattr(db_module, 'psycopg2', psycopg2, raising=False)
+    monkeypatch.setattr(db_module, '_pool', pool)
+    yield SimpleNamespace(pool=pool, created=created)
+    pool.close_all()
+
+
+@pytest.fixture
 def client(app):
     return app.app.test_client()
 

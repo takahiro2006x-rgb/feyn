@@ -213,6 +213,21 @@ def init_db():
             )
         ''')
 
+        # 利用状況の計測（会話の開始・完了・何往復目で離脱したか・有料化など）。
+        # 会話本文・名前・メールなど、個人を特定できる内容は入れない（log_event を参照）
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS events (
+                id {pk},
+                event_type TEXT NOT NULL,
+                user_id INTEGER,
+                conv_id TEXT,
+                subject TEXT,
+                mode TEXT,
+                turn INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         # 2. 全テーブルが存在する状態で、あとから追加したカラムをマイグレーションする
         db.add_column_if_missing(conn, 'users', "role TEXT NOT NULL DEFAULT 'student'")
         db.add_column_if_missing(conn, 'users', 'security_question TEXT')
@@ -241,7 +256,32 @@ def init_db():
         # 解約を予約済みの有料会員が「いつまで有料か」を表示するための日付（YYYY-MM-DD。予約なしはNULL）
         db.add_column_if_missing(conn, 'users', 'subscription_cancel_at TEXT')
 
+        # 3. よく使う検索のためのインデックス（追加のみ。IF NOT EXISTS なので何度実行しても安全）
+        for index_sql in INDEXES:
+            conn.execute(index_sql)
+
         conn.commit()
+
+
+# よく使う検索のためのインデックス。SQLite・Postgresの両方で同じ書き方が使える
+INDEXES = [
+    # 会話ログ: 1つの会話の取得（session_id）・学習のきろくの一覧（user_idで絞って会話ごとにまとめる）
+    'CREATE INDEX IF NOT EXISTS idx_conversation_logs_user_session ON conversation_logs (user_id, session_id)',
+    # 会話ログ: session_id が無い過去データ・再起動後の復元（日付×科目で探す）
+    'CREATE INDEX IF NOT EXISTS idx_conversation_logs_user_subject_date ON conversation_logs (user_id, subject, session_date)',
+    # 完了記録: 連続学習日数・クリア数・完了済みかの確認
+    'CREATE INDEX IF NOT EXISTS idx_session_logs_user_session ON session_logs (user_id, session_id)',
+    # 苦手ノート: 本人の一覧・復習どきの件数・重複チェック
+    'CREATE INDEX IF NOT EXISTS idx_knowledge_gaps_user_subject_topic ON knowledge_gaps (user_id, subject, topic)',
+    # 課題: 生徒の未完了の課題・先生の提出一覧
+    'CREATE INDEX IF NOT EXISTS idx_assignments_student_status ON assignments (student_id, status)',
+    'CREATE INDEX IF NOT EXISTS idx_assignments_teacher_status ON assignments (teacher_id, status)',
+    # 先生ダッシュボード: 組織の生徒一覧
+    'CREATE INDEX IF NOT EXISTS idx_users_school_role ON users (school_id, role)',
+    # 利用状況の計測: 期間での集計・本人のデータ削除
+    'CREATE INDEX IF NOT EXISTS idx_events_created ON events (created_at)',
+    'CREATE INDEX IF NOT EXISTS idx_events_user ON events (user_id)',
+]
 
 init_db()
 
@@ -272,12 +312,12 @@ from google import genai  # noqa: E402
 client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 # 無料枠の利用上限（429）はモデルごとに別カウントのため、
-# 上限に達したら次のモデルへ自動で切り替える
+# 上限に達したら次のモデルへ自動で切り替える。
+# gemini-2.0-flash / 2.0-flash-lite は提供終了日（最短 2026-06-01）を過ぎたので外した。
+# 提供終了の予定は https://ai.google.dev/gemini-api/docs/deprecations で確認できる
 GEMINI_MODELS = [
     'gemini-2.5-flash',
-    'gemini-2.0-flash',
     'gemini-2.5-flash-lite',
-    'gemini-2.0-flash-lite',
 ]
 
 # --- Groq クライアント（任意。GROQ_API_KEY未設定なら使わない） ---
@@ -312,6 +352,276 @@ def log_api_call(model, endpoint, success):
             conn.commit()
     except Exception:
         pass  # 記録の失敗が本来の処理を止めないようにする
+
+
+# ========================================
+# 利用状況の計測
+# ========================================
+# 記録するのは「何が起きたか」だけ。会話本文・名前・メールアドレスなど、個人を特定できる内容は入れない。
+# user_id はアプリ内の番号で、アカウント削除のときに一緒に消す。
+EVENT_TYPES = {
+    'signup',                  # 生徒の新規登録
+    'conversation_started',    # 会話を始めた（mode: normal / review / assignment / photo）
+    'conversation_turn',       # 生徒が1回返信した（turn: 何往復目か）
+    'conversation_completed',  # Feynが納得して会話が終わった（turn: 何往復で終わったか）
+    'life_blocked',            # 無料プランのライフ切れで始められなかった
+    'subscription_started',    # 無料 → 有料になった
+    'subscription_ended',      # 有料 → 無料に戻った（解約・支払い失敗など）
+}
+
+
+def log_event(event_type, user_id=None, conv_id=None, subject=None, mode=None, turn=None):
+    """利用状況のイベントを1件記録する。記録の失敗で本来の処理を止めないよう、例外は外に出さない。
+    DBの接続を自分で開くので、with get_db() の中からは呼ばないこと（接続を二重に使わないため）"""
+    if event_type not in EVENT_TYPES:
+        return
+    try:
+        with get_db() as conn:
+            conn.execute(
+                'INSERT INTO events (event_type, user_id, conv_id, subject, mode, turn) VALUES (?, ?, ?, ?, ?, ?)',
+                (event_type, user_id, conv_id, subject, mode, turn)
+            )
+            conn.commit()
+    except Exception:
+        pass
+
+
+# 始めてからこの時間が経っていない会話は「まだ続いているかもしれない」ので、離脱の集計に入れない
+IN_PROGRESS_HOURS = 1
+
+
+def compute_usage_metrics(school_id, days=30, now=None):
+    """先生ダッシュボード用に、組織の生徒の利用状況を集計する（直近 days 日）"""
+    days = max(1, min(int(days), 365))
+    now = now or datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')   # DBの時刻はUTC
+    in_progress_after = now - timedelta(hours=IN_PROGRESS_HOURS)
+
+    with get_db() as conn:
+        rows = conn.execute(
+            'SELECT e.event_type, e.user_id, e.conv_id, e.mode, e.turn, e.created_at FROM events e '
+            'JOIN users u ON u.id = e.user_id '
+            "WHERE u.school_id = ? AND u.role = 'student' AND e.created_at >= ?",
+            (school_id, since)
+        ).fetchall()
+        plan_rows = conn.execute(
+            "SELECT subscription_status, COUNT(*) AS cnt FROM users WHERE school_id = ? AND role = 'student' "
+            'GROUP BY subscription_status',
+            (school_id,)
+        ).fetchall()
+
+    started = {}          # conv_id -> 始めた時刻
+    completed = {}        # conv_id -> 何往復で終わったか
+    max_turn = {}         # conv_id -> 何往復目まで進んだか
+    modes = {}
+    active_users, blocked_users = set(), set()
+    counts = {t: 0 for t in EVENT_TYPES}
+    for r in rows:
+        counts[r['event_type']] = counts.get(r['event_type'], 0) + 1
+        conv_id = r['conv_id']
+        if r['event_type'] == 'conversation_started':
+            active_users.add(r['user_id'])
+            modes[r['mode'] or 'normal'] = modes.get(r['mode'] or 'normal', 0) + 1
+            if conv_id:
+                started[conv_id] = _as_utc_datetime(r['created_at'])
+        elif r['event_type'] == 'conversation_turn' and conv_id:
+            max_turn[conv_id] = max(max_turn.get(conv_id, 0), r['turn'] or 0)
+        elif r['event_type'] == 'conversation_completed' and conv_id:
+            completed[conv_id] = r['turn'] or 0
+        elif r['event_type'] == 'life_blocked':
+            blocked_users.add(r['user_id'])
+
+    # 離脱: 始めたが終わっていない会話を、何往復目で止まったかで分ける（始めたばかりの会話は除く）
+    dropout = {'0': 0, '1': 0, '2': 0, '3+': 0}
+    in_progress = 0
+    for conv_id, started_at in started.items():
+        if conv_id in completed:
+            continue
+        if started_at and started_at > in_progress_after:
+            in_progress += 1
+            continue
+        turn = max_turn.get(conv_id, 0)
+        dropout['3+' if turn >= 3 else str(turn)] += 1
+
+    finished_started = [c for c in started if c in completed]
+    completed_turns = list(completed.values())
+    plans = {r['subscription_status']: r['cnt'] for r in plan_rows}
+    return {
+        'days':                days,
+        'since':               to_jst_str(since)[:10],
+        'active_students':     len(active_users),
+        'started':             len(started),
+        'completed':           len(finished_started),
+        'completion_rate':     round(len(finished_started) / len(started) * 100) if started else None,
+        'in_progress':         in_progress,
+        'dropout_by_turn':     dropout,
+        'avg_turns_to_complete': round(sum(completed_turns) / len(completed_turns), 1) if completed_turns else None,
+        'started_by_mode':     modes,
+        'signups':             counts['signup'],
+        'subscriptions_started': counts['subscription_started'],
+        'subscriptions_ended': counts['subscription_ended'],
+        'life_blocked':        counts['life_blocked'],
+        'life_blocked_students': len(blocked_users),
+        'plans':               {'free': plans.get('free', 0), 'active': plans.get('active', 0)},
+    }
+
+
+# ========================================
+# つまずきマップ（テーマごとに、何割の生徒の苦手ノートに入っているか）
+# ========================================
+STUMBLE_MAP_LIMIT = 20
+
+
+def compute_stumble_map(school_id, limit=STUMBLE_MAP_LIMIT):
+    """組織の生徒について、苦手ノートに「未解決」で残っているテーマを、生徒の割合が高い順に返す。
+    テーマ名は会話の分析時に既存の名前へそろえているので、それを単元のまとまりとして扱う"""
+    joined = "JOIN users u ON u.id = {col} WHERE u.school_id = ? AND u.role = 'student'"
+    with get_db() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM users WHERE school_id = ? AND role = 'student'", (school_id,)
+        ).fetchone()['cnt']
+        gap_rows = conn.execute(
+            'SELECT g.subject, g.topic, COUNT(DISTINCT g.user_id) AS students FROM knowledge_gaps g '
+            + joined.format(col='g.user_id') + " AND g.status != 'resolved' GROUP BY g.subject, g.topic",
+            (school_id,)
+        ).fetchall()
+        studied_rows = conn.execute(
+            'SELECT t.subject, t.topic, COUNT(DISTINCT t.user_id) AS students FROM topic_progress t '
+            + joined.format(col='t.user_id') + ' GROUP BY t.subject, t.topic',
+            (school_id,)
+        ).fetchall()
+
+    studied = {(r['subject'], r['topic']): r['students'] for r in studied_rows}
+    topics = []
+    for r in gap_rows:
+        topics.append({
+            'subject':  r['subject'],
+            'topic':    r['topic'],
+            'students': r['students'],
+            'studied':  max(studied.get((r['subject'], r['topic']), 0), r['students']),
+            'rate':     round(r['students'] / total * 100) if total else 0,
+        })
+    topics.sort(key=lambda t: (-t['students'], t['subject'], t['topic']))
+    return {'total_students': total, 'topics': topics[:limit], 'more': max(0, len(topics) - limit)}
+
+
+# ========================================
+# 先生向けCSV出力（生徒ごとの進捗・クリア数。会話本文は含めない）
+# ========================================
+CSV_FORMULA_PREFIXES = ('=', '+', '-', '@', '\t', '\r')
+
+
+def csv_safe(value):
+    """Excelで開いたときに、=や+で始まる文字（ニックネームなど）が数式として実行されないようにする"""
+    if value is None:
+        return ''
+    text = str(value)
+    if text.startswith(CSV_FORMULA_PREFIXES):
+        return "'" + text
+    return text
+
+
+def build_students_csv_rows(school_id):
+    """組織の生徒ごとに1行の、CSV用の行（見出し行を含む）を返す"""
+    student_filter = "JOIN users u ON u.id = {col} WHERE u.school_id = ? AND u.role = 'student'"
+    with get_db() as conn:
+        students = conn.execute(
+            'SELECT id, name, email, created_at, last_login, subscription_status FROM users '
+            "WHERE school_id = ? AND role = 'student' ORDER BY id",
+            (school_id,)
+        ).fetchall()
+        clears = conn.execute(
+            'SELECT s.user_id, s.subject, COUNT(*) AS cnt, MAX(s.completed_at) AS last_at FROM session_logs s '
+            + student_filter.format(col='s.user_id') + ' GROUP BY s.user_id, s.subject',
+            (school_id,)
+        ).fetchall()
+        topics = conn.execute(
+            'SELECT t.user_id, AVG(t.understanding) AS avg_understanding, COUNT(*) AS cnt FROM topic_progress t '
+            + student_filter.format(col='t.user_id') + ' GROUP BY t.user_id',
+            (school_id,)
+        ).fetchall()
+        gaps = conn.execute(
+            'SELECT g.user_id, g.status, COUNT(*) AS cnt FROM knowledge_gaps g '
+            + student_filter.format(col='g.user_id') + ' GROUP BY g.user_id, g.status',
+            (school_id,)
+        ).fetchall()
+        assignments = conn.execute(
+            'SELECT a.student_id, a.status, COUNT(*) AS cnt FROM assignments a '
+            + student_filter.format(col='a.student_id') + ' GROUP BY a.student_id, a.status',
+            (school_id,)
+        ).fetchall()
+
+    clears_by = {}
+    last_by = {}
+    for r in clears:
+        clears_by.setdefault(r['user_id'], {})[r['subject']] = r['cnt']
+        last = _as_utc_datetime(r['last_at'])
+        if last and (r['user_id'] not in last_by or last > last_by[r['user_id']]):
+            last_by[r['user_id']] = last
+    topics_by = {r['user_id']: r for r in topics}
+    gaps_by = {}
+    for r in gaps:
+        key = 'resolved' if r['status'] == 'resolved' else 'open'
+        gaps_by.setdefault(r['user_id'], {'open': 0, 'resolved': 0})[key] += r['cnt']
+    assign_by = {}
+    for r in assignments:
+        key = 'completed' if r['status'] == 'completed' else 'open'
+        assign_by.setdefault(r['student_id'], {'open': 0, 'completed': 0})[key] += r['cnt']
+
+    header = (['生徒ID', 'ニックネーム', 'メールアドレス', 'プラン', '登録日時', '最終ログイン', '最終学習',
+               '総クリア数'] + [f'{s}クリア数' for s in SUBJECTS]
+              + ['理解度の平均(0-100)', '学習したテーマ数', '苦手（未解決）', '苦手（解決済み）',
+                 '課題（未完了）', '課題（完了）'])
+    rows = [header]
+    for st in students:
+        sid = st['id']
+        per_subject = clears_by.get(sid, {})
+        topic = topics_by.get(sid)
+        # round() は 70.5 を 70 にする（偶数への丸め）ので、一般的な四捨五入にする
+        avg = int(float(topic['avg_understanding']) + 0.5) if topic and topic['avg_understanding'] is not None else ''
+        g = gaps_by.get(sid, {'open': 0, 'resolved': 0})
+        a = assign_by.get(sid, {'open': 0, 'completed': 0})
+        last = last_by.get(sid)
+        rows.append([
+            sid, csv_safe(st['name']), csv_safe(st['email']),
+            '有料' if st['subscription_status'] == 'active' else '無料',
+            to_jst_str(st['created_at']) or '', to_jst_str(st['last_login']) or '',
+            to_jst_str(last) or '',
+            sum(per_subject.values()),
+        ] + [per_subject.get(s, 0) for s in SUBJECTS] + [
+            avg, topic['cnt'] if topic else 0, g['open'], g['resolved'], a['open'], a['completed'],
+        ])
+    return rows
+
+
+# ========================================
+# アカウント削除
+# ========================================
+# 本人のデータを、参照している側（子）から順に消す。Postgresは「users を参照している行」が残っていると
+# users を消せないので、この順番を崩さないこと。テーブルを足したときはここにも足す
+USER_DATA_TABLES = [
+    ('conversation_logs', 'user_id'),
+    ('session_logs',      'user_id'),
+    ('knowledge_gaps',    'user_id'),
+    ('topic_progress',    'user_id'),
+    ('assignments',       'student_id'),
+    ('events',            'user_id'),
+]
+
+
+def delete_user_data(user_id):
+    """生徒本人のデータとアカウントを、1つのトランザクションでまとめて削除する（途中で失敗したら全部取り消す）。
+    戻り値は、テーブルごとに消した行数"""
+    deleted = {}
+    with get_db() as conn:
+        for table, column in USER_DATA_TABLES:
+            deleted[table] = conn.execute(f'DELETE FROM {table} WHERE {column} = ?', (user_id,)).rowcount
+        deleted['users'] = conn.execute('DELETE FROM users WHERE id = ?', (user_id,)).rowcount
+        conn.commit()
+    # メモリ上の会話の途中経過も消す
+    for key in [k for k in list(chat_sessions) if k.startswith(f'{user_id}_')]:
+        chat_sessions.pop(key, None)
+    return deleted
 
 
 def _lives_anchor(value):
@@ -440,8 +750,7 @@ def generate_once(instruction, message, endpoint_name):
             return response.text or ''
         except Exception as e:
             log_api_call(model, endpoint_name, False)
-            err = str(e)
-            if '429' in err or '503' in err or 'UNAVAILABLE' in err:
+            if llm.classify_error(e) in llm.RETRYABLE_ON_NEXT_MODEL:
                 continue
             break
     return None
@@ -527,63 +836,114 @@ def restore_chat_session(session_key, user_id, teacher_name, target_date=None, c
 
     instruction = tutoring.build_instruction(subject, difficulty, teacher_name)
     chat = create_chat(ALL_MODELS[0], instruction, history=history)
-    turns = min(sum(1 for row in rows if row['role'] == 'user'), 3)
+    user_turns = sum(1 for row in rows if row['role'] == 'user')
+    turns = min(user_turns, 3)
     return {'chat': chat, 'model': ALL_MODELS[0], 'instruction': instruction, 'conv_id': conv_id,
-            'turns': turns, 'subject': subject, 'difficulty': difficulty, 'unit': unit,
+            'turns': turns, 'user_turns': user_turns, 'subject': subject, 'difficulty': difficulty, 'unit': unit,
             # 復習・課題のIDはメモリにしか持っていないので、復元した会話では引き継がない
             'gap_id': None, 'assignment_id': None, 'done': done}
 
 
 # ========================================
-# 学習履歴（会話ログを日付×科目でまとめて返す）
+# 学習のきろく（会話ごとの一覧と、1つの会話の中身）
 # ========================================
-def get_history_sessions(user_id):
+# 以前は全会話の全メッセージを毎回読み込んでいたので、使うほど重くなっていた。
+# 一覧は「会話ごとの見出し」だけをページ単位で返し、中身は開いたときに1つずつ取りに行く。
+#
+# 会話の見分け方（key）:
+#   - session_id がある会話（今の形式）: session_id そのもの
+#   - session_id が無い過去データ: 「日付|科目」（同じ日・同じ科目をひとまとめにしていた頃の形式）
+HISTORY_PAGE_SIZE = 20
+_CONV_KEY_SQL = "COALESCE(NULLIF(session_id, ''), session_date || '|' || subject)"
+
+
+def get_history_page(user_id, offset=0, limit=HISTORY_PAGE_SIZE):
+    """学習のきろくの一覧（新しい順）。戻り値は {'sessions': [見出し...], 'has_more': bool}。
+    Feynの最初の問いを見ただけで一度も返信していない会話は「学習」とみなさず除外する"""
+    offset = max(0, int(offset))
+    limit = max(1, min(int(limit), 100))
     with get_db() as conn:
-        rows = conn.execute(
-            'SELECT subject, difficulty, role, message, session_date, session_id, unit FROM conversation_logs '
-            'WHERE user_id = ? ORDER BY id',
-            (user_id,)
+        # SQLite・Postgresの両方で動くよう、まとめ方の式は内側で1回だけ作り、外側で GROUP BY する
+        groups = conn.execute(
+            'SELECT conv_key, MIN(id) AS first_id, COUNT(*) AS message_count '
+            f'FROM (SELECT {_CONV_KEY_SQL} AS conv_key, id, role FROM conversation_logs WHERE user_id = ?) t '
+            'GROUP BY conv_key '
+            "HAVING SUM(CASE WHEN role = 'user' THEN 1 ELSE 0 END) > 0 "
+            'ORDER BY MIN(id) DESC LIMIT ? OFFSET ?',
+            (user_id, limit + 1, offset)
         ).fetchall()
-        completed_rows = conn.execute(
-            'SELECT subject, completed_at, session_id, topic FROM session_logs WHERE user_id = ?',
-            (user_id,)
+        has_more = len(groups) > limit
+        groups = groups[:limit]
+        if not groups:
+            return {'sessions': [], 'has_more': False}
+
+        # 見出しに使う科目・難易度・単元は、その会話の最初の行から取る
+        first_ids = [g['first_id'] for g in groups]
+        placeholders = ','.join('?' * len(first_ids))
+        first_rows = conn.execute(
+            'SELECT id, subject, difficulty, unit, session_date, session_id FROM conversation_logs '
+            f'WHERE id IN ({placeholders})',
+            first_ids
         ).fetchall()
+        first_by_id = {r['id']: r for r in first_rows}
 
-    # 「会話終了」まで到達した（＝完了記録がある）会話。session_idがあればそれで、
-    # 過去データ（session_id無し）は日付×科目でまとめて判定する
-    completed_conv_ids = {r['session_id'] for r in completed_rows if r['session_id']}
-    completed_legacy_keys = {f"{str(r['completed_at'])[:10]}|{r['subject']}" for r in completed_rows if not r['session_id']}
-    # 分析で分かった具体的なテーマ（会話ログの見出しに使う）
-    topic_by_conv_id = {r['session_id']: r['topic'] for r in completed_rows if r['session_id'] and r['topic']}
+        conv_ids = [r['session_id'] for r in first_rows if r['session_id']]
+        completed_rows = []
+        if conv_ids:
+            placeholders = ','.join('?' * len(conv_ids))
+            completed_rows = conn.execute(
+                f'SELECT session_id, topic FROM session_logs WHERE user_id = ? AND session_id IN ({placeholders})',
+                [user_id] + conv_ids
+            ).fetchall()
+        has_legacy = any(not r['session_id'] for r in first_rows)
+        legacy_rows = conn.execute(
+            'SELECT subject, completed_at FROM session_logs WHERE user_id = ? AND session_id IS NULL',
+            (user_id,)
+        ).fetchall() if has_legacy else []
 
-    grouped = {}
-    order = []
-    for row in rows:
-        # session_idがある会話は「開始した回」ごとに独立させ、無い過去データは日付×科目でまとめる
-        key = row['session_id'] or f"{row['session_date']}|{row['subject']}"
-        if key not in grouped:
-            if row['session_id']:
-                completed = row['session_id'] in completed_conv_ids
-            else:
-                completed = key in completed_legacy_keys
-            grouped[key] = {
-                'session_id': row['session_id'],
-                'date':       row['session_date'],
-                'subject':    row['subject'],
-                'difficulty': row['difficulty'],
-                'unit':       row['unit'],
-                'topic':      topic_by_conv_id.get(row['session_id']),
-                'messages':   [],
-                'completed':  completed,
-            }
-            order.append(key)
-        grouped[key]['messages'].append({'role': row['role'], 'message': row['message']})
+    completed_conv_ids = {r['session_id'] for r in completed_rows}
+    topic_by_conv_id = {r['session_id']: r['topic'] for r in completed_rows if r['topic']}
+    # 過去データ（session_id無し）は日付×科目で完了を判定する
+    completed_legacy_keys = {f"{str(r['completed_at'])[:10]}|{r['subject']}" for r in legacy_rows}
 
-    # Feynの最初の問いを見ただけで一度も返信していないセッションは「学習」とみなさず除外する
-    order = [k for k in order if any(m['role'] == 'user' for m in grouped[k]['messages'])]
+    sessions = []
+    for g in groups:
+        first = first_by_id[g['first_id']]
+        conv_id = first['session_id'] or None
+        sessions.append({
+            'key':           g['conv_key'],
+            'session_id':    conv_id,
+            'date':          first['session_date'],
+            'subject':       first['subject'],
+            'difficulty':    first['difficulty'],
+            'unit':          first['unit'],
+            'topic':         topic_by_conv_id.get(conv_id) if conv_id else None,
+            'message_count': g['message_count'],
+            'completed':     (conv_id in completed_conv_ids) if conv_id else (g['conv_key'] in completed_legacy_keys),
+        })
+    return {'sessions': sessions, 'has_more': has_more}
 
-    # 新しい方が先頭に来るように逆順で返す
-    return [grouped[k] for k in reversed(order)]
+
+def get_history_messages(user_id, key):
+    """1つの会話の中身（古い順）。key は get_history_page が返した 'key'。見つからなければ空のリスト"""
+    key = (key or '').strip()
+    if not key:
+        return []
+    with get_db() as conn:
+        if '|' in key:
+            session_date, subject = key.split('|', 1)
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs '
+                "WHERE user_id = ? AND (session_id IS NULL OR session_id = '') "
+                'AND session_date = ? AND subject = ? ORDER BY id',
+                (user_id, session_date, subject)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                'SELECT role, message FROM conversation_logs WHERE user_id = ? AND session_id = ? ORDER BY id',
+                (user_id, key)
+            ).fetchall()
+    return [{'role': r['role'], 'message': r['message']} for r in rows]
 
 
 # ========================================

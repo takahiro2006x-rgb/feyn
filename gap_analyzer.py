@@ -15,6 +15,8 @@ import json
 
 from google.genai import types
 
+import llm
+
 # ギャップの3類型
 GAP_TYPES = ['misconception', 'vague', 'missing_prerequisite']
 
@@ -191,9 +193,9 @@ def analyze_session(client, models, subject, difficulty, transcript_rows, existi
             if on_attempt:
                 on_attempt(model, False)
             err = str(e)
-            # 枠切れ(429)・過負荷(503)はモデル単位の問題なので次のモデルで再挑戦する
-            if '429' in err or '503' in err or 'UNAVAILABLE' in err:
-                print(f'[gap_analyzer] {model} busy ({err[:60]}), trying next model')
+            # 枠切れ(429)・過負荷(503)・モデルが見つからない(404)はモデル単位の問題なので次のモデルで再挑戦する
+            if llm.classify_error(e) in llm.RETRYABLE_ON_NEXT_MODEL:
+                print(f'[gap_analyzer] {model} unavailable ({err[:60]}), trying next model')
                 continue
             print(f'[gap_analyzer] {model} failed: {err[:200]}')
             return None

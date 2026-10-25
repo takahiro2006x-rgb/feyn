@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request, session
 
 import core
 import gap_analyzer
+import llm
 import tutoring
 
 chat_bp = Blueprint('chat', __name__)
@@ -83,6 +84,7 @@ def start():
     # 入力のチェックがすべて通ってから、AIを呼ぶ直前にライフを消費する
     limit_error = core.check_and_consume_life(session['user_id'])
     if limit_error:
+        core.log_event('life_blocked', session['user_id'], subject=subject)
         return jsonify({'error': limit_error, 'upgrade_required': True}), 403
 
     # 写真モードは画像を読める必要があるため、画像非対応のGroqにはフォールバックしない
@@ -102,12 +104,12 @@ def start():
             core.log_api_call(model, 'start', True)
             break
         except Exception as e:
-            err = str(e)
             core.log_api_call(model, 'start', False)
-            # 枠切れ(429)・過負荷(503)はモデル単位の問題なので次のモデルで再挑戦する
-            if '429' in err:
+            kind = llm.classify_error(e)
+            # 枠切れ(429)・過負荷(503)・モデルが見つからない(404)はモデル単位の問題なので次のモデルで再挑戦する
+            if kind == llm.ERROR_QUOTA:
                 continue
-            if '503' in err or 'UNAVAILABLE' in err:
+            if kind in (llm.ERROR_OVERLOADED, llm.ERROR_NOT_FOUND):
                 quota_only = False
                 continue
             # それ以外の想定外のエラーは、他のモデルを試さずに打ち切る
@@ -136,6 +138,7 @@ def start():
         'gap_id':        gap['id'] if gap else None,
         'assignment_id': assignment['id'] if assignment else None,
         'done':          False,  # Feynが【会話終了】を出したらTrueになる
+        'user_turns':    0,      # 生徒が返信した回数（turns と違って3で止めない。利用状況の計測用）
     }
 
     reply = response.text or ''
@@ -151,6 +154,9 @@ def start():
             (session['user_id'], subject, difficulty, 'feyn', reply, today, conv_id, unit)
         )
         conn.commit()
+
+    mode = 'photo' if photo_bytes else 'review' if gap else 'assignment' if assignment else 'normal'
+    core.log_event('conversation_started', session['user_id'], conv_id=conv_id, subject=subject, mode=mode)
     return jsonify({'reply': reply, 'session_key': session_key, 'subject': subject})
 
 
@@ -193,26 +199,26 @@ def chat():
             core.log_api_call(sess['model'], 'chat', True)
             break
         except Exception as e:
-            err = str(e)
             core.log_api_call(sess['model'], 'chat', False)
-            overloaded = '503' in err or 'UNAVAILABLE' in err
+            kind = llm.classify_error(e)
 
             # 過負荷はまず同じモデルで少し待って再試行する
-            if overloaded and retries < 2:
+            if kind == llm.ERROR_OVERLOADED and retries < 2:
                 retries += 1
                 time.sleep(2)
                 continue
 
-            # 枠切れ(429)・回復しない過負荷は、会話履歴を引き継いで次のモデルへ切り替える
-            if '429' in err or overloaded:
-                idx = core.ALL_MODELS.index(sess['model']) if sess.get('model') in core.ALL_MODELS else len(core.ALL_MODELS) - 1
+            # 枠切れ(429)・回復しない過負荷・モデルが見つからない(404)は、会話履歴を引き継いで次のモデルへ切り替える
+            if kind in llm.RETRYABLE_ON_NEXT_MODEL:
+                # 予備の一覧に無いモデル（一覧から外した古いモデルなど）で話していた場合は、先頭から試す
+                idx = core.ALL_MODELS.index(sess['model']) if sess.get('model') in core.ALL_MODELS else -1
                 if idx + 1 < len(core.ALL_MODELS):
                     next_model = core.ALL_MODELS[idx + 1]
                     sess['chat']  = core.create_chat(next_model, sess['instruction'], history=sess['chat'].get_history())
                     sess['model'] = next_model
                     retries = 0
                     continue
-                if '429' in err:
+                if kind == llm.ERROR_QUOTA:
                     return jsonify({'error': '本日のAPI利用上限に達しました。'}), 429
             return jsonify({'error': 'AIサーバーが混み合っています。'}), 503
 
@@ -247,6 +253,13 @@ def chat():
             (session['user_id'], subject, difficulty, 'feyn', reply, today, conv_id, unit)
         )
         conn.commit()
+
+    # 利用状況の計測（本文は記録せず、何往復目か・終わったかだけ）
+    sess['user_turns'] = sess.get('user_turns', 0) + 1
+    core.log_event('conversation_turn', session['user_id'], conv_id=conv_id, subject=subject, turn=sess['user_turns'])
+    if is_done:
+        core.log_event('conversation_completed', session['user_id'], conv_id=conv_id, subject=subject,
+                       turn=sess['user_turns'])
 
     return jsonify({'reply': reply, 'is_done': is_done, 'progress': progress})
 
@@ -408,7 +421,8 @@ def complete():
         import traceback; traceback.print_exc()
         analysis = None
 
-    return jsonify({'ok': True, 'analysis': analysis})
+    # labels: 結果画面で穴の種類（誤解・曖昧・前提不足）を日本語で出すため
+    return jsonify({'ok': True, 'analysis': analysis, 'labels': tutoring.GAP_TYPE_LABELS})
 
 
 @chat_bp.route('/api/hint', methods=['POST'])

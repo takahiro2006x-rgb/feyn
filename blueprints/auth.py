@@ -76,6 +76,8 @@ def signup():
             session['user_name']  = name
             session['user_role']  = role
             session['school_id']  = school_id
+        if role == 'student':
+            core.log_event('signup', user['id'])
         return jsonify({'ok': True, 'name': name, 'role': role})
     except db.IntegrityError:
         return jsonify({'error': 'そのメールアドレスはすでに登録されています'}), 409
@@ -211,6 +213,69 @@ def complete_onboarding():
     with core.get_db() as conn:
         conn.execute('UPDATE users SET onboarded = 1 WHERE id = ?', (session['user_id'],))
         conn.commit()
+    return jsonify({'ok': True})
+
+
+# Stripeの契約がこの状態なら、まだ請求が続く（または続きうる）ので削除させない
+_LIVE_SUBSCRIPTION_STATUSES = {'active', 'trialing', 'past_due', 'unpaid', 'incomplete', 'paused'}
+
+
+def _subscription_blocks_deletion(user):
+    """有料プランの契約が残っていれば、削除を止める理由（文章）を返す。問題なければNone"""
+    if user['subscription_status'] == 'active':
+        return ('有料プランの契約中はアカウントを削除できません。'
+                '先に「プランを管理する」から解約し、有料期間が終わってから削除してください。')
+    if not user['stripe_subscription_id']:
+        return None
+    # アプリ上は無料でも、支払いが滞っているだけでStripeの契約が残っていることがある。Stripeに確かめる
+    try:
+        sub = core.stripe.Subscription.retrieve(user['stripe_subscription_id'])
+        status = sub['status']
+    except Exception:
+        current_app.logger.exception('Stripe subscription lookup failed before account deletion')
+        return '契約状況を確認できませんでした。少し時間をおいてから、もう一度お試しください。'
+    if status in _LIVE_SUBSCRIPTION_STATUSES:
+        return ('有料プランの契約が残っています。先に「プランを管理する」から解約してから、'
+                'アカウントを削除してください。')
+    return None
+
+
+@auth_bp.route('/api/account/delete', methods=['POST'])
+def delete_account():
+    """本人のアカウントと学習データを削除する（パスワードの再入力が必要。先生アカウントは今回は対象外）"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+
+    data     = request.get_json() or {}
+    password = data.get('password', '')
+    user_id  = session['user_id']
+
+    with core.get_db() as conn:
+        user = conn.execute(
+            'SELECT id, email, role, password_hash, subscription_status, stripe_subscription_id FROM users WHERE id = ?',
+            (user_id,)
+        ).fetchone()
+    if not user:
+        session.clear()
+        return jsonify({'error': 'アカウントが見つかりません'}), 404
+    if user['role'] != 'student':
+        return jsonify({'error': '先生アカウントの削除には、まだ対応していません'}), 403
+
+    # パスワードの総当たりを防ぐため、間違いが続いたら一定時間受け付けない
+    blocked = _too_many_attempts('delete-account', user['email'])
+    if blocked:
+        return blocked
+    if not check_password_hash(user['password_hash'], password):
+        ratelimit.record_failure('delete-account', ratelimit.client_ip(), user['email'])
+        return jsonify({'error': 'パスワードが違います'}), 401
+    ratelimit.record_success('delete-account', ratelimit.client_ip(), user['email'])
+
+    reason = _subscription_blocks_deletion(user)
+    if reason:
+        return jsonify({'error': reason, 'subscription_active': True}), 409
+
+    core.delete_user_data(user_id)
+    session.clear()
     return jsonify({'ok': True})
 
 

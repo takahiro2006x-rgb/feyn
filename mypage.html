@@ -353,6 +353,7 @@
     }
     .review-btn:hover, .resume-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
     .resume-btn { align-self: flex-start; padding: 10px 20px; }
+    .load-more-btn { display: block; margin: 8px auto 0; }
 
     /* ===== セッションカード（アコーディオン・学習のきろく） ===== */
     .session-card {
@@ -423,6 +424,47 @@
       .progress-row { flex-wrap: wrap; }
       .msg { max-width: 100%; }
     }
+    /* ===== アカウントの削除 ===== */
+    .danger-wrap { max-width: 800px; margin: 8px auto 40px; padding: 0 24px; width: 100%; }
+    .danger-card {
+      border: 2px solid var(--border); border-radius: 18px; padding: 18px 20px; background: var(--card);
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .danger-title { font-size: 14px; font-weight: 800; color: var(--text); }
+    .danger-desc { font-size: 13px; font-weight: 700; color: var(--subtext); line-height: 1.7; }
+    .danger-btn {
+      align-self: flex-start; padding: 10px 18px; border-radius: 12px; border: 2px solid var(--red);
+      background: none; color: var(--red); font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+    }
+    .danger-btn:hover { background: rgba(255, 75, 75, 0.08); }
+    .delete-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .delete-card {
+      background: var(--card); border: 2px solid var(--border); border-radius: 22px; width: min(440px, 100%);
+      max-height: calc(100dvh - 32px); overflow-y: auto;
+      padding: 22px; display: flex; flex-direction: column; gap: 12px; color: var(--text);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    }
+    .delete-title { font-size: 17px; font-weight: 800; }
+    .delete-list { font-size: 13px; font-weight: 700; line-height: 1.8; padding-left: 20px; color: var(--text); }
+    .delete-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 800; }
+    .delete-field input[type="password"] {
+      padding: 10px 12px; border-radius: 12px; border: 2px solid var(--border); background: var(--bg);
+      color: var(--text); font-family: inherit; font-size: 15px; font-weight: 700;
+    }
+    .delete-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; font-weight: 700; line-height: 1.6; cursor: pointer; }
+    .delete-check input { margin-top: 4px; }
+    .delete-error { font-size: 13px; font-weight: 800; color: var(--red); line-height: 1.6; min-height: 1em; }
+    .delete-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .delete-actions button, .delete-error button {
+      padding: 10px 18px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
+    }
+    .delete-error button { margin-top: 8px; }
+    .delete-cancel { background: none; border: 2px solid var(--border); color: var(--text); }
+    .delete-submit { background: var(--red); border: none; color: white; }
+    .delete-submit:disabled { opacity: 0.4; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -468,6 +510,41 @@
     <div class="tab-panel" id="panel-history">
       <div class="page-desc">Feynに説明した内容を見返して、理解を深めよう！</div>
       <div id="content-history"><div class="loading">読み込み中...</div></div>
+    </div>
+  </div>
+
+  <!-- ===== アカウントの削除（生徒のみ。先生には表示しない） ===== -->
+  <div class="danger-wrap" id="dangerZone" style="display:none;">
+    <div class="danger-card">
+      <div class="danger-title">⚠️ アカウントの削除</div>
+      <div class="danger-desc">
+        アカウントと、これまでの学習のきろく・苦手ノート・理解度などのデータをすべて削除します。削除すると元に戻せません。
+      </div>
+      <button class="danger-btn" id="deleteAccountBtn">アカウントを削除する</button>
+    </div>
+  </div>
+
+  <div class="delete-overlay" id="deleteOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+    <div class="delete-card" id="deleteCard">
+      <div class="delete-title" id="deleteTitle">本当にアカウントを削除しますか？</div>
+      <ul class="delete-list">
+        <li>Feynとの会話（学習のきろく）</li>
+        <li>苦手ノート・理解度・偏差値・連続学習日数</li>
+        <li>先生から出された課題の記録</li>
+        <li>ログイン用のアカウント（同じメールアドレスで登録し直すことはできます）</li>
+      </ul>
+      <label class="delete-field">確認のため、パスワードを入力してください
+        <input type="password" id="deletePassword" autocomplete="current-password">
+      </label>
+      <label class="delete-check">
+        <input type="checkbox" id="deleteConfirm">
+        <span>削除すると元に戻せないことを理解しました</span>
+      </label>
+      <div class="delete-error" id="deleteError" role="alert"></div>
+      <div class="delete-actions">
+        <button class="delete-cancel" id="deleteCancel">やめる</button>
+        <button class="delete-submit" id="deleteSubmit" disabled>削除する</button>
+      </div>
     </div>
   </div>
 
@@ -698,8 +775,28 @@
     }
 
     // ===== 学習のきろくタブ =====
+    // 一覧は会話ごとの見出しだけを20件ずつ読み込み、中身はカードを開いたときに取りに行く
+    const MATH_DELIMITERS = [
+      { left: '$$', right: '$$', display: true },
+      { left: '\\[', right: '\\]', display: true },
+      { left: '$', right: '$', display: false },
+      { left: '\\(', right: '\\)', display: false },
+    ];
+    let historyOffset = 0;
+
+    function historyErrorHtml() {
+      return `
+        <div class="empty-state">
+          <div class="empty-emoji">⚠️</div>
+          <div class="empty-title">読み込みに失敗しました</div>
+          <div class="empty-desc">ページを再読み込みしてください</div>
+        </div>
+      `;
+    }
+
     async function loadHistory() {
       const contentEl = document.getElementById('content-history');
+      historyOffset = 0;
       try {
         const res = await fetch('/api/history');
         if (res.status === 401) { window.location.href = '/login'; return; }
@@ -717,72 +814,96 @@
         }
 
         contentEl.innerHTML = '';
+        appendHistoryPage(contentEl, data);
+      } catch (e) {
+        contentEl.innerHTML = historyErrorHtml();
+      }
+    }
 
-        data.sessions.forEach(s => {
-          const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
-          const card = document.createElement('div');
-          card.className = 'session-card';
+    function appendHistoryPage(contentEl, data) {
+      data.sessions.forEach(s => contentEl.appendChild(historyCard(s)));
+      historyOffset += data.sessions.length;
 
-          const bubbles = s.messages.map(m => `
-            <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
-              <div class="bubble">${escHtml(m.message)}</div>
-            </div>
-          `).join('');
-
-          const badge = s.completed ? '' : `<span class="incomplete-badge">⏸ 中断中</span>`;
-          const resumeBtn = s.completed ? '' : `<button class="resume-btn" data-subject="${escHtml(s.subject)}" data-date="${escHtml(s.date)}" data-session-id="${escHtml(s.session_id || '')}">▶️ 続きから再開する</button>`;
-
-          card.innerHTML = `
-            <button class="session-head">
-              <span class="session-emoji">${emoji}</span>
-              <span class="session-info">
-                <span class="session-subject">${sessionTitle(s)}</span>
-                <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
-              </span>
-              ${badge}
-              <span class="session-count">💬 ${s.messages.length}</span>
-              <span class="session-arrow">▶</span>
-            </button>
-            <div class="session-body">${bubbles}${resumeBtn}</div>
-          `;
-
-          card.querySelector('.session-head').addEventListener('click', () => {
-            card.classList.toggle('open');
-          });
-
-          const resumeButtonEl = card.querySelector('.resume-btn');
-          if (resumeButtonEl) {
-            resumeButtonEl.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const subject   = resumeButtonEl.dataset.subject;
-              const date      = resumeButtonEl.dataset.date;
-              const sessionId = resumeButtonEl.dataset.sessionId;
-              const sidParam  = sessionId ? `&session_id=${encodeURIComponent(sessionId)}` : '';
-              window.location.href = `/?resume=${encodeURIComponent(subject)}&date=${encodeURIComponent(date)}${sidParam}`;
-            });
-          }
-
-          contentEl.appendChild(card);
-          if (window.renderMathInElement) {
-            renderMathInElement(card, {
-              delimiters: [
-                { left: '$$', right: '$$', display: true },
-                { left: '\\[', right: '\\]', display: true },
-                { left: '$', right: '$', display: false },
-                { left: '\\(', right: '\\)', display: false },
-              ],
-              throwOnError: false,
-            });
+      if (data.has_more) {
+        const more = document.createElement('button');
+        more.className = 'resume-btn load-more-btn';
+        more.textContent = '⬇️ もっと見る';
+        more.addEventListener('click', async () => {
+          more.disabled = true;
+          more.textContent = '読み込み中...';
+          try {
+            const res = await fetch(`/api/history?offset=${historyOffset}`);
+            const next = await res.json();
+            more.remove();
+            appendHistoryPage(contentEl, next);
+          } catch (e) {
+            more.disabled = false;
+            more.textContent = '⬇️ もっと見る（もう一度）';
           }
         });
-      } catch (e) {
-        contentEl.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-emoji">⚠️</div>
-            <div class="empty-title">読み込みに失敗しました</div>
-            <div class="empty-desc">ページを再読み込みしてください</div>
-          </div>
-        `;
+        contentEl.appendChild(more);
+      }
+    }
+
+    function historyCard(s) {
+      const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+      const card = document.createElement('div');
+      card.className = 'session-card';
+
+      const badge = s.completed ? '' : `<span class="incomplete-badge">⏸ 中断中</span>`;
+      card.innerHTML = `
+        <button class="session-head">
+          <span class="session-emoji">${emoji}</span>
+          <span class="session-info">
+            <span class="session-subject">${sessionTitle(s)}</span>
+            <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
+          </span>
+          ${badge}
+          <span class="session-count">💬 ${Number(s.message_count) || 0}</span>
+          <span class="session-arrow">▶</span>
+        </button>
+        <div class="session-body"></div>
+      `;
+
+      const body = card.querySelector('.session-body');
+      let loaded = false;
+      card.querySelector('.session-head').addEventListener('click', async () => {
+        card.classList.toggle('open');
+        if (loaded || !card.classList.contains('open')) return;
+        loaded = true;
+        body.innerHTML = '<div class="loading">読み込み中...</div>';
+        try {
+          const res = await fetch(`/api/history/messages?key=${encodeURIComponent(s.key)}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'error');
+          renderHistoryBody(body, s, data.messages);
+        } catch (e) {
+          loaded = false;  // もう一度開いたときに取り直す
+          body.innerHTML = '<div class="loading">読み込みに失敗しました。もう一度開いてください</div>';
+        }
+      });
+      return card;
+    }
+
+    function renderHistoryBody(body, s, messages) {
+      const bubbles = messages.map(m => `
+        <div class="msg ${m.role === 'user' ? 'user' : 'feyn'}">
+          <div class="bubble">${escHtml(m.message)}</div>
+        </div>
+      `).join('');
+      const resumeBtn = s.completed ? '' : `<button class="resume-btn">▶️ 続きから再開する</button>`;
+      body.innerHTML = bubbles + resumeBtn;
+
+      const resumeButtonEl = body.querySelector('.resume-btn');
+      if (resumeButtonEl) {
+        resumeButtonEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const sidParam = s.session_id ? `&session_id=${encodeURIComponent(s.session_id)}` : '';
+          window.location.href = `/?resume=${encodeURIComponent(s.subject)}&date=${encodeURIComponent(s.date)}${sidParam}`;
+        });
+      }
+      if (window.renderMathInElement) {
+        renderMathInElement(body, { delimiters: MATH_DELIMITERS, throwOnError: false });
       }
     }
 
@@ -846,6 +967,8 @@
         if (res.status === 401) { window.location.href = '/login'; return; }
         const data = await res.json();
         renderPlanCard(data.subscription_status || 'free', data.subscription_cancel_at || null);
+        // アカウントの削除は生徒だけ（先生アカウントは今回は対象外）
+        document.getElementById('dangerZone').style.display = data.role === 'student' ? 'block' : 'none';
       } catch (e) {
         document.getElementById('planCard').innerHTML = '<div class="plan-card-desc">プラン情報の読み込みに失敗しました</div>';
       }
@@ -911,6 +1034,88 @@
         alert('お支払いの確認中に接続エラーが発生しました。ページを開き直してください。');
       }
     }
+
+    // ===== アカウントの削除 =====
+    const deleteOverlay  = document.getElementById('deleteOverlay');
+    const deletePassword = document.getElementById('deletePassword');
+    const deleteConfirm  = document.getElementById('deleteConfirm');
+    const deleteSubmit   = document.getElementById('deleteSubmit');
+    const deleteError    = document.getElementById('deleteError');
+
+    function updateDeleteButton() {
+      deleteSubmit.disabled = !(deleteConfirm.checked && deletePassword.value.length > 0);
+    }
+
+    function openDeleteDialog() {
+      deletePassword.value = '';
+      deleteConfirm.checked = false;
+      deleteError.textContent = '';
+      deleteSubmit.textContent = '削除する';
+      updateDeleteButton();
+      deleteOverlay.style.display = 'flex';
+      deletePassword.focus();
+    }
+
+    function closeDeleteDialog() {
+      deleteOverlay.style.display = 'none';
+      deletePassword.value = '';
+    }
+
+    // 有料プランが残っていて削除できないとき、解約（Stripeのプラン管理）へ進めるボタンを出す
+    function addPortalButton() {
+      const btn = document.createElement('button');
+      btn.className = 'delete-cancel';
+      btn.textContent = '👑 プランを管理する（解約）';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          const r = await fetch('/api/billing/portal', { method: 'POST' });
+          const d = await r.json();
+          if (d.url) { window.location.href = d.url; return; }
+          deleteError.textContent = d.error || 'プラン管理ページを開けませんでした';
+        } catch (e) {
+          deleteError.textContent = '接続エラーが発生しました';
+        }
+      });
+      deleteError.appendChild(document.createElement('br'));
+      deleteError.appendChild(btn);
+    }
+
+    async function submitDeleteAccount() {
+      deleteSubmit.disabled = true;
+      deleteSubmit.textContent = '削除しています...';
+      deleteError.textContent = '';
+      try {
+        const res = await fetch('/api/account/delete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: deletePassword.value }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          document.getElementById('deleteCard').innerHTML = `
+            <div class="delete-title">アカウントを削除しました</div>
+            <div class="danger-desc">これまでFeynを使ってくれてありがとうございました。トップページに戻ります。</div>`;
+          setTimeout(() => { window.location.href = '/landing'; }, 2500);
+          return;
+        }
+        deleteError.textContent = data.error || '削除に失敗しました';
+        if (res.status === 409 && data.subscription_active) addPortalButton();
+      } catch (e) {
+        deleteError.textContent = '接続エラーが発生しました。もう一度お試しください。';
+      }
+      deleteSubmit.textContent = '削除する';
+      updateDeleteButton();
+    }
+
+    document.getElementById('deleteAccountBtn').addEventListener('click', openDeleteDialog);
+    document.getElementById('deleteCancel').addEventListener('click', closeDeleteDialog);
+    deletePassword.addEventListener('input', updateDeleteButton);
+    deleteConfirm.addEventListener('change', updateDeleteButton);
+    deleteSubmit.addEventListener('click', submitDeleteAccount);
+    deleteOverlay.addEventListener('click', (e) => { if (e.target === deleteOverlay) closeDeleteDialog(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && deleteOverlay.style.display !== 'none') closeDeleteDialog();
+    });
 
     // ===== 起動 =====
     // activateTab()がURLを書き換える前に、決済からの戻りパラメータを読み取っておく

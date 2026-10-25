@@ -91,6 +91,8 @@ def confirm_checkout():
     status = 'active' if checkout_session.status == 'complete' else 'free'
     if status == 'active':
         with core.get_db() as conn:
+            prev = conn.execute('SELECT subscription_status FROM users WHERE id = ?',
+                                (session['user_id'],)).fetchone()
             # 買い直し・再契約のときに、前回の解約予定日が残らないようNULLにする
             conn.execute(
                 'UPDATE users SET subscription_status = ?, stripe_customer_id = ?, stripe_subscription_id = ?, '
@@ -98,6 +100,9 @@ def confirm_checkout():
                 ('active', checkout_session.customer, checkout_session.subscription, session['user_id'])
             )
             conn.commit()
+        # Webhookと両方から届くことがあるので、無料→有料に変わったときだけ1回数える
+        if not prev or prev['subscription_status'] != 'active':
+            core.log_event('subscription_started', session['user_id'])
     return jsonify({'ok': True, 'status': status})
 
 
@@ -150,6 +155,14 @@ def billing_webhook():
     event_type = event['type']
     obj        = event['data']['object']
 
+    # 利用状況の計測用に、無料⇔有料が切り替わった人を集めておき、DBを閉じてから記録する
+    transitions = []
+
+    def note_changes(rows, new_status):
+        for r in rows:
+            if r['subscription_status'] != new_status:
+                transitions.append(('subscription_started' if new_status == 'active' else 'subscription_ended', r['id']))
+
     with core.get_db() as conn:
         if event_type == 'checkout.session.completed':
             # 決済画面から戻ってくる前にタブを閉じると /api/billing/confirm が呼ばれず、
@@ -158,6 +171,8 @@ def billing_webhook():
             user_id = str(_field(obj, 'client_reference_id') or '')
             if (_field(obj, 'mode') == 'subscription' and _field(obj, 'status') == 'complete'
                     and user_id.isdigit()):
+                note_changes(conn.execute('SELECT id, subscription_status FROM users WHERE id = ?',
+                                          (int(user_id),)).fetchall(), 'active')
                 conn.execute(
                     'UPDATE users SET subscription_status = ?, stripe_customer_id = ?, stripe_subscription_id = ?, '
                     'subscription_cancel_at = NULL WHERE id = ?',
@@ -168,6 +183,8 @@ def billing_webhook():
             status = 'active' if obj['status'] in ('active', 'trialing') else 'free'
             # 有料のままで解約だけ予約されている場合は、いつまで使えるかを覚えておく（再開されたらNULLに戻る）
             cancel_at = scheduled_cancel_date(obj) if status == 'active' else None
+            note_changes(conn.execute('SELECT id, subscription_status FROM users WHERE stripe_customer_id = ?',
+                                      (obj['customer'],)).fetchall(), status)
             conn.execute(
                 'UPDATE users SET subscription_status = ?, stripe_subscription_id = ?, subscription_cancel_at = ? '
                 'WHERE stripe_customer_id = ?',
@@ -175,6 +192,8 @@ def billing_webhook():
             )
             conn.commit()
         elif event_type == 'customer.subscription.deleted':
+            note_changes(conn.execute('SELECT id, subscription_status FROM users WHERE stripe_customer_id = ?',
+                                      (obj['customer'],)).fetchall(), 'free')
             conn.execute(
                 "UPDATE users SET subscription_status = 'free', subscription_cancel_at = NULL "
                 "WHERE stripe_customer_id = ?",
@@ -182,4 +201,6 @@ def billing_webhook():
             )
             conn.commit()
 
+    for event_name, user_id in transitions:
+        core.log_event(event_name, user_id)
     return jsonify({'received': True})

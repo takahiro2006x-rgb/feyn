@@ -382,6 +382,7 @@
       white-space: nowrap;
     }
     .assign-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .csv-btn { text-decoration: none; display: inline-block; }
 
     .modal select {
       width: 100%; padding: 10px 12px;
@@ -460,9 +461,41 @@
 
     .modal-close:hover { filter: brightness(1.08); }
 
+    /* ===== 利用状況（直近30日） ===== */
+    .metrics-box {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 4px 0 var(--border);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .metric { border: 2px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+    .metric-label { font-size: 12px; font-weight: 700; color: var(--subtext); }
+    .metric-value { font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.1; }
+    .metric-sub { font-size: 12px; font-weight: 700; color: var(--subtext); }
+    .metrics-subtitle { font-size: 13px; font-weight: 800; color: var(--text); }
+    .metrics-note { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.6; }
+    .dropout-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .dropout-bar { height: 12px; border-radius: 99px; background: var(--border); overflow: hidden; }
+    .dropout-fill { height: 100%; border-radius: 99px; background: var(--yellow); }
+    .dropout-count { text-align: right; color: var(--subtext); }
+    .stumble-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 2fr 110px; align-items: center; gap: 12px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .stumble-topic { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stumble-topic small { color: var(--subtext); font-weight: 700; }
+    .stumble-fill { height: 100%; border-radius: 99px; }
+    .stumble-count { text-align: right; color: var(--subtext); font-size: 12px; }
+
     /* ===== レスポンシブ ===== */
     @media (max-width: 768px) {
       .summary { grid-template-columns: 1fr; }
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .dropout-row { grid-template-columns: 96px 1fr 40px; }
+      .stumble-row { grid-template-columns: 1fr 90px; }
+      .stumble-row .dropout-bar { grid-column: 1 / -1; grid-row: 2; }
       .header  { height: auto; flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
       .header-divider { display: none; }
       .header-user { display: none; }
@@ -493,6 +526,22 @@
       <div class="loading">読み込み中...</div>
     </div>
 
+    <!-- 利用状況（会話の開始・完了・離脱・有料化） -->
+    <div class="section-header">
+      <div class="section-title">📈 利用状況（直近30日）</div>
+    </div>
+    <div class="metrics-box" id="metricsWrap">
+      <div class="loading">読み込み中...</div>
+    </div>
+
+    <!-- つまずきマップ -->
+    <div class="section-header">
+      <div class="section-title">🗺️ つまずきマップ（苦手ノートに残っている生徒の割合）</div>
+    </div>
+    <div class="metrics-box" id="stumbleWrap">
+      <div class="loading">読み込み中...</div>
+    </div>
+
     <!-- API使用量 -->
     <div class="section-header">
       <div class="section-title">🔋 今日のGemini使用量</div>
@@ -513,6 +562,7 @@
     <div class="section-header">
       <div class="section-title">生徒一覧</div>
       <div style="display:flex; align-items:center; gap:8px;">
+        <a class="assign-btn csv-btn" href="/api/dashboard/students.csv" download title="生徒ごとの進捗・クリア数（会話の中身は含みません）">📥 CSVで書き出す</a>
         <button class="assign-btn" id="bulkAssignBtn" disabled>📋 選択した生徒に課題を出す（<span id="bulkAssignCount">0</span>人）</button>
         <div class="student-count" id="studentCount">—</div>
       </div>
@@ -810,6 +860,96 @@
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    // ===== 利用状況（直近30日） =====
+    const MODE_LABELS = { normal: '通常', review: '復習', assignment: '課題', photo: '写真' };
+
+    function metricTile(label, value, sub) {
+      return `
+        <div class="metric">
+          <div class="metric-label">${label}</div>
+          <div class="metric-value">${value}</div>
+          ${sub ? `<div class="metric-sub">${sub}</div>` : ''}
+        </div>`;
+    }
+
+    async function loadMetrics() {
+      const wrap = document.getElementById('metricsWrap');
+      try {
+        const res = await fetch('/api/dashboard/metrics?days=30');
+        const m = await res.json();
+        if (!res.ok) { wrap.innerHTML = `<div class="loading">${escHtml(m.error || '読み込みに失敗しました')}</div>`; return; }
+
+        const rate = m.completion_rate === null ? '—' : `${m.completion_rate}%`;
+        const avgTurns = m.avg_turns_to_complete === null ? '—' : `${m.avg_turns_to_complete}`;
+        const modes = Object.entries(m.started_by_mode || {})
+          .map(([k, v]) => `${escHtml(MODE_LABELS[k] || k)} ${Number(v)}`).join('・');
+
+        const d = m.dropout_by_turn;
+        const dropoutTotal = d['0'] + d['1'] + d['2'] + d['3+'];
+        const rows = [
+          ['返信せずに終了', d['0']], ['1往復目で終了', d['1']], ['2往復目で終了', d['2']], ['3往復以上で終了', d['3+']],
+        ].map(([label, n]) => {
+          const pct = dropoutTotal ? Math.round(n / dropoutTotal * 100) : 0;
+          return `
+            <div class="dropout-row">
+              <span>${label}</span>
+              <div class="dropout-bar"><div class="dropout-fill" style="width:${pct}%"></div></div>
+              <span class="dropout-count">${Number(n)}</span>
+            </div>`;
+        }).join('');
+
+        wrap.innerHTML = `
+          <div class="metrics-grid">
+            ${metricTile('🙋 使った生徒', `${Number(m.active_students)}人`, '')}
+            ${metricTile('💬 会話の開始', `${Number(m.started)}回`, modes)}
+            ${metricTile('✅ 完了率', rate, `${Number(m.completed)}回完了・平均${avgTurns}往復`)}
+            ${metricTile('💔 ライフ切れ', `${Number(m.life_blocked)}回`, `${Number(m.life_blocked_students)}人`)}
+            ${metricTile('🆕 新規登録', `${Number(m.signups)}人`, '')}
+            ${metricTile('⭐ 有料化', `${Number(m.subscriptions_started)}件`, `解約 ${Number(m.subscriptions_ended)}件`)}
+            ${metricTile('👑 いまの有料会員', `${Number(m.plans.active)}人`, `無料 ${Number(m.plans.free)}人`)}
+            ${metricTile('⏳ 進行中', `${Number(m.in_progress)}回`, '始めて1時間以内')}
+          </div>
+          <div class="metrics-subtitle">🚪 途中でやめた会話（${dropoutTotal}回）は何往復目で止まったか</div>
+          ${rows}
+          <div class="metrics-note">${escHtml(m.since)}以降の集計です。記録しているのは回数・往復数・日時だけで、会話の中身は含みません。</div>
+        `;
+      } catch (e) {
+        wrap.innerHTML = `<div class="loading">読み込みに失敗しました</div>`;
+      }
+    }
+
+    // ===== つまずきマップ =====
+    // 割合が高いほど濃い色にする（多くの生徒がつまずいているテーマが一目で分かるように）
+    function stumbleColor(rate) {
+      if (rate >= 50) return '#FF4B4B';
+      if (rate >= 25) return '#FF9600';
+      return '#FFC200';
+    }
+
+    async function loadStumbleMap() {
+      const wrap = document.getElementById('stumbleWrap');
+      try {
+        const res = await fetch('/api/dashboard/stumble-map');
+        const data = await res.json();
+        if (!res.ok) { wrap.innerHTML = `<div class="loading">${escHtml(data.error || '読み込みに失敗しました')}</div>`; return; }
+        if (data.topics.length === 0) {
+          wrap.innerHTML = '<div class="loading">苦手ノートに残っているテーマはまだありません</div>';
+          return;
+        }
+        const rows = data.topics.map(t => `
+          <div class="stumble-row">
+            <span class="stumble-topic" title="${escHtml(t.subject)}：${escHtml(t.topic)}">${SUBJECT_EMOJIS[t.subject] || '📚'} ${escHtml(t.topic)} <small>${escHtml(t.subject)}</small></span>
+            <div class="dropout-bar"><div class="stumble-fill" style="width:${Number(t.rate)}%; background:${stumbleColor(Number(t.rate))}"></div></div>
+            <span class="stumble-count">${Number(t.rate)}%（${Number(t.students)}人 / ${Number(data.total_students)}人）</span>
+          </div>`).join('');
+        const more = data.more > 0 ? `<div class="metrics-note">ほかに ${Number(data.more)} テーマあります（人数の多い順に上位を表示）</div>` : '';
+        wrap.innerHTML = rows + more + `
+          <div class="metrics-note">苦手ノートに「未解決」で残っている生徒の数です。復習で解決すると数から外れます。テーマ名は会話の分析でAIが付けたものです。</div>`;
+      } catch (e) {
+        wrap.innerHTML = '<div class="loading">読み込みに失敗しました</div>';
+      }
+    }
+
     // ===== API使用量 =====
     async function loadUsage() {
       const wrap = document.getElementById('usageWrap');
@@ -860,6 +1000,8 @@
         renderSummary(data.summary);
         renderSubmissions(data.recent_submissions);
         renderTable(allStudents);
+        loadMetrics();
+        loadStumbleMap();
         loadUsage();
       } catch (e) {
         document.getElementById('tableWrap').innerHTML = `

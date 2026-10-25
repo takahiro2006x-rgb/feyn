@@ -62,7 +62,20 @@ def streak():
 def history_api():
     if not session.get('user_id'):
         return jsonify({'error': 'ログインしてください'}), 401
-    return jsonify({'sessions': core.get_history_sessions(session['user_id'])})
+    # 一覧は会話ごとの見出しだけを、20件ずつ返す（中身は /api/history/messages で1つずつ）
+    offset = request.args.get('offset', 0, type=int) or 0
+    return jsonify(core.get_history_page(session['user_id'], offset=offset))
+
+
+@progress_bp.route('/api/history/messages')
+def history_messages_api():
+    """学習のきろくで開いた1つの会話の中身"""
+    if not session.get('user_id'):
+        return jsonify({'error': 'ログインしてください'}), 401
+    messages = core.get_history_messages(session['user_id'], request.args.get('key', ''))
+    if not messages:
+        return jsonify({'error': '会話が見つかりません'}), 404
+    return jsonify({'messages': messages})
 
 
 @progress_bp.route('/api/gaps')

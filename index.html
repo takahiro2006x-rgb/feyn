@@ -120,6 +120,11 @@
       </div>
     </div>
 
+    <!-- ===== 会話終了後の結果画面（/api/complete の分析結果をカードで見せる。中身はscript.jsのshowResult） ===== -->
+    <div class="result-overlay" id="resultOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <div class="result-card" id="resultCard"></div>
+    </div>
+
     <!-- ===== キャラクターパネル ===== -->
     <div class="character-panel">
 
@@ -224,6 +229,8 @@
 
       <div class="input-area">
         <button class="math-btn" id="mathBtn" type="button" title="数式を入力">🧮</button>
+        <!-- 音声入力。ブラウザが対応しているときだけ script.js が表示する -->
+        <button class="mic-btn" id="micBtn" type="button" title="音声で入力" aria-label="音声で入力" aria-pressed="false" style="display:none;">🎤</button>
         <textarea placeholder="Feynに解説を入力してください..."></textarea>
         <button class="send-btn">🚀 送信</button>
       </div>

@@ -453,6 +453,12 @@
     els.forgotAnswerInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') els.newPasswordInput.focus(); });
     els.newPasswordInput.addEventListener('keydown',  (e) => { if (e.key === 'Enter') submit(); });
 
+    // ===== LPの「無料で始める」から来たときは、最初から新規登録の画面にする（/login?signup=1） =====
+    if (new URLSearchParams(location.search).get('signup') === '1') {
+      setMode('signup');
+      history.replaceState(null, '', '/login');
+    }
+
     // ===== 30分無操作による自動ログアウトからの遷移なら案内を出す =====
     if (new URLSearchParams(location.search).get('timeout') === '1') {
       els.successMsg.textContent   = 'しばらく操作がなかったため、自動的にログアウトしました。';

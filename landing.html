@@ -3,687 +3,437 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Feyn - ファインマン学習法AIアプリ</title>
+  <title>Feyn - その「わかった」、説明できる？｜ファインマン学習法AIアプリ</title>
+  <meta name="description" content="AIのライバル受験生「Feyn」に説明して学ぶ、ファインマン学習法のアプリ。説明に詰まる所を見つけて、苦手ノートと復習で埋めていく。7科目対応・無料で始められます。">
+  <meta property="og:title" content="Feyn - その「わかった」、説明できる？">
+  <meta property="og:description" content="AIのライバル受験生に説明して学ぶ、ファインマン学習法のアプリ。無料で始められます。">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#58CC02">
+  <link rel="icon" href="/icons/icon-192.png">
   <script>
-    // ちらつき防止のため、描画前に保存済みテーマを適用する
+    // ちらつき防止のため、描画前に保存済みテーマを適用する（アプリ本体と同じ保存先）
     document.documentElement.setAttribute('data-theme',
       localStorage.getItem('feynTheme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
+    /* ===== 色（ライト / ダーク） ===== */
     :root {
-      --green:       #58CC02;
-      --green-dark:  #46A302;
-      --blue:        #1CB0F6;
-      --blue-dark:   #0891CC;
-      --yellow:      #FFC200;
-      --text:        #3C3C3C;
-      --subtext:     #AFAFAF;
-      --bg:          #F0F4F8;
-      --card:        #FFFFFF;
-      --border:      #E5E5E5;
+      --bg:          #FFFFFF;
+      --surface:     #FFFFFF;
+      --tint:        #FAFAF8;
+      --green-tint:  #F1F9E8;
+      --line:        #E6E9E3;
+      --line-soft:   #EEF0EC;
+      --text:        #1A1C19;
+      --sub:         #464A43;
+      --muted:       #6B7066;
+      --accent-text: #357A00;   /* 白地で読める緑（文字用） */
+      --brand:       #58CC02;   /* Feynの緑（塗り用。上の文字は濃い色にする） */
+      --on-brand:    #10240A;
+      --ink-btn:     #1A1C19;
+      --on-ink-btn:  #FFFFFF;
+      --warn:        #FF9600;
+      --warn-text:   #8A4B00;
+      --meter:       #FFC200;
+      --footer-bg:   #1A1C19;
     }
-
     [data-theme="dark"] {
-      --text:        #E2E8F0;
-      --subtext:     #6E7681;
-      --bg:          #0D1117;
-      --card:        #161B22;
-      --border:      #30363D;
+      --bg:          #121411;
+      --surface:     #1A1D19;
+      --tint:        #161915;
+      --green-tint:  #1C2816;
+      --line:        #2C312A;
+      --line-soft:   #262A24;
+      --text:        #ECEFE9;
+      --sub:         #C3C8BE;
+      --muted:       #A2A89D;
+      --accent-text: #9BE05A;
+      --ink-btn:     #ECEFE9;
+      --on-ink-btn:  #121411;
+      --warn-text:   #FFB860;
+      --footer-bg:   #0B0D0A;
     }
 
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
       background: var(--bg);
       color: var(--text);
-      transition: background 0.2s, color 0.2s;
+      line-height: 1.8;
+      transition: background 0.3s, color 0.3s;
     }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 8px; }
 
-    /* ===== ナビ ===== */
-    nav {
-      background: var(--card);
-      border-bottom: 2px solid var(--border);
-      padding: 0 48px;
-      height: 68px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
+    .heading {
+      font-family: "Zen Kaku Gothic New", "Hiragino Sans", sans-serif; font-weight: 900; line-height: 1.3;
+      word-break: auto-phrase;   /* 対応ブラウザでは、日本語を文節の区切りで改行する */
     }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    .eyebrow { font-size: 14px; font-weight: 800; color: var(--accent-text); letter-spacing: 0.08em; }
+    .lead { font-size: 16px; font-weight: 700; color: var(--sub); }
+    .section { padding: 96px 0; }
+    .section-tint { background: var(--tint); border-top: 2px solid var(--line-soft); border-bottom: 2px solid var(--line-soft); }
+    .section-head { display: flex; flex-direction: column; gap: 10px; max-width: 36em; margin-bottom: 40px; }
+    .section-head h2 { font-size: clamp(28px, 4vw, 42px); }
 
-    .nav-logo {
-      font-size: 24px;
-      font-weight: 800;
-      color: var(--green);
-      letter-spacing: 2px;
+    /* ===== ボタン ===== */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 44px; padding: 10px 18px; border-radius: 99px;
+      font-family: inherit; font-weight: 800; font-size: 15px;
+      text-decoration: none; cursor: pointer; border: none;
+      transition: filter 0.15s, transform 0.15s;
     }
+    .btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+    .btn-brand { background: var(--brand); color: var(--on-brand); }
+    .btn-ink { background: var(--ink-btn); color: var(--on-ink-btn); }
+    .btn-line { background: transparent; color: var(--text); border: 2px solid var(--line); }
+    .btn-lg { padding: 16px 32px; font-size: 17px; }
 
-    .nav-actions { display: flex; gap: 12px; align-items: center; }
-
-    .btn-outline {
-      padding: 10px 22px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 800;
-      font-family: inherit;
-      color: var(--subtext);
-      text-decoration: none;
-      transition: all 0.15s;
-    }
-    .btn-outline:hover { border-color: var(--green); color: var(--green); }
-
-    .btn-primary {
-      padding: 10px 22px;
-      background: var(--green);
-      border: none;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 800;
-      font-family: inherit;
-      color: white;
-      text-decoration: none;
-      box-shadow: 0 4px 0 var(--green-dark);
-      transition: all 0.1s;
-      display: inline-block;
-    }
-    .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
-
+    /* ===== ヘッダー ===== */
+    .header { padding: 20px 0; }
+    .header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--brand); display: flex; align-items: center; justify-content: center; }
+    .logo-text { font-family: "Zen Kaku Gothic New", sans-serif; font-size: 22px; font-weight: 900; }
+    .nav { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; }
+    .nav-link { color: var(--sub); text-decoration: none; font-weight: 700; font-size: 15px; padding: 8px 2px; }
+    .nav-link:hover { color: var(--text); }
     .theme-toggle {
-      padding: 10px 16px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      background: var(--card);
-      color: var(--text);
-      font-size: 14px;
-      font-weight: 800;
-      font-family: inherit;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
-    }
-    .theme-toggle:hover { border-color: var(--green); color: var(--green); }
-
-    .btn-primary-lg {
-      padding: 18px 40px;
-      background: var(--green);
-      border: none;
-      border-radius: 16px;
-      font-size: 20px;
-      font-weight: 800;
-      font-family: inherit;
-      color: white;
-      text-decoration: none;
-      box-shadow: 0 6px 0 var(--green-dark);
-      transition: all 0.1s;
-      display: inline-block;
-    }
-    .btn-primary-lg:hover  { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 8px 0 var(--green-dark); }
-    .btn-primary-lg:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--green-dark); }
-
-    /* ===== ヒーロー ===== */
-    .hero {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 80px 32px 64px;
-      display: flex;
-      align-items: center;
-      gap: 64px;
+      display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px;
+      border-radius: 99px; border: 2px solid var(--line); background: transparent; color: var(--sub);
+      font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
     }
 
-    .hero-text { flex: 1; }
+    /* ===== ファーストビュー ===== */
+    .hero { padding: 80px 0 72px; text-align: center; }
+    .hero .wrap { max-width: 900px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+    .hero h1 { font-size: clamp(30px, 8.4vw, 76px); line-height: 1.2; }
+    .nobr { white-space: nowrap; }   /* 「わかっ／た」のように言葉の途中で改行させない */
+    .hero .lead { font-size: clamp(16px, 2vw, 19px); max-width: 32em; }
+    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+    .hero-note { font-size: 14px; font-weight: 700; color: var(--muted); }
 
-    .hero-badge {
-      display: inline-block;
-      background: color-mix(in srgb, var(--green) 12%, transparent);
-      color: var(--green);
-      border: 2px solid color-mix(in srgb, var(--green) 30%, transparent);
-      border-radius: 99px;
-      padding: 6px 16px;
-      font-size: 13px;
-      font-weight: 800;
-      margin-bottom: 20px;
-    }
+    /* ===== 比較 ===== */
+    .compare { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); border: 2px solid var(--line); border-radius: 24px; overflow: hidden; }
+    .compare > div { padding: 32px; display: flex; flex-direction: column; gap: 14px; }
+    .compare .before { background: var(--tint); }
+    .compare .after { background: var(--green-tint); }
+    .compare .label { font-size: 14px; font-weight: 800; color: var(--muted); }
+    .compare .after .label { color: var(--accent-text); }
+    .compare .title { font-size: 24px; }
+    .compare ul { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; font-weight: 700; color: var(--sub); }
+    .compare li { padding-left: 1.2em; position: relative; }
+    .compare li::before { content: ""; position: absolute; left: 0; top: 0.75em; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+    .compare .after li::before { background: var(--accent-text); }
 
-    .hero h1 {
-      font-size: 52px;
-      font-weight: 800;
-      line-height: 1.2;
-      color: var(--text);
-      margin-bottom: 20px;
-    }
+    /* ===== しくみ ===== */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; }
+    .step { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+    .step-num { font-family: "Zen Kaku Gothic New", sans-serif; font-size: 32px; font-weight: 900; color: var(--accent-text); line-height: 1; }
+    .step-title { font-size: 18px; font-weight: 800; }
+    .step-text { font-size: 14px; font-weight: 700; color: var(--sub); }
 
-    .hero h1 span { color: var(--green); }
+    /* ===== 結果画面の見本 ===== */
+    .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 48px; align-items: center; }
+    .split h2 { font-size: clamp(28px, 4vw, 40px); }
+    .split-text { display: flex; flex-direction: column; gap: 16px; }
+    .result-card { border: 2px solid var(--line); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 14px; background: var(--surface); }
+    .result-sub { font-size: 13px; font-weight: 800; color: var(--muted); }
+    .result-theme { font-size: 18px; font-weight: 800; }
+    .result-score { border: 2px solid var(--line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .score-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+    .score-num { font-size: 30px; font-weight: 800; line-height: 1; }
+    .score-word { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--warn-text); }
+    .meter { height: 10px; border-radius: 99px; background: var(--line-soft); overflow: hidden; }
+    .meter > span { display: block; height: 100%; border-radius: 99px; background: var(--meter); }
+    .gap { border-left: 4px solid var(--warn); background: var(--tint); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+    .gap-type { font-size: 12px; font-weight: 800; color: var(--warn-text); }
+    .gap-desc { font-size: 15px; font-weight: 800; }
+    .gap-evidence { font-size: 13px; font-weight: 700; color: var(--muted); }
+    .sample-note { font-size: 12px; font-weight: 700; color: var(--muted); text-align: right; }
 
-    .hero p {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--subtext);
-      line-height: 1.8;
-      margin-bottom: 36px;
-      max-width: 460px;
-    }
+    /* ===== 復習 ===== */
+    .review { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 12px; }
+    .review > div { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 18px; text-align: center; }
+    .review strong { display: block; font-size: 28px; font-weight: 800; color: var(--accent-text); }
+    .review span { font-size: 13px; font-weight: 700; color: var(--muted); }
 
-    .hero-actions { display: flex; gap: 16px; align-items: center; }
+    /* ===== できること ===== */
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+    .feature { border: 2px solid var(--line); border-radius: 20px; padding: 22px; display: flex; gap: 14px; background: var(--surface); }
+    .feature-icon { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; background: var(--green-tint); display: flex; align-items: center; justify-content: center; color: var(--accent-text); }
+    .feature-title { font-size: 17px; font-weight: 800; }
+    .feature-text { font-size: 14px; font-weight: 700; color: var(--sub); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+    .chip { padding: 6px 14px; border-radius: 99px; border: 2px solid var(--line); font-size: 14px; font-weight: 800; background: var(--surface); }
 
-    .hero-sub {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--subtext);
-    }
+    /* ===== 料金 ===== */
+    .price-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; align-items: center; }
+    .price-wrap .section-head { align-items: center; text-align: center; margin-bottom: 0; }
+    .plans { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
+    .plan { border: 2px solid var(--line); border-radius: 22px; padding: 28px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
+    .plan-paid { border-color: var(--text); }
+    .plan-name { font-size: 15px; font-weight: 800; color: var(--muted); }
+    .plan-paid .plan-name { color: var(--accent-text); }
+    .plan-price { font-size: 36px; font-weight: 800; line-height: 1.1; }
+    .plan-price small { font-size: 15px; font-weight: 800; color: var(--sub); }
+    .plan-text { font-size: 15px; font-weight: 700; color: var(--sub); }
 
-    /* デザイン見直し中のため非表示。マークアップ・SVGは削除せず残す */
-    .hero-char {
-      display: none;
-      flex-shrink: 0;
-      animation: float 3.5s ease-in-out infinite;
-      filter: drop-shadow(0 16px 32px rgba(88,204,2,0.2));
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50%       { transform: translateY(-12px); }
-    }
-
-    /* ===== 特徴セクション ===== */
-    .features {
-      background: var(--card);
-      border-top: 2px solid var(--border);
-      border-bottom: 2px solid var(--border);
-      padding: 80px 32px;
-    }
-
-    .section-inner { max-width: 1100px; margin: 0 auto; }
-
-    .section-label {
-      text-align: center;
-      font-size: 13px;
-      font-weight: 800;
-      color: var(--green);
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      margin-bottom: 12px;
-    }
-
-    .section-title {
-      text-align: center;
-      font-size: 36px;
-      font-weight: 800;
-      color: var(--text);
-      margin-bottom: 48px;
-    }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-    }
-
-    .feature-card {
-      background: var(--bg);
-      border: 2px solid var(--border);
-      border-radius: 24px;
-      padding: 32px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 4px 0 var(--border);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .feature-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 0 var(--border);
-    }
-
-    .feature-icon {
-      font-size: 40px;
-      line-height: 1;
-    }
-
-    .feature-card h3 {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text);
-    }
-
-    .feature-card p {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--subtext);
-      line-height: 1.8;
-    }
-
-    /* ===== ステップセクション ===== */
-    .howto {
-      padding: 80px 32px;
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-      position: relative;
-    }
-
-    .steps::before {
-      content: '';
-      position: absolute;
-      top: 40px;
-      left: calc(16.666% + 24px);
-      right: calc(16.666% + 24px);
-      height: 3px;
-      background: var(--border);
-      border-radius: 99px;
-    }
-
-    .step {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 14px;
-    }
-
-    .step-num {
-      width: 64px;
-      height: 64px;
-      background: var(--green);
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      font-weight: 800;
-      box-shadow: 0 4px 0 var(--green-dark);
-      position: relative;
-      z-index: 1;
-    }
-
-    .step h3 {
-      font-size: 17px;
-      font-weight: 800;
-      color: var(--text);
-    }
-
-    .step p {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--subtext);
-      line-height: 1.7;
-    }
-
-    /* ===== CTA ===== */
-    .cta {
-      background: var(--green);
-      padding: 80px 32px;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
-    }
-
-    .cta h2 {
-      font-size: 36px;
-      font-weight: 800;
-      color: white;
-    }
-
-    .cta p {
-      font-size: 16px;
-      font-weight: 700;
-      color: rgba(255,255,255,0.85);
-    }
-
-    .btn-white {
-      padding: 18px 48px;
-      background: white;
-      border: none;
-      border-radius: 16px;
-      font-size: 20px;
-      font-weight: 800;
-      font-family: inherit;
-      color: var(--green);
-      text-decoration: none;
-      box-shadow: 0 6px 0 var(--green-dark);
-      transition: all 0.1s;
-      display: inline-block;
-    }
-    .btn-white:hover  { filter: brightness(0.97); transform: translateY(-2px); box-shadow: 0 8px 0 var(--green-dark); }
-    .btn-white:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--green-dark); }
+    /* ===== よくある質問 ===== */
+    .faq { max-width: 800px; margin: 0 auto; }
+    .faq h2 { font-size: clamp(26px, 3.6vw, 36px); margin-bottom: 24px; }
+    .faq-item { border-top: 2px solid var(--line-soft); padding: 20px 0; display: flex; flex-direction: column; gap: 4px; }
+    .faq-item:last-child { border-bottom: 2px solid var(--line-soft); }
+    .faq-q { font-size: 17px; font-weight: 800; }
+    .faq-a { font-size: 15px; font-weight: 700; color: var(--sub); }
 
     /* ===== フッター ===== */
-    footer {
-      background: var(--card);
-      border-top: 2px solid var(--border);
-      padding: 32px 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
+    .footer { background: var(--footer-bg); color: #E9EBE7; padding: 56px 0 32px; }
+    .footer .wrap { display: flex; flex-direction: column; gap: 28px; }
+    .footer-cta { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .footer-catch { font-size: clamp(24px, 3.4vw, 34px); color: #FFFFFF; }
+    .footer-bottom { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; font-weight: 700; color: #B9BEB5; }
+    .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+    .footer-links a { color: #B9DE8F; }
 
-    .footer-logo {
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--green);
-      letter-spacing: 2px;
-    }
-
-    .footer-copy {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--subtext);
-    }
-
-    /* ===== 科目セクション ===== */
-    .subjects-section {
-      padding: 80px 32px;
-      text-align: center;
-    }
-
-    .subject-tags {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .subject-tag {
-      padding: 14px 28px;
-      background: var(--c);
-      color: white;
-      border-radius: 16px;
-      font-size: 18px;
-      font-weight: 800;
-      box-shadow: 0 5px 0 var(--cd);
-      transition: transform 0.15s, box-shadow 0.15s;
-      cursor: default;
-    }
-
-    .subject-tag:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 0 var(--cd);
-    }
-
-    .exam-tags {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 8px;
-    }
-
-    .exam-tag {
-      padding: 8px 20px;
-      border: 2px solid var(--border);
-      border-radius: 99px;
-      font-size: 13px;
-      font-weight: 800;
-      color: var(--subtext);
-      background: var(--card);
-    }
-
-    /* ===== FAQ ===== */
-    .faq-section {
-      background: var(--card);
-      border-top: 2px solid var(--border);
-      border-bottom: 2px solid var(--border);
-      padding: 80px 32px;
-    }
-
-    .faq-list {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      max-width: 720px;
-      margin: 0 auto;
-    }
-
-    .faq-item {
-      background: var(--bg);
-      border: 2px solid var(--border);
-      border-radius: 20px;
-      padding: 24px 28px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      box-shadow: 0 4px 0 var(--border);
-    }
-
-    .faq-q {
-      font-size: 16px;
-      font-weight: 800;
-      color: var(--text);
-    }
-
-    .faq-a {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--subtext);
-      line-height: 1.8;
-    }
-
-    /* ===== レスポンシブ ===== */
-    @media (max-width: 768px) {
-      nav { padding: 0 20px; }
-      .hero { flex-direction: column; padding: 48px 20px; gap: 32px; text-align: center; }
-      .hero h1 { font-size: 36px; }
-      .hero p { font-size: 15px; }
-      .hero-actions { justify-content: center; flex-wrap: wrap; }
-      .hero-char svg { width: 160px; height: 185px; }
-      .feature-grid { grid-template-columns: 1fr; }
-      .steps { grid-template-columns: 1fr; }
-      .steps::before { display: none; }
-      footer { flex-direction: column; gap: 8px; text-align: center; }
+    @media (max-width: 640px) {
+      .section { padding: 72px 0; }
+      .hero { padding: 48px 0 56px; }
+      .nav .nav-link { display: none; }   /* スマホでは「しくみ」「料金」を省き、ボタンだけにする */
+      .compare > div { padding: 24px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ナビ -->
-  <nav>
-    <div class="nav-logo">🎓 Feyn</div>
-    <div class="nav-actions">
-      <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
-      <a href="/login" class="btn-outline" data-auth-cta data-loggedin-hide>ログイン</a>
-      <a href="/login" class="btn-primary" data-auth-cta data-loggedin-text="🎓 アプリへ戻る">無料で始める</a>
+  <header class="header">
+    <div class="wrap">
+      <a href="/landing" class="logo" aria-label="Feyn トップ">
+        <span class="logo-mark">
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg>
+        </span>
+        <span class="logo-text">Feyn</span>
+      </a>
+      <nav class="nav" aria-label="メインメニュー">
+        <a href="#how" class="nav-link">しくみ</a>
+        <a href="#price" class="nav-link">料金</a>
+        <button class="theme-toggle" id="themeToggle" type="button">ダークモード</button>
+        <a href="/login" class="nav-link" data-auth-cta data-loggedin-hide>ログイン</a>
+        <a href="/login?signup=1" class="btn btn-ink" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+      </nav>
     </div>
-  </nav>
+  </header>
 
-  <!-- ヒーロー -->
-  <section class="hero">
-    <div class="hero-text">
-      <div class="hero-badge">✨ AIファインマン学習法</div>
-      <h1>Feynに教えると、<br><span>本当に</span>わかる。</h1>
-      <p>AIキャラ「Feyn」に教えることで、ファインマン学習法を体験。自分の言葉で説明する力が、本物の理解を生む。</p>
-      <div class="hero-actions">
-        <a href="/login" class="btn-primary-lg" data-auth-cta data-loggedin-text="🎓 アプリへ戻る →">今すぐ始める →</a>
-        <span class="hero-sub">無料・登録1分</span>
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <span class="eyebrow">ファインマン学習法 × AI</span>
+        <h1 class="heading"><span class="nobr">その「わかった」、</span><br><span class="nobr">説明できる？</span></h1>
+        <p class="lead">説明しようとして言葉に詰まる所が、本当はわかっていない所。Feynは、あなたの説明に「なんで？」を返し続けて、その場所を見つけ出します。</p>
+        <div class="hero-actions">
+          <a href="/login?signup=1" class="btn btn-brand btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+          <a href="#how" class="btn btn-line btn-lg">しくみを見る</a>
+        </div>
+        <span class="hero-note">登録1分・カード登録なしで始められます</span>
       </div>
-    </div>
+    </section>
 
-    <div class="hero-char">
-      <svg width="220" height="253" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <radialGradient id="lp-face" cx="45%" cy="40%" r="55%">
-            <stop offset="0%" stop-color="#FFE0B8"/>
-            <stop offset="100%" stop-color="#FFCB94"/>
-          </radialGradient>
-          <radialGradient id="lp-iris-l" cx="60%" cy="35%" r="60%">
-            <stop offset="0%" stop-color="#4F8EF7"/>
-            <stop offset="100%" stop-color="#1A3FAA"/>
-          </radialGradient>
-          <radialGradient id="lp-iris-r" cx="60%" cy="35%" r="60%">
-            <stop offset="0%" stop-color="#4F8EF7"/>
-            <stop offset="100%" stop-color="#1A3FAA"/>
-          </radialGradient>
-        </defs>
-        <ellipse cx="100" cy="82" rx="70" ry="64" fill="#1A1A2E"/>
-        <ellipse cx="32" cy="104" rx="12" ry="14" fill="#FFCB94"/>
-        <ellipse cx="168" cy="104" rx="12" ry="14" fill="#FFCB94"/>
-        <ellipse cx="100" cy="108" rx="62" ry="68" fill="url(#lp-face)"/>
-        <ellipse cx="58" cy="126" rx="16" ry="10" fill="#FFB3C6" opacity="0.55"/>
-        <ellipse cx="142" cy="126" rx="16" ry="10" fill="#FFB3C6" opacity="0.55"/>
-        <path d="M 62 74 Q 76 69 90 74" fill="none" stroke="#3D2B1F" stroke-width="3.5" stroke-linecap="round"/>
-        <path d="M 110 74 Q 124 69 138 74" fill="none" stroke="#3D2B1F" stroke-width="3.5" stroke-linecap="round"/>
-        <rect x="53" y="82" width="42" height="30" rx="10" fill="rgba(200,230,255,0.18)" stroke="#1A1A2E" stroke-width="3.5"/>
-        <rect x="105" y="82" width="42" height="30" rx="10" fill="rgba(200,230,255,0.18)" stroke="#1A1A2E" stroke-width="3.5"/>
-        <line x1="95" y1="97" x2="105" y2="97" stroke="#1A1A2E" stroke-width="3"/>
-        <line x1="53" y1="95" x2="36" y2="93" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
-        <line x1="147" y1="95" x2="164" y2="93" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
-        <ellipse cx="74" cy="97" rx="16" ry="14" fill="white"/>
-        <circle cx="74" cy="98" r="10" fill="url(#lp-iris-l)"/>
-        <circle cx="74" cy="98" r="6" fill="#0A0A1A"/>
-        <circle cx="78" cy="93" r="4" fill="white"/>
-        <circle cx="69" cy="103" r="2" fill="white" opacity="0.75"/>
-        <ellipse cx="126" cy="97" rx="16" ry="14" fill="white"/>
-        <circle cx="126" cy="98" r="10" fill="url(#lp-iris-r)"/>
-        <circle cx="126" cy="98" r="6" fill="#0A0A1A"/>
-        <circle cx="130" cy="93" r="4" fill="white"/>
-        <circle cx="121" cy="103" r="2" fill="white" opacity="0.75"/>
-        <path d="M 100 118 Q 96 124 100 126 Q 104 124 100 118" fill="none" stroke="#D4956A" stroke-width="2" stroke-linecap="round"/>
-        <path d="M 80 136 Q 100 154 120 136" fill="none" stroke="#C07A50" stroke-width="2.8" stroke-linecap="round"/>
-        <path d="M 34 100 Q 36 52 62 44 Q 64 74 56 100 Z" fill="#1A1A2E"/>
-        <path d="M 62 44 Q 78 26 100 34 Q 94 64 80 90 Z" fill="#1A1A2E"/>
-        <path d="M 100 34 Q 122 26 138 44 Q 118 64 110 88 Z" fill="#1A1A2E"/>
-        <path d="M 138 44 Q 164 54 166 100 Q 148 76 140 56 Z" fill="#1A1A2E"/>
-        <rect x="84" y="170" width="32" height="22" rx="10" fill="#FFCB94"/>
-        <path d="M 36 192 Q 68 176 100 180 Q 132 176 164 192 L 174 230 L 26 230 Z" fill="white"/>
-        <path d="M 36 192 Q 60 180 78 182 L 68 230 L 26 230 Z" fill="#E8ECF0"/>
-        <path d="M 164 192 Q 140 180 122 182 L 132 230 L 174 230 Z" fill="#E8ECF0"/>
-        <path d="M 100 178 L 84 198 L 100 194 L 116 198 Z" fill="#F8FAFC"/>
-        <path d="M 100 195 L 92 218 L 100 224 L 108 218 Z" fill="#58CC02"/>
-        <path d="M 92 218 L 100 224 L 108 218 L 100 230 Z" fill="#3EA801"/>
-      </svg>
-    </div>
-  </section>
-
-  <!-- 特徴 -->
-  <section class="features">
-    <div class="section-inner">
-      <div class="section-label">Features</div>
-      <div class="section-title">Feynの3つの特徴</div>
-      <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🧠</div>
-          <h3>ファインマン学習法</h3>
-          <p>「説明できれば理解している」。AIキャラ Feyn に教えることで、本当にわかっているかが試される。受け身の暗記とはまったく違う学習体験。</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📚</div>
-          <h3>7科目・5試験種別に対応</h3>
-          <p>物理・数学・英語・化学・生物・国語・歴史の7科目。中学受験から大学試験まで対応。科目ごとにネクタイの色が変わるFeynが手強く問い返す。</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📊</div>
-          <h3>講師ダッシュボード</h3>
-          <p>先生アカウントなら、生徒一人ひとりの科目別クリア回数・学習状況をリアルタイムで確認。塾・学校での導入に最適。</p>
+    <section aria-label="読むだけの勉強との違い" style="padding: 0 0 96px;">
+      <div class="wrap">
+        <div class="compare">
+          <div class="before">
+            <span class="label">読むだけの勉強</span>
+            <span class="title heading">わかった気がする</span>
+            <ul>
+              <li>解説を読むと、なるほどと思う</li>
+              <li>でも、条件が変わると解けない</li>
+              <li>どこが分かっていないのか、自分では気づけない</li>
+            </ul>
+          </div>
+          <div class="after">
+            <span class="label">Feynに説明する勉強</span>
+            <span class="title heading">わかっていない所が見える</span>
+            <ul>
+              <li>自分の言葉で説明するから、ごまかせない</li>
+              <li>曖昧な言葉や飛ばした理由を、その場で聞き返される</li>
+              <li>見つかった穴は、苦手ノートに残る</li>
+            </ul>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- 使い方 -->
-  <section class="howto">
-    <div class="section-label">How it works</div>
-    <div class="section-title">使い方は3ステップ</div>
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>科目を選ぶ</h3>
-        <p>7科目から学習したい科目を選択。試験種別（大学受験・定期テストなど）も設定できる。</p>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>Feynの質問に答える</h3>
-        <p>Feynが「なんで？」「それってどういうこと？」と鋭く問い返してくる。</p>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>納得させてクリア！</h3>
-        <p>Feynが「なるほど！」と言ったらクリア。XPゲージと紙吹雪で達成感が得られる。</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 科目 -->
-  <section class="subjects-section">
-    <div class="section-inner">
-      <div class="section-label">Subjects</div>
-      <div class="section-title">7科目に対応</div>
-      <div class="subject-tags">
-        <div class="subject-tag" style="--c:#3B82F6;--cd:#1D4ED8">⚡ 物理</div>
-        <div class="subject-tag" style="--c:#8B5CF6;--cd:#6D28D9">📐 数学</div>
-        <div class="subject-tag" style="--c:#F97316;--cd:#C2410C">🌍 英語</div>
-        <div class="subject-tag" style="--c:#10B981;--cd:#047857">⚗️ 化学</div>
-        <div class="subject-tag" style="--c:#84CC16;--cd:#4D7C0F">🌿 生物</div>
-        <div class="subject-tag" style="--c:#EF4444;--cd:#B91C1C">📖 国語</div>
-        <div class="subject-tag" style="--c:#B45309;--cd:#78350F">🏛️ 歴史</div>
-      </div>
-      <div class="exam-tags">
-        <span class="exam-tag">中学受験</span>
-        <span class="exam-tag">高校受験</span>
-        <span class="exam-tag">大学受験</span>
-        <span class="exam-tag">定期テスト</span>
-        <span class="exam-tag">大学試験</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="faq-section">
-    <div class="section-inner">
-      <div class="section-label">FAQ</div>
-      <div class="section-title">よくある質問</div>
-      <div class="faq-list">
-        <div class="faq-item">
-          <div class="faq-q">💬 無料で使えますか？</div>
-          <div class="faq-a">はい、完全無料で使えます。登録も1分でできます。</div>
+    <section id="how" class="section section-tint">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">しくみ</span>
+          <h2 class="heading">説明して、突っ込まれて、<br>穴が見つかる。</h2>
         </div>
-        <div class="faq-item">
-          <div class="faq-q">📱 スマホでも使えますか？</div>
-          <div class="faq-a">はい、スマホ・タブレット・PCすべてに対応しています。</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">🧠 ファインマン学習法って何ですか？</div>
-          <div class="faq-a">「人に教えられれば本当に理解している」という学習法です。Feynに教えることで、わかったつもりを防ぎ、深い理解が身につきます。</div>
-        </div>
-        <div class="faq-item">
-          <div class="faq-q">🎓 先生アカウントとは何ですか？</div>
-          <div class="faq-a">塾や学校の講師向けのアカウントです。生徒の学習状況・科目別クリア数をダッシュボードで一覧できます。先生コードが必要です。</div>
+        <div class="steps">
+          <div class="step">
+            <span class="step-num">01</span>
+            <span class="step-title">Feynが問題を出す</span>
+            <span class="step-text">選んだ単元で、受験生が間違えやすいポイントを、具体的な数値つきで聞いてくる。</span>
+          </div>
+          <div class="step">
+            <span class="step-num">02</span>
+            <span class="step-title">あなたが説明する</span>
+            <span class="step-text">文字でも声でもOK。数式も入力できる。</span>
+          </div>
+          <div class="step">
+            <span class="step-num">03</span>
+            <span class="step-title">1つずつ突っ込まれる</span>
+            <span class="step-text">Feynは答えを言わない。返ってくるのは、いつも1つの問いだけ。</span>
+          </div>
+          <div class="step">
+            <span class="step-num">04</span>
+            <span class="step-title">納得したら結果が出る</span>
+            <span class="step-text">理解度と、説明から見つかった理解の穴が、カードで返ってくる。</span>
+          </div>
         </div>
       </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap split">
+        <div class="split-text">
+          <span class="eyebrow">会話のあとに</span>
+          <h2 class="heading">どこが分かっていないかが、言葉で返ってくる</h2>
+          <p class="lead">「誤解している」「曖昧に理解している」「前提知識が抜けている」。穴の種類と、根拠になったあなたの発言まで、まとめて残ります。</p>
+        </div>
+        <div>
+          <div class="result-card" role="img" aria-label="結果画面の見本: 数学、理解度64点、理解の穴が2つ">
+            <div>
+              <div class="result-sub">数学 クリア</div>
+              <div class="result-theme">テーマ：放物線と直線で囲まれた面積</div>
+            </div>
+            <div class="result-score">
+              <div class="score-row"><span class="result-sub">理解度</span><span class="score-num">64</span><span class="result-sub">/ 100</span><span class="score-word">だいたいOK・あと一歩</span></div>
+              <div class="meter"><span style="width: 64%;"></span></div>
+            </div>
+            <div class="gap">
+              <span class="gap-type">曖昧に理解している</span>
+              <span class="gap-desc">公式が「交点が2つあるときだけ」使える理由を説明できていない</span>
+              <span class="gap-evidence">あなたの説明：「なんとなく公式に当てはめた」</span>
+            </div>
+            <div class="gap">
+              <span class="gap-type">前提知識が抜けている</span>
+              <span class="gap-desc">定積分と面積の関係</span>
+            </div>
+          </div>
+          <p class="sample-note">※ 画面の見本です</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-tint">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">復習</span>
+          <h2 class="heading">忘れかけたころに、Feynがまた聞きに来る</h2>
+          <p class="lead">穴が解決しても、忘却曲線に合わせて同じ所をもう一度。説明し直せたら、次の復習はもっと先へ。</p>
+        </div>
+        <div class="review">
+          <div><strong>1日後</strong><span>1回目の復習</span></div>
+          <div><strong>3日後</strong><span>2回目</span></div>
+          <div><strong>7日後</strong><span>3回目</span></div>
+          <div><strong>14日後</strong><span>4回目</span></div>
+          <div><strong>30日後</strong><span>5回目</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">できること</span>
+          <h2 class="heading">机でも、スマホでも</h2>
+        </div>
+        <div class="features">
+          <div class="feature">
+            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+            <div><div class="feature-title">解いている問題を写真で</div><div class="feature-text">問題集のページを撮れば、Feynがその問題について質問してくる。</div></div>
+          </div>
+          <div class="feature">
+            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg></span>
+            <div><div class="feature-title">声で説明できる</div><div class="feature-text">口で説明するほうが、本当に分かっているかがはっきり出る。</div></div>
+          </div>
+          <div class="feature">
+            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></span>
+            <div><div class="feature-title">詰まったらヒント</div><div class="feature-text">考えるきっかけのキーワードだけをくれる。どうしても無理なら答えも見られる。</div></div>
+          </div>
+          <div class="feature">
+            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c4 0 7-3 7-7 0-4-3-6-4-9-1 2-2 3-4 3 0-2-1-4-2-6-2 3-4 6-4 12 0 4 3 7 7 7z"/></svg></span>
+            <div><div class="feature-title">連続学習日数</div><div class="feature-text">1日1回クリアすると記録がのびる。毎日続ける目安になる。</div></div>
+          </div>
+        </div>
+        <div class="chips" aria-label="対応している科目">
+          <span class="chip">物理</span><span class="chip">数学</span><span class="chip">英語</span><span class="chip">化学</span><span class="chip">生物</span><span class="chip">国語</span><span class="chip">歴史</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="price" class="section section-tint">
+      <div class="wrap price-wrap">
+        <div class="section-head">
+          <span class="eyebrow">料金</span>
+          <h2 class="heading">無料で始めて、合えば続ける</h2>
+        </div>
+        <div class="plans">
+          <div class="plan">
+            <span class="plan-name">無料プラン</span>
+            <span class="plan-price">¥0</span>
+            <span class="plan-text">新しい会話はライフ3つまで。2時間で1つ回復する。苦手ノート・復習・学習のきろくは使える。</span>
+          </div>
+          <div class="plan plan-paid">
+            <span class="plan-name">受験生プラン</span>
+            <span class="plan-price">¥980 <small>/ 月（税込）</small></span>
+            <span class="plan-text">会話・ヒント・答えを見る、すべて無制限。いつでも解約できる。</span>
+          </div>
+        </div>
+        <a href="/login?signup=1" class="btn btn-brand btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap faq">
+        <h2 class="heading">よくある質問</h2>
+        <div class="faq-item"><span class="faq-q">答えは教えてくれないの？</span><span class="faq-a">Feynは問いを返す役。詰まったときは「ヒント」と「答えを見る」で助けを出せます。</span></div>
+        <div class="faq-item"><span class="faq-q">どの科目・試験に使える？</span><span class="faq-a">物理・数学・英語・化学・生物・国語・歴史の7科目。大学受験・高校受験・中学受験・定期テスト・大学の試験に合わせて、問いのレベルが変わります。</span></div>
+        <div class="faq-item"><span class="faq-q">スマホでも使える？</span><span class="faq-a">スマホ・タブレット・PCで使えます。ホーム画面に追加すれば、アプリのように開けます。</span></div>
+        <div class="faq-item"><span class="faq-q">ファインマン学習法とは？</span><span class="faq-a">「人に説明できれば本当に理解している」という考え方の勉強法です。説明できない所が、まだ分かっていない所です。</span></div>
+        <div class="faq-item" id="teachers"><span class="faq-q">塾・学校の先生も使える？</span><span class="faq-a">先生用のアカウントがあります。生徒ごとの学習状況や苦手、クラス全体のつまずきを一覧で確認でき、課題も出せます。登録には運営が発行する先生コードが必要です。</span></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <div class="footer-cta">
+        <span class="footer-catch heading">説明できたら、本物。</span>
+        <a href="/login?signup=1" class="btn btn-brand btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Feyn — ファインマン学習法AIアプリ</span>
+        <span class="footer-links"><a href="#teachers">塾・学校の先生へ</a><a href="/tokushoho">特定商取引法に基づく表記</a></span>
+      </div>
     </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="cta">
-    <h2>さあ、Feynに教えよう</h2>
-    <p>無料・登録1分ではじめられます</p>
-    <a href="/login" class="btn-white" data-auth-cta data-loggedin-text="🎓 アプリへ戻る →">今すぐ始める →</a>
-  </section>
-
-  <!-- フッター -->
-  <footer>
-    <div class="footer-logo">🎓 Feyn</div>
-    <div class="footer-copy">© 2026 Feyn — ファインマン学習法AIアプリ　|　<a href="/tokushoho" style="color:inherit;">特定商取引法に基づく表記</a></div>
   </footer>
 
   <script>
+    // ===== ダークモードの切り替え（アプリ本体と同じ保存先 feynTheme を使う） =====
     const themeToggle = document.getElementById('themeToggle');
 
     function updateThemeLabel() {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+      themeToggle.textContent = isDark ? 'ライトモード' : 'ダークモード';
+      themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
     }
     updateThemeLabel();
 
@@ -691,16 +441,16 @@
       const html = document.documentElement;
       const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       html.setAttribute('data-theme', next);
-      localStorage.setItem('feynTheme', next);
+      try { localStorage.setItem('feynTheme', next); } catch (e) { /* 保存できなくても切り替えは効く */ }
       updateThemeLabel();
     });
 
-    // ===== ログイン中なら、CTAを「アプリへ戻る」に出し分ける =====
-    // これにより、ログイン中にロゴなどからLPへ来ても再ログイン画面を踏まずに戻れる
+    // ===== ログイン中なら、ボタンを「アプリへ戻る」に出し分ける =====
+    // ログイン中にロゴなどからLPへ来ても、再ログイン画面を踏まずに戻れるようにする
     (async () => {
       try {
         const res = await fetch('/api/me');
-        if (!res.ok) return; // 未ログインなら何もしない（通常のログイン導線のまま）
+        if (!res.ok) return; // 未ログインなら何もしない（通常の登録・ログイン導線のまま）
         document.querySelectorAll('[data-auth-cta]').forEach(el => {
           if (el.hasAttribute('data-loggedin-hide')) {
             el.style.display = 'none';
@@ -713,6 +463,5 @@
       } catch (e) {}
     })();
   </script>
-
 </body>
 </html>

@@ -1,0 +1,56 @@
+# -*- coding: utf-8 -*-
+"""LP（landing.html）の、壊れると困る約束事のテスト。
+
+見た目はブラウザで確認するので、ここでは「導線」と「事実の表記」だけを確かめる。
+"""
+import re
+
+import pytest
+
+LANDING = open('landing.html', encoding='utf-8').read()
+LOGIN = open('login.html', encoding='utf-8').read()
+
+
+def test_landing_page_is_served(client):
+    resp = client.get('/landing')
+    assert resp.status_code == 200
+    assert 'その「わかった」、' in resp.get_data(as_text=True)
+
+
+def test_start_buttons_go_straight_to_signup():
+    starts = re.findall(r'<a [^>]*href="([^"]+)"[^>]*>無料で始める</a>', LANDING)
+    assert starts, '「無料で始める」ボタンが見つからない'
+    assert set(starts) == {'/login?signup=1'}
+
+
+def test_login_page_opens_in_signup_mode_from_the_landing_page():
+    assert "get('signup') === '1'" in LOGIN
+    assert "setMode('signup')" in LOGIN
+
+
+def test_buttons_switch_to_back_to_app_when_logged_in():
+    # ログイン中は「アプリへ戻る」に変わる（data-auth-cta の付いたリンクを /api/me の結果で書き換える）
+    assert LANDING.count('data-loggedin-text="アプリへ戻る"') >= 4
+    assert 'data-loggedin-hide>ログイン</a>' in LANDING
+    assert "fetch('/api/me')" in LANDING
+
+
+def test_legal_link_and_theme_toggle_are_kept():
+    assert 'href="/tokushoho"' in LANDING
+    assert 'id="themeToggle"' in LANDING
+    assert "localStorage.setItem('feynTheme'" in LANDING   # アプリ本体と同じ保存先
+
+
+@pytest.mark.parametrize('fact', [
+    '¥980',          # 受験生プランの価格
+    '月（税込）',
+    'ライフ3つ',      # 無料プランの制限
+    '2時間で1つ回復',
+])
+def test_pricing_facts_match_the_app(fact):
+    assert fact in LANDING
+
+
+def test_does_not_claim_to_be_completely_free():
+    # 以前のLPは有料プランがあるのに「完全無料」と書いていた
+    assert '完全無料' not in LANDING

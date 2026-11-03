@@ -256,35 +256,38 @@
     .review { padding: 96px 0; }
     .review h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; max-width: 18em; }
     .review > .wrap > p { margin-top: 12px; font-size: 16px; color: var(--ink-soft); max-width: 36em; }
-    .timeline { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 48px; position: relative; }
-    .timeline::before { content: ""; position: absolute; left: 10%; right: 10%; top: 31px; height: 2px; background: var(--ink); }
-    .timeline li { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .dot { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); display: grid; place-items: center; font-weight: 900; font-size: 22px; line-height: 1; }
-    .dot small { font-size: 11px; font-weight: 700; }
-    .timeline li:first-child .dot { border-color: var(--red); color: var(--red); }
-    .timeline span { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+    .curve { margin-top: 40px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); padding: 24px 24px 18px; }
+    .curve-legend { display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    .lg::before { content: ""; display: inline-block; width: 28px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+    .lg-feyn::before { background: linear-gradient(90deg, #3E9B2F, #C9A800, #E5780B); }
+    .lg-none::before { background: #9AA6AE; }
+    .curve-plot { position: relative; }
+    .curve-svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .grid-line { stroke: var(--rule); stroke-width: 1.5; stroke-dasharray: 4 6; }
+    .axis-line { stroke: var(--ink-soft); stroke-width: 2; }
+    .rv-guide { stroke: #D4352A; stroke-width: 1.5; stroke-dasharray: 3 5; opacity: 0.45; }
+    .curve-none { fill: none; stroke: #9AA6AE; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .curve-feyn { fill: none; stroke: url(#memoryColor); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+    .rv-dot { fill: #FFFFFF; stroke: #D4352A; stroke-width: 3.5; }
+    .y-tick { position: absolute; left: 0; transform: translateY(-115%); font-size: 12px; font-weight: 700; color: var(--ink-soft); }   /* 線の少し上に置き、線の始まりと重ねない */
+    .curve-note { position: absolute; font-size: 15px; line-height: 1.4; transform: rotate(-3deg); }
+    .note-review { color: #D4352A; }
+    .note-none { right: 1%; bottom: 14%; color: var(--ink-soft); text-align: right; }
+    .curve-days { position: relative; height: 26px; margin-top: 6px; }
+    .day { position: absolute; transform: translateX(-50%); font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+    .rv-label { color: #D4352A; font-weight: 900; }
+    .y100 { top: 10.7%; }
+    .y50 { top: 50%; }
+    .curve-svg.sp, .curve-notes-sp { display: none; }
+    .curve-notes-sp { font-size: 13px; color: var(--ink-soft); margin-top: 8px; line-height: 1.7; }
+    .curve-notes-sp .red { color: #D4352A; }
+    .curve figcaption { margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
 
     /* ===== 申し込みの帯（黒板） ===== */
     .board-band { background: var(--board); color: var(--board-ink); }
     .board-band .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; padding-top: 56px; padding-bottom: 56px; }
     .board-band p.big { font-size: clamp(22px, 3vw, 32px); font-weight: 900; line-height: 1.4; }
     .chalk { font-family: var(--hand); font-weight: 600; font-size: 16px; opacity: 0.85; display: block; margin-top: 4px; }
-
-    /* ===== Feynの紹介 ===== */
-    .feyn { padding: 96px 0; }
-    .feyn .wrap { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 56px; align-items: center; }
-    .feyn-card { border: 1.5px solid var(--ink); border-radius: 4px; padding: 30px; position: relative; background: var(--paper); }
-    .feyn-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
-    .feyn-face { width: 72px; height: 72px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; }
-    .feyn-name { font-size: 26px; font-weight: 900; line-height: 1.2; }
-    .feyn-role { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
-    .feyn-says { font-family: var(--hand); font-weight: 600; font-size: 19px; line-height: 1.7; }
-    .feyn h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; margin-bottom: 18px; }
-    .traits { border-top: 1px solid var(--rule); }
-    .traits > div { display: grid; grid-template-columns: 2.4em 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
-    .traits b { font-size: 24px; font-weight: 900; color: var(--red); line-height: 1.2; }
-    .traits h3 { font-size: 17px; font-weight: 900; }
-    .traits p { font-size: 15px; color: var(--ink-soft); }
 
     /* ===== 料金（罫線の表） ===== */
     .price { padding: 96px 0; background: var(--paper-2); border-top: 1px solid var(--rule); }
@@ -390,19 +393,26 @@
     .js .sheet.is-in .gap-tag { animation: pen-write 0.6s var(--d, 1.4s) ease-out forwards; }
     .js .sheet.is-in .gap-desc, .js .sheet.is-in .gap-quote { animation: pop-in 0.45s var(--d, 1.6s) ease-out forwards; }
 
-    /* 復習: 線が引かれ、印が順に灯る */
-    .js .timeline::before { transform-origin: left center; transform: scaleX(0); }
-    .js .timeline.is-in::before { transform: none; animation: line-x 1.2s ease-out both; }
-    .js .timeline .dot { opacity: 0; }
-    .js .timeline.is-in .dot { animation: pop-in 0.4s ease-out forwards; }
-    .js .timeline.is-in li:nth-child(2) .dot { animation-delay: 0.25s; }
-    .js .timeline.is-in li:nth-child(3) .dot { animation-delay: 0.5s; }
-    .js .timeline.is-in li:nth-child(4) .dot { animation-delay: 0.75s; }
-    .js .timeline.is-in li:nth-child(5) .dot { animation-delay: 1s; }
+    /* 復習のグラフ: 灰色の線（復習しない）をさっと引き、色付きの線（Feynの復習）をゆっくり引く。
+       線の色は覚えている量で変わり（緑→黄→赤）、復習の瞬間に印と「◯日後」が灯って緑に戻る */
+    .js .curve .curve-none, .js .curve .curve-feyn { stroke-dasharray: 1; stroke-dashoffset: 1; }
+    .js .curve.is-in .curve-none { animation: pen-draw 1.4s 0.2s ease-out forwards; }
+    .js .curve.is-in .curve-feyn { animation: pen-draw 4.5s 1.0s linear forwards; }
+    .js .curve .rv-dot, .js .curve .rv-guide, .js .curve .note-none { opacity: 0; }
+    .js .curve .rv-label { color: var(--ink-soft); font-weight: 700; }
+    .js .curve .note-review { clip-path: inset(0 100% 0 0); }
+    .js .curve.is-in .rv-dot { transform-box: fill-box; transform-origin: center; animation: dot-pop 0.5s var(--t) ease-out forwards; }
+    .js .curve.is-in .rv-guide { animation: guide-in 0.4s var(--t) ease-out forwards; }
+    .js .curve.is-in .rv-label { animation: label-on 0.4s var(--t) ease-out forwards; }
+    .js .curve.is-in .note-none { animation: pop-in 0.5s 1.6s ease-out forwards; }
+    .js .curve.is-in .note-review { animation: pen-write 0.6s 1.85s ease-out forwards; }
+    @keyframes dot-pop { 0% { opacity: 0; transform: scale(0.2); } 60% { opacity: 1; transform: scale(1.5); } 100% { opacity: 1; transform: scale(1); } }
+    @keyframes guide-in { to { opacity: 0.45; } }
+    @keyframes label-on { to { color: #D4352A; font-weight: 900; } }
 
     /* ========================= スマホ ========================= */
     @media (max-width: 860px) {
-      .hero .wrap, .graded .wrap, .feyn .wrap, .step { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+      .hero .wrap, .graded .wrap, .step { grid-template-columns: minmax(0, 1fr); gap: 36px; }
       .step:nth-of-type(even) .step-text { order: 0; }
       .catch-note { right: -4px; top: -32px; font-size: 16px; }
     }
@@ -422,17 +432,20 @@
       .bubble { border-radius: 26px; text-align: left; padding: 14px 20px; }
       .bubble:nth-child(2), .bubble:nth-child(4) { margin-top: 0; margin-left: 24px; }
       .bubble:nth-child(odd) { margin-right: 24px; }
-      .how, .graded, .review, .feyn, .price, .faq, .final { padding-top: 72px; padding-bottom: 72px; }
+      .how, .graded, .review, .price, .faq, .final { padding-top: 72px; padding-bottom: 72px; }
       .score-stamp { width: 84px; top: 12px; right: 12px; }
       .score-stamp b { font-size: 30px; }
       .sheet { padding: 34px 18px 34px; }
       .sheet-title { padding-right: 88px; }
       .types div { grid-template-columns: minmax(0, 1fr); gap: 0; }
-      .timeline { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-      .timeline::before { left: 31px; right: auto; top: 10px; bottom: 10px; width: 2px; height: auto; }
-      .js .timeline::before { transform-origin: center top; transform: scaleY(0); }
-      .js .timeline.is-in::before { transform: none; animation-name: line-y; }
-      .timeline li { flex-direction: row; text-align: left; gap: 16px; }
+      .curve { padding: 16px 12px 14px; }
+      .curve-svg.pc, .curve-note { display: none; }
+      .curve-svg.sp, .curve-notes-sp { display: block; }
+      .y100 { top: 9.1%; }
+      .y50 { top: 48.5%; }
+      .y-tick { font-size: 10px; }
+      .curve-note { font-size: 12px; }
+      .day { font-size: 10.5px; }
       .ptable thead { display: none; }
       .ptable, .ptable tbody, .ptable tr, .ptable th, .ptable td { display: block; width: 100%; }
       .ptable tr { padding: 12px 0; border-bottom: 1px solid var(--rule); }
@@ -633,14 +646,84 @@
     <section class="review">
       <div class="wrap">
         <h2>忘れかけたころに、Feynがまた聞きに来る</h2>
-        <p>苦手ノートの穴は、忘却曲線に合わせて同じ所をもう一度。説明し直せたら、次の復習はもっと先へ延びます。</p>
-        <ol class="timeline">
-          <li><span class="dot">1<small>日後</small></span><span>1回目の復習</span></li>
-          <li><span class="dot">3<small>日後</small></span><span>2回目</span></li>
-          <li><span class="dot">7<small>日後</small></span><span>3回目</span></li>
-          <li><span class="dot">14<small>日後</small></span><span>4回目</span></li>
-          <li><span class="dot">30<small>日後</small></span><span>5回目</span></li>
-        </ol>
+        <p>覚えたことは、何もしないと数日でほとんど忘れてしまいます（忘却曲線）。Feynは苦手ノートの穴を、忘れかけたころにもう一度聞きに来ます。説明し直せるたびに忘れにくくなり、次の復習はもっと先へ延びます。</p>
+        <figure class="curve" role="img" aria-label="イメージ図: 復習しないと、覚えている量は数日でほとんどなくなる。Feynの復習では、1・3・7・14・30日後の忘れかけたころに復習するたびに元に戻り、忘れ方もだんだんゆるやかになる。">
+          <div class="curve-legend" aria-hidden="true">
+            <span class="lg lg-feyn">Feynで復習した場合</span>
+            <span class="lg lg-none">復習しない場合</span>
+          </div>
+          <div class="curve-plot" aria-hidden="true">
+            <span class="y-tick y100">100%</span>
+            <span class="y-tick y50">50%</span>
+            <svg class="curve-svg pc" viewBox="0 0 800 280" focusable="false">
+              <defs>
+                <!-- 線の色＝覚えている量。多い（上）は緑、半分くらいは黄、少ない（下）は赤 -->
+                <linearGradient id="memoryColor" gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2="250">
+                  <stop offset="0" stop-color="#3E9B2F"/>
+                  <stop offset="0.18" stop-color="#3E9B2F"/>
+                  <stop offset="0.36" stop-color="#C9A800"/>
+                  <stop offset="0.5" stop-color="#E5780B"/>
+                  <stop offset="0.7" stop-color="#D4352A"/>
+                  <stop offset="1" stop-color="#D4352A"/>
+                </linearGradient>
+              </defs>
+              <line class="grid-line" x1="50" y1="30" x2="770" y2="30"/>
+              <line class="grid-line" x1="50" y1="140" x2="770" y2="140"/>
+              <line class="axis-line" x1="50" y1="250" x2="770" y2="250"/>
+              <line class="rv-guide" style="--t: 1.85s;" x1="168.3" y1="30" x2="168.3" y2="250"/>
+              <line class="rv-guide" style="--t: 2.63s;" x1="254.9" y1="30" x2="254.9" y2="250"/>
+              <line class="rv-guide" style="--t: 3.45s;" x1="363" y1="30" x2="363" y2="250"/>
+              <line class="rv-guide" style="--t: 4.27s;" x1="492.7" y1="30" x2="492.7" y2="250"/>
+              <line class="rv-guide" style="--t: 5.32s;" x1="698.1" y1="30" x2="698.1" y2="250"/>
+              <path class="curve-none" pathLength="1" d="M50 30 L113.9 68.9 L140.4 100.9 L160.7 127.2 L177.8 148.9 L192.9 166.8 L206.5 181.5 L219.1 193.6 L230.7 203.6 L241.7 211.8 L252.1 218.5 L261.9 224.1 L271.4 228.7 L280.4 232.4 L289.1 235.5 L297.5 238.1 L305.6 240.2 L313.5 241.9 L321.1 243.4 L328.5 244.5 L335.8 245.5 L342.8 246.3 L349.7 246.9 L356.5 247.5 L363 247.9 L369.5 248.3 L375.8 248.6 L382 248.8 L388.1 249 L394.1 249.2 L400 249.4 L405.8 249.5 L411.5 249.6 L417.1 249.6 L422.6 249.7 L428 249.8 L433.4 249.8 L438.7 249.8 L443.9 249.9 L449.1 249.9 L454.1 249.9 L459.2 249.9 L464.1 249.9 L469 249.9 L473.9 250 L478.7 250 L483.4 250 L488.1 250 L492.7 250 L497.3 250 L501.8 250 L506.3 250 L510.8 250 L515.2 250 L519.6 250 L523.9 250 L528.2 250 L532.4 250 L536.7 250 L540.8 250 L545 250 L549.1 250 L553.2 250 L557.2 250 L561.2 250 L565.2 250 L569.1 250 L573.1 250 L576.9 250 L580.8 250 L584.6 250 L588.4 250 L592.2 250 L596 250 L599.7 250 L603.4 250 L607.1 250 L610.7 250 L614.4 250 L618 250 L621.5 250 L625.1 250 L628.6 250 L632.2 250 L635.7 250 L639.1 250 L642.6 250 L646 250 L649.4 250 L652.8 250 L656.2 250 L659.6 250 L662.9 250 L666.2 250 L669.5 250 L672.8 250 L676.1 250 L679.4 250 L682.6 250 L685.8 250 L689 250 L692.2 250 L695.4 250 L698.5 250 L701.7 250 L704.8 250 L707.9 250 L711 250 L714.1 250 L717.1 250 L720.2 250 L723.2 250 L726.3 250 L729.3 250 L732.3 250 L735.3 250 L738.2 250 L741.2 250 L744.1 250 L747.1 250 L750 250"/>
+              <path class="curve-feyn" pathLength="1" d="M50 30 L68.7 33.6 L76.5 37.2 L82.4 40.7 L87.4 44.2 L91.8 47.6 L95.8 50.9 L99.5 54.2 L102.9 57.5 L106.1 60.6 L109.2 63.8 L112 66.9 L114.8 69.9 L117.5 72.9 L120 75.8 L122.5 78.7 L124.8 81.5 L127.1 84.3 L129.4 87 L131.5 89.7 L133.7 92.4 L135.7 95 L137.7 97.5 L139.7 100.1 L141.7 102.5 L143.5 105 L145.4 107.4 L147.2 109.7 L149 112 L150.7 114.3 L152.5 116.6 L154.2 118.8 L155.8 120.9 L157.5 123.1 L159.1 125.2 L160.7 127.2 L162.2 129.3 L163.8 131.3 L165.3 133.2 L166.8 135.1 L168.3 137 L168.3 30 L168.3 30 L171.2 33.6 L174.1 37.2 L176.9 40.7 L179.6 44.2 L182.3 47.6 L184.9 50.9 L187.5 54.2 L190 57.5 L192.5 60.6 L194.9 63.8 L197.3 66.9 L199.7 69.9 L202 72.9 L204.3 75.8 L206.5 78.7 L208.7 81.5 L210.9 84.3 L213.1 87 L215.2 89.7 L217.3 92.4 L219.4 95 L221.5 97.5 L223.5 100.1 L225.5 102.5 L227.5 105 L229.4 107.4 L231.4 109.7 L233.3 112 L235.2 114.3 L237.1 116.6 L238.9 118.8 L240.8 120.9 L242.6 123.1 L244.4 125.2 L246.2 127.2 L248 129.3 L249.7 131.3 L251.5 133.2 L253.2 135.1 L254.9 137 L254.9 30 L254.9 30 L258.3 33.6 L261.7 37.2 L264.9 40.7 L268.2 44.2 L271.4 47.6 L274.5 50.9 L277.6 54.2 L280.7 57.5 L283.7 60.6 L286.6 63.8 L289.6 66.9 L292.5 69.9 L295.4 72.9 L298.2 75.8 L301 78.7 L303.8 81.5 L306.5 84.3 L309.2 87 L311.9 89.7 L314.6 92.4 L317.2 95 L319.8 97.5 L322.4 100.1 L325 102.5 L327.5 105 L330 107.4 L332.5 109.7 L335 112 L337.4 114.3 L339.8 116.6 L342.2 118.8 L344.6 120.9 L347 123.1 L349.3 125.2 L351.7 127.2 L354 129.3 L356.3 131.3 L358.5 133.2 L360.8 135.1 L363 137 L363 30 L363 30 L366.9 33.2 L370.8 36.3 L374.6 39.4 L378.3 42.5 L382 45.5 L385.7 48.4 L389.3 51.4 L392.9 54.2 L396.5 57.1 L400 59.9 L403.5 62.6 L406.9 65.3 L410.3 68 L413.7 70.6 L417.1 73.2 L420.4 75.8 L423.7 78.3 L427 80.8 L430.2 83.2 L433.4 85.7 L436.6 88 L439.7 90.4 L442.9 92.7 L446 95 L449.1 97.2 L452.1 99.4 L455.2 101.6 L458.2 103.8 L461.2 105.9 L464.1 108 L467.1 110 L470 112 L472.9 114 L475.8 116 L478.7 117.9 L481.5 119.9 L484.3 121.7 L487.1 123.6 L489.9 125.4 L492.7 127.2 L492.7 30 L492.7 30 L499 33.5 L505.2 36.9 L511.3 40.3 L517.3 43.6 L523.3 46.9 L529.2 50.1 L535 53.3 L540.7 56.4 L546.4 59.5 L552 62.5 L557.5 65.5 L563 68.4 L568.5 71.3 L573.8 74.2 L579.2 76.9 L584.4 79.7 L589.6 82.4 L594.8 85.1 L599.9 87.7 L605 90.2 L610 92.8 L615 95.3 L619.9 97.7 L624.8 100.2 L629.7 102.5 L634.5 104.9 L639.2 107.2 L644 109.4 L648.7 111.7 L653.3 113.9 L657.9 116 L662.5 118.2 L667.1 120.2 L671.6 122.3 L676.1 124.3 L680.6 126.3 L685 128.3 L689.4 130.2 L693.7 132.1 L698.1 134 L698.1 30 L698.1 30 L699.4 30.5 L700.8 31.1 L702.1 31.6 L703.5 32.2 L704.8 32.7 L706.1 33.3 L707.5 33.8 L708.8 34.4 L710.1 34.9 L711.4 35.4 L712.8 36 L714.1 36.5 L715.4 37 L716.7 37.6 L718 38.1 L719.3 38.6 L720.6 39.2 L721.9 39.7 L723.2 40.2 L724.5 40.7 L725.8 41.3 L727.1 41.8 L728.4 42.3 L729.7 42.8 L731 43.3 L732.3 43.8 L733.6 44.4 L734.8 44.9 L736.1 45.4 L737.4 45.9 L738.7 46.4 L739.9 46.9 L741.2 47.4 L742.5 47.9 L743.7 48.4 L745 48.9 L746.2 49.4 L747.5 49.9 L748.7 50.4 L750 50.9"/>
+              <circle class="rv-dot" style="--t: 1.85s;" cx="168.3" cy="30" r="8"/>
+              <circle class="rv-dot" style="--t: 2.63s;" cx="254.9" cy="30" r="8"/>
+              <circle class="rv-dot" style="--t: 3.45s;" cx="363" cy="30" r="8"/>
+              <circle class="rv-dot" style="--t: 4.27s;" cx="492.7" cy="30" r="8"/>
+              <circle class="rv-dot" style="--t: 5.32s;" cx="698.1" cy="30" r="8"/>
+            </svg>
+            <svg class="curve-svg sp" viewBox="0 0 400 330" focusable="false">
+              <defs>
+                <linearGradient id="memoryColorSp" gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2="290">
+                  <stop offset="0" stop-color="#3E9B2F"/>
+                  <stop offset="0.18" stop-color="#3E9B2F"/>
+                  <stop offset="0.36" stop-color="#C9A800"/>
+                  <stop offset="0.5" stop-color="#E5780B"/>
+                  <stop offset="0.7" stop-color="#D4352A"/>
+                  <stop offset="1" stop-color="#D4352A"/>
+                </linearGradient>
+              </defs>
+              <line class="grid-line" x1="25" y1="30" x2="383" y2="30"/>
+              <line class="grid-line" x1="25" y1="160" x2="383" y2="160"/>
+              <line class="axis-line" x1="25" y1="290" x2="383" y2="290"/>
+              <line class="rv-guide" style="--t: 1.89s;" x1="84.2" y1="30" x2="84.2" y2="290"/>
+              <line class="rv-guide" style="--t: 2.75s;" x1="127.5" y1="30" x2="127.5" y2="290"/>
+              <line class="rv-guide" style="--t: 3.63s;" x1="181.5" y1="30" x2="181.5" y2="290"/>
+              <line class="rv-guide" style="--t: 4.44s;" x1="246.4" y1="30" x2="246.4" y2="290"/>
+              <line class="rv-guide" style="--t: 5.38s;" x1="349" y1="30" x2="349" y2="290"/>
+              <path class="curve-none" pathLength="1" d="M25 30 L57 75.9 L70.2 113.8 L80.3 144.9 L88.9 170.5 L96.4 191.7 L103.3 209 L109.5 223.3 L115.4 235.1 L120.9 244.8 L126 252.8 L131 259.4 L135.7 264.8 L140.2 269.2 L144.5 272.9 L148.7 275.9 L152.8 278.4 L156.7 280.5 L160.6 282.1 L164.3 283.5 L167.9 284.7 L171.4 285.6 L174.9 286.4 L178.2 287 L181.5 287.6 L184.8 288 L187.9 288.3 L191 288.6 L194.1 288.9 L197.1 289.1 L200 289.2 L202.9 289.4 L205.7 289.5 L208.5 289.6 L211.3 289.7 L214 289.7 L216.7 289.8 L219.3 289.8 L222 289.8 L224.5 289.9 L227.1 289.9 L229.6 289.9 L232.1 289.9 L234.5 289.9 L236.9 289.9 L239.3 290 L241.7 290 L244 290 L246.4 290 L248.7 290 L250.9 290 L253.2 290 L255.4 290 L257.6 290 L259.8 290 L262 290 L264.1 290 L266.2 290 L268.3 290 L270.4 290 L272.5 290 L274.5 290 L276.6 290 L278.6 290 L280.6 290 L282.6 290 L284.6 290 L286.5 290 L288.5 290 L290.4 290 L292.3 290 L294.2 290 L296.1 290 L298 290 L299.8 290 L301.7 290 L303.5 290 L305.4 290 L307.2 290 L309 290 L310.8 290 L312.6 290 L314.3 290 L316.1 290 L317.8 290 L319.6 290 L321.3 290 L323 290 L324.7 290 L326.4 290 L328.1 290 L329.8 290 L331.5 290 L333.1 290 L334.8 290 L336.4 290 L338 290 L339.7 290 L341.3 290 L342.9 290 L344.5 290 L346.1 290 L347.7 290 L349.3 290 L350.8 290 L352.4 290 L354 290 L355.5 290 L357 290 L358.6 290 L360.1 290 L361.6 290 L363.1 290 L364.6 290 L366.1 290 L367.6 290 L369.1 290 L370.6 290 L372.1 290 L373.5 290 L375 290"/>
+              <path class="curve-feyn" pathLength="1" style="stroke: url(#memoryColorSp);" d="M25 30 L34.4 34.3 L38.2 38.5 L41.2 42.7 L43.7 46.8 L45.9 50.8 L47.9 54.7 L49.7 58.6 L51.5 62.5 L53.1 66.2 L54.6 69.9 L56 73.6 L57.4 77.1 L58.7 80.6 L60 84.1 L61.2 87.5 L62.4 90.9 L63.6 94.2 L64.7 97.4 L65.8 100.6 L66.8 103.7 L67.9 106.8 L68.9 109.8 L69.9 112.8 L70.8 115.7 L71.8 118.6 L72.7 121.4 L73.6 124.2 L74.5 127 L75.4 129.7 L76.2 132.3 L77.1 134.9 L77.9 137.5 L78.7 140 L79.5 142.5 L80.3 144.9 L81.1 147.3 L81.9 149.7 L82.7 152 L83.4 154.3 L84.2 156.5 L84.2 30 L84.2 30 L85.6 34.3 L87 38.5 L88.4 42.7 L89.8 46.8 L91.1 50.8 L92.5 54.7 L93.7 58.6 L95 62.5 L96.2 66.2 L97.5 69.9 L98.7 73.6 L99.8 77.1 L101 80.6 L102.1 84.1 L103.3 87.5 L104.4 90.9 L105.5 94.2 L106.5 97.4 L107.6 100.6 L108.7 103.7 L109.7 106.8 L110.7 109.8 L111.7 112.8 L112.7 115.7 L113.7 118.6 L114.7 121.4 L115.7 124.2 L116.7 127 L117.6 129.7 L118.5 132.3 L119.5 134.9 L120.4 137.5 L121.3 140 L122.2 142.5 L123.1 144.9 L124 147.3 L124.9 149.7 L125.7 152 L126.6 154.3 L127.5 156.5 L127.5 30 L127.5 30 L129.2 34.3 L130.8 38.5 L132.5 42.7 L134.1 46.8 L135.7 50.8 L137.2 54.7 L138.8 58.6 L140.3 62.5 L141.8 66.2 L143.3 69.9 L144.8 73.6 L146.2 77.1 L147.7 80.6 L149.1 84.1 L150.5 87.5 L151.9 90.9 L153.3 94.2 L154.6 97.4 L156 100.6 L157.3 103.7 L158.6 106.8 L159.9 109.8 L161.2 112.8 L162.5 115.7 L163.7 118.6 L165 121.4 L166.2 124.2 L167.5 127 L168.7 129.7 L169.9 132.3 L171.1 134.9 L172.3 137.5 L173.5 140 L174.7 142.5 L175.8 144.9 L177 147.3 L178.1 149.7 L179.3 152 L180.4 154.3 L181.5 156.5 L181.5 30 L181.5 30 L183.5 33.8 L185.4 37.5 L187.3 41.1 L189.2 44.7 L191 48.3 L192.9 51.8 L194.7 55.2 L196.5 58.6 L198.2 62 L200 65.3 L201.7 68.5 L203.5 71.7 L205.2 74.9 L206.9 78 L208.5 81.1 L210.2 84.1 L211.8 87.1 L213.5 90 L215.1 92.9 L216.7 95.8 L218.3 98.6 L219.9 101.4 L221.4 104.1 L223 106.8 L224.5 109.4 L226.1 112 L227.6 114.6 L229.1 117.2 L230.6 119.7 L232.1 122.1 L233.5 124.6 L235 127 L236.5 129.3 L237.9 131.6 L239.3 133.9 L240.8 136.2 L242.2 138.4 L243.6 140.6 L245 142.8 L246.4 144.9 L246.4 30 L246.4 30 L249.5 34.1 L252.6 38.2 L255.7 42.2 L258.7 46.1 L261.6 50 L264.6 53.8 L267.5 57.5 L270.4 61.2 L273.2 64.9 L276 68.4 L278.8 72 L281.5 75.4 L284.2 78.8 L286.9 82.2 L289.6 85.5 L292.2 88.7 L294.8 91.9 L297.4 95.1 L300 98.2 L302.5 101.2 L305 104.2 L307.5 107.1 L310 110 L312.4 112.9 L314.8 115.7 L317.2 118.5 L319.6 121.2 L322 123.9 L324.3 126.5 L326.7 129.1 L329 131.7 L331.3 134.2 L333.5 136.7 L335.8 139.1 L338 141.5 L340.3 143.8 L342.5 146.2 L344.7 148.4 L346.9 150.7 L349 152.9 L349 30 L349 30 L349.7 30.6 L350.4 31.3 L351.1 31.9 L351.7 32.6 L352.4 33.2 L353.1 33.9 L353.7 34.5 L354.4 35.1 L355.1 35.8 L355.7 36.4 L356.4 37.1 L357 37.7 L357.7 38.3 L358.4 38.9 L359 39.6 L359.7 40.2 L360.3 40.8 L361 41.4 L361.6 42.1 L362.3 42.7 L362.9 43.3 L363.6 43.9 L364.2 44.5 L364.9 45.1 L365.5 45.8 L366.1 46.4 L366.8 47 L367.4 47.6 L368.1 48.2 L368.7 48.8 L369.3 49.4 L370 50 L370.6 50.6 L371.2 51.2 L371.9 51.8 L372.5 52.4 L373.1 53 L373.7 53.6 L374.4 54.2 L375 54.7"/>
+              <circle class="rv-dot" style="--t: 1.89s;" cx="84.2" cy="30" r="7"/>
+              <circle class="rv-dot" style="--t: 2.75s;" cx="127.5" cy="30" r="7"/>
+              <circle class="rv-dot" style="--t: 3.63s;" cx="181.5" cy="30" r="7"/>
+              <circle class="rv-dot" style="--t: 4.44s;" cx="246.4" cy="30" r="7"/>
+              <circle class="rv-dot" style="--t: 5.38s;" cx="349" cy="30" r="7"/>
+            </svg>
+            <span class="curve-note note-review hand" style="left: 7.5%; top: 62%;">忘れかけたころに<br>復習！</span>
+            <span class="curve-note note-none hand">復習しないと、<br>ほとんど忘れる</span>
+          </div>
+          <div class="curve-days" aria-hidden="true">
+            <span class="day" style="left: 6.25%;">今日</span>
+            <span class="day rv-label" style="left: 21.04%; --t: 1.85s;">1日後</span>
+            <span class="day rv-label" style="left: 31.87%; --t: 2.63s;">3日後</span>
+            <span class="day rv-label" style="left: 45.38%; --t: 3.45s;">7日後</span>
+            <span class="day rv-label" style="left: 61.59%; --t: 4.27s;">14日後</span>
+            <span class="day rv-label" style="left: 87.26%; --t: 5.32s;">30日後</span>
+          </div>
+          <p class="curve-notes-sp" aria-hidden="true"><span class="hand red">赤い丸</span>＝忘れかけたころの復習。<span class="hand">灰色の線</span>＝復習しないと、ほとんど忘れる。</p>
+          <figcaption>※ 説明のためのイメージ図です。実際の覚え方・忘れ方は、人や内容によって違います。</figcaption>
+        </figure>
       </div>
     </section>
 
@@ -651,28 +734,6 @@
         <div class="cta">
           <span class="micro">＼ 登録1分・カード登録なし ／</span>
           <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===== Feynの紹介 ===== -->
-    <section class="feyn">
-      <div class="wrap">
-        <div class="feyn-card">
-          <div class="feyn-head">
-            <span class="feyn-face"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span>
-            <span><span class="feyn-name">Feyn</span><br><span class="feyn-role">あなたと同じ受験生（AI）</span></span>
-          </div>
-          <p class="feyn-says">「ねえ、それってほんとに説明できてる？ ちゃんとわかるまで、何回でも聞くからね。」</p>
-        </div>
-        <div>
-          <h2>ちょっと生意気な、同じ受験生</h2>
-          <div class="traits">
-            <div><b>一</b><div><h3>答えは言わない</h3><p>返すのはいつも問い。考えるのはあなた。</p></div></div>
-            <div><b>二</b><div><h3>1回に聞くのは1つだけ</h3><p>一度にたくさん聞いて混乱させない。</p></div></div>
-            <div><b>三</b><div><h3>「なんとなく」は見逃さない</h3><p>曖昧な言葉が出たら、意味を具体的に聞き返す。</p></div></div>
-            <div><b>四</b><div><h3>納得したら、素直に感謝する</h3><p>説明しきれたら「なるほど、ありがとう」。そこでクリア。</p></div></div>
-          </div>
         </div>
       </div>
     </section>
@@ -764,9 +825,9 @@
 
       // ふわっと出す所と、中身を順番に動かす所（.seq）
       const fade = ['.worries h2', '.bridge', '.how-title', '.how-sub', '.step-text', '.graded-text', '.sheet',
-                    '.review h2', '.review > .wrap > p', '.board-band .wrap', '.feyn-card', '.feyn h2', '.traits',
+                    '.review h2', '.review > .wrap > p', '.board-band .wrap',
                     '.price h2', '.ptable', '.faq h2', '.final h2'];
-      const seq = ['.hero', '.stage', '.facts', '.bubbles', '.step-visual', '.timeline'];
+      const seq = ['.hero', '.stage', '.facts', '.bubbles', '.step-visual', '.curve'];
       fade.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal')));
       seq.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal', 'seq')));
 

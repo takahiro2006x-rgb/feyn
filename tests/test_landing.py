@@ -75,6 +75,18 @@ def test_animations_are_off_for_reduced_motion_and_without_js():
         assert rule.strip().startswith('.js '), f'.js が付いていない隠しルール: {rule.strip()}'
 
 
+def test_forgetting_curve_chart_is_labeled_as_an_illustration():
+    # 復習の説明は忘却曲線のグラフ（PC用・スマホ用）。説明用のイメージであることを必ず書く
+    assert LANDING.count('class="curve-svg') == 2
+    assert 'イメージ図' in LANDING
+    for day in ['1日後', '3日後', '7日後', '14日後', '30日後']:
+        assert day in LANDING
+
+
+def test_feyn_introduction_section_was_removed():
+    assert 'ちょっと生意気な、同じ受験生' not in LANDING
+
+
 def test_ogp_has_japanese_locale():
     assert '<meta property="og:locale" content="ja_JP">' in LANDING
 

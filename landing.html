@@ -4,209 +4,379 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feyn - その「わかった」、説明できる？｜ファインマン学習法AIアプリ</title>
-  <meta name="description" content="AIのライバル受験生「Feyn」に説明して学ぶ、ファインマン学習法のアプリ。説明に詰まる所を見つけて、苦手ノートと復習で埋めていく。7科目対応・無料で始められます。">
+  <meta name="description" content="AIのライバル受験生「Feyn」に説明して学ぶ、ファインマン学習法のアプリ。説明に詰まる所を赤ペンで突っ込まれ、苦手ノートと復習で埋めていく。7科目対応・無料で始められます。">
   <meta property="og:title" content="Feyn - その「わかった」、説明できる？">
   <meta property="og:description" content="AIのライバル受験生に説明して学ぶ、ファインマン学習法のアプリ。無料で始められます。">
   <meta property="og:type" content="website">
-  <meta name="theme-color" content="#58CC02">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="theme-color" content="#1E4D2B">
   <link rel="icon" href="/icons/icon-192.png">
   <script>
     // ちらつき防止のため、描画前に保存済みテーマを適用する（アプリ本体と同じ保存先）
-    document.documentElement.setAttribute('data-theme',
-      localStorage.getItem('feynTheme') ||
-      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    try {
+      document.documentElement.setAttribute('data-theme',
+        localStorage.getItem('feynTheme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    } catch (e) {}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Zen+Kaku+Gothic+New:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <style>
-    /* ===== 色（ライト / ダーク） ===== */
+    /* =========================================================
+       核のモチーフ: 「ノートと赤ペン」
+       あなたの説明＝方眼ノートに書いた文、Feynの突っ込み＝赤ペンの書き込み。
+       赤ペンの赤は「突っ込みの印」と「申し込みボタン」だけに使う。
+       ========================================================= */
     :root {
-      --bg:          #FFFFFF;
-      --surface:     #FFFFFF;
-      --tint:        #FAFAF8;
-      --green-tint:  #F1F9E8;
-      --line:        #E6E9E3;
-      --line-soft:   #EEF0EC;
-      --text:        #1A1C19;
-      --sub:         #464A43;
-      --muted:       #6B7066;
-      --accent-text: #357A00;   /* 白地で読める緑（文字用） */
-      --brand:       #58CC02;   /* Feynの緑（塗り用。上の文字は濃い色にする） */
-      --on-brand:    #10240A;
-      --ink-btn:     #1A1C19;
-      --on-ink-btn:  #FFFFFF;
-      --warn:        #FF9600;
-      --warn-text:   #8A4B00;
-      --meter:       #FFC200;
-      --footer-bg:   #1A1C19;
+      --paper:      #FFFFFF;   /* ノートの紙 */
+      --paper-2:    #F3F8FB;   /* 淡い帯 */
+      --grid-line:  rgba(40, 110, 170, 0.085);
+      --rule:       #D9E3EA;   /* 罫線 */
+      --ink:        #1B2A33;   /* 文字（墨） */
+      --ink-soft:   #4A5A66;   /* 補足 */
+      --pencil:     #33424D;   /* 生徒の鉛筆書き */
+      --red:        #D4352A;   /* 赤ペン（突っ込み・CTA） */
+      --red-dark:   #A8261E;
+      --board:      #1E4D2B;   /* 黒板の緑（濃い面） */
+      --board-ink:  #F4F7F2;
+      --brand:      #58CC02;   /* Feynの緑（ロゴとFeynにだけ） */
+      --on-brand:   #10240A;
+      --meter:      #F2B705;
+      --wrap:       1120px;
+      --sans:  "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+      --hand:  "Klee One", "Zen Kaku Gothic New", sans-serif;
     }
+    /* ダークモード: ノート → 夜の黒板 */
     [data-theme="dark"] {
-      --bg:          #121411;
-      --surface:     #1A1D19;
-      --tint:        #161915;
-      --green-tint:  #1C2816;
-      --line:        #2C312A;
-      --line-soft:   #262A24;
-      --text:        #ECEFE9;
-      --sub:         #C3C8BE;
-      --muted:       #A2A89D;
-      --accent-text: #9BE05A;
-      --ink-btn:     #ECEFE9;
-      --on-ink-btn:  #121411;
-      --warn-text:   #FFB860;
-      --footer-bg:   #0B0D0A;
+      --paper:      #131A16;
+      --paper-2:    #18211B;
+      --grid-line:  rgba(200, 230, 210, 0.06);
+      --rule:       #2D3A31;
+      --ink:        #ECF1EC;
+      --ink-soft:   #B8C4BA;
+      --pencil:     #D5DED6;
+      --red:        #FF6B5E;
+      --red-dark:   #FF8C82;
+      --board:      #0E2416;
+      --meter:      #F2B705;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
     body {
-      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.8;
-      transition: background 0.3s, color 0.3s;
+      font-family: var(--sans);
+      font-weight: 500;
+      font-size: 16px;
+      line-height: 1.85;
+      color: var(--ink);
+      background: var(--paper);
     }
     a { color: inherit; }
-    :focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 8px; }
-
-    .heading {
-      font-family: "Zen Kaku Gothic New", "Hiragino Sans", sans-serif; font-weight: 900; line-height: 1.3;
-      word-break: auto-phrase;   /* 対応ブラウザでは、日本語を文節の区切りで改行する */
+    :focus-visible { outline: 3px solid var(--red); outline-offset: 3px; border-radius: 4px; }
+    .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+    .hand { font-family: var(--hand); font-weight: 600; }
+    .nobr { white-space: nowrap; }
+    h1, h2, h3 { line-height: 1.3; word-break: auto-phrase; }
+    /* 短い文も、対応ブラウザでは文節の区切りで改行する（「見／つかる」「で／す。」のような切れ方を防ぐ） */
+    main p, main dd, main td, main summary, .micro, .final .hand { word-break: auto-phrase; }
+    .grid-paper {
+      background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 24px 24px;
     }
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-    .eyebrow { font-size: 14px; font-weight: 800; color: var(--accent-text); letter-spacing: 0.08em; }
-    .lead { font-size: 16px; font-weight: 700; color: var(--sub); }
-    .section { padding: 96px 0; }
-    .section-tint { background: var(--tint); border-top: 2px solid var(--line-soft); border-bottom: 2px solid var(--line-soft); }
-    .section-head { display: flex; flex-direction: column; gap: 10px; max-width: 36em; margin-bottom: 40px; }
-    .section-head h2 { font-size: clamp(28px, 4vw, 42px); }
 
-    /* ===== ボタン ===== */
+    /* ===== ボタン（赤ペンの赤。マイクロコピー付き） ===== */
+    .cta { display: inline-flex; flex-direction: column; align-items: center; gap: 6px; }
+    .micro { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+    .on-board .micro { color: var(--board-ink); }
     .btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      min-height: 44px; padding: 10px 18px; border-radius: 99px;
-      font-family: inherit; font-weight: 800; font-size: 15px;
-      text-decoration: none; cursor: pointer; border: none;
-      transition: filter 0.15s, transform 0.15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 48px; padding: 14px 30px; border-radius: 6px;
+      background: var(--red); color: #FFFFFF; text-decoration: none;
+      font-weight: 900; font-size: 17px; letter-spacing: 0.04em;
+      box-shadow: 0 4px 0 var(--red-dark);
+      transition: transform 0.12s, box-shadow 0.12s;
     }
-    .btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
-    .btn-brand { background: var(--brand); color: var(--on-brand); }
-    .btn-ink { background: var(--ink-btn); color: var(--on-ink-btn); }
-    .btn-line { background: transparent; color: var(--text); border: 2px solid var(--line); }
-    .btn-lg { padding: 16px 32px; font-size: 17px; }
+    [data-theme="dark"] .btn { color: #1A0D0B; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--red-dark); }
+    .btn-lg { min-height: 56px; padding: 16px 38px; font-size: 19px; }
+    .btn svg { flex-shrink: 0; }
 
     /* ===== ヘッダー ===== */
-    .header { padding: 20px 0; }
-    .header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .header { border-bottom: 1px solid var(--rule); background: var(--paper); }
+    .header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 68px; }
     .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-    .logo-mark { width: 34px; height: 34px; border-radius: 10px; background: var(--brand); display: flex; align-items: center; justify-content: center; }
-    .logo-text { font-family: "Zen Kaku Gothic New", sans-serif; font-size: 22px; font-weight: 900; }
-    .nav { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; }
-    .nav-link { color: var(--sub); text-decoration: none; font-weight: 700; font-size: 15px; padding: 8px 2px; }
-    .nav-link:hover { color: var(--text); }
-    .theme-toggle {
-      display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px;
-      border-radius: 99px; border: 2px solid var(--line); background: transparent; color: var(--sub);
-      font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer;
-    }
+    .logo-mark { width: 36px; height: 36px; border-radius: 9px; background: var(--brand); display: grid; place-items: center; }
+    .logo-text { font-size: 23px; font-weight: 900; letter-spacing: 0.02em; }
+    .nav { display: flex; align-items: center; gap: 6px 22px; }
+    .nav-link { text-decoration: none; font-size: 15px; font-weight: 700; color: var(--ink-soft); padding: 8px 0; }
+    .nav-link:hover { color: var(--ink); }
+    .theme-toggle { min-height: 40px; padding: 4px 12px; border: 1px solid var(--rule); border-radius: 4px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .header .btn { min-height: 44px; padding: 8px 18px; font-size: 15px; box-shadow: 0 3px 0 var(--red-dark); }
 
     /* ===== ファーストビュー ===== */
-    .hero { padding: 80px 0 72px; text-align: center; }
-    .hero .wrap { max-width: 900px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
-    .hero h1 { font-size: clamp(30px, 8.4vw, 76px); line-height: 1.2; }
-    .nobr { white-space: nowrap; }   /* 「わかっ／た」のように言葉の途中で改行させない */
-    .hero .lead { font-size: clamp(16px, 2vw, 19px); max-width: 32em; }
-    .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
-    .hero-note { font-size: 14px; font-weight: 700; color: var(--muted); }
+    .hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--rule); }
+    .hero .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 56px; align-items: center; padding-top: 64px; padding-bottom: 84px; }
+    .hero-copy { display: flex; flex-direction: column; gap: 24px; }
+    .catch { font-weight: 900; letter-spacing: 0.01em; line-height: 1.22; }
+    .catch .s { display: block; font-size: clamp(26px, 3.4vw, 40px); }
+    .catch .l { display: block; font-size: clamp(42px, 7vw, 86px); }
+    .catch .mark { position: relative; display: inline-block; }
+    .catch .mark::after {                      /* 赤ペンの丸囲み */
+      content: ""; position: absolute; inset: -6px -10px -4px -12px;
+      border: 3px solid var(--red); border-radius: 50% 46% 52% 44%;
+      transform: rotate(-3deg); pointer-events: none;
+    }
+    .catch-note { position: absolute; top: -34px; right: -96px; color: var(--red); font-size: 18px; transform: rotate(6deg); white-space: nowrap; }
+    .hero-lead { font-size: 17px; font-weight: 700; color: var(--ink-soft); max-width: 31em; }
+    .hero-facts { display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+    .hero-facts span { margin-right: 16px; white-space: nowrap; }
+    .hero-facts span::before { content: "・"; color: var(--red); }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-    /* ===== 比較 ===== */
-    .compare { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); border: 2px solid var(--line); border-radius: 24px; overflow: hidden; }
-    .compare > div { padding: 32px; display: flex; flex-direction: column; gap: 14px; }
-    .compare .before { background: var(--tint); }
-    .compare .after { background: var(--green-tint); }
-    .compare .label { font-size: 14px; font-weight: 800; color: var(--muted); }
-    .compare .after .label { color: var(--accent-text); }
-    .compare .title { font-size: 24px; }
-    .compare ul { list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; font-weight: 700; color: var(--sub); }
-    .compare li { padding-left: 1.2em; position: relative; }
-    .compare li::before { content: ""; position: absolute; left: 0; top: 0.75em; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
-    .compare .after li::before { background: var(--accent-text); }
+    /* ノートのページ（Feynの赤ペンが入った、あなたの説明） */
+    .stage { position: relative; }
+    .notebook {
+      position: relative; background-color: #FFFFFF; color: #1B2A33;
+      border: 1px solid #CBD7DF; border-radius: 4px 10px 10px 4px;
+      padding: 26px 26px 30px 54px;
+      box-shadow: 0 18px 40px rgba(27, 42, 51, 0.14);
+      transform: rotate(-1.2deg);
+      background-image:
+        linear-gradient(rgba(40, 110, 170, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(40, 110, 170, 0.1) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .notebook::before {                         /* とじ穴 */
+      content: ""; position: absolute; left: 16px; top: 24px; bottom: 24px; width: 12px;
+      background: radial-gradient(circle at 6px 6px, #D6DEE4 5px, transparent 5.5px) 0 0 / 12px 44px repeat-y;
+    }
+    .nb-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 700; color: #4A5A66; border-bottom: 2px solid #1B2A33; padding-bottom: 6px; margin-bottom: 14px; }
+    .nb-line { display: grid; grid-template-columns: minmax(0, 1fr) 13em; gap: 14px; align-items: start; padding: 6px 0; }
+    .nb-text { font-family: var(--hand); font-weight: 600; font-size: 18px; color: #33424D; line-height: 1.75; }
+    .nb-note { font-family: var(--hand); font-weight: 600; font-size: 16px; color: #D4352A; line-height: 1.5; transform: rotate(-2deg); }
+    .wavy { text-decoration: underline wavy #D4352A; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+    .ring { border: 2px solid #D4352A; border-radius: 50%; padding: 0 6px; }
+    .nb-score { margin-top: 16px; display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 700; color: #4A5A66; }
+    .nb-meter { flex: 1; height: 10px; background: #E3EAEF; border-radius: 99px; overflow: hidden; }
+    .nb-meter span { display: block; height: 100%; width: 50%; background: var(--brand); border-radius: 99px; }
 
-    /* ===== しくみ ===== */
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; }
-    .step { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 24px; display: flex; flex-direction: column; gap: 8px; }
-    .step-num { font-family: "Zen Kaku Gothic New", sans-serif; font-size: 32px; font-weight: 900; color: var(--accent-text); line-height: 1; }
-    .step-title { font-size: 18px; font-weight: 800; }
-    .step-text { font-size: 14px; font-weight: 700; color: var(--sub); }
+    /* 会話画面の部品（しくみで使う） */
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; flex-shrink: 0; }
+    .b-feyn, .b-me { max-width: 88%; padding: 7px 10px; font-size: 11.5px; font-weight: 700; line-height: 1.55; }
+    .b-feyn { align-self: flex-start; background: #FFFFFF; border-radius: 12px 12px 12px 3px; }
+    .b-me { align-self: flex-end; background: var(--brand); color: var(--on-brand); border-radius: 12px 12px 3px 12px; }
 
-    /* ===== 結果画面の見本 ===== */
-    .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 48px; align-items: center; }
-    .split h2 { font-size: clamp(28px, 4vw, 40px); }
-    .split-text { display: flex; flex-direction: column; gap: 16px; }
-    .result-card { border: 2px solid var(--line); border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 14px; background: var(--surface); }
-    .result-sub { font-size: 13px; font-weight: 800; color: var(--muted); }
-    .result-theme { font-size: 18px; font-weight: 800; }
-    .result-score { border: 2px solid var(--line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
-    .score-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-    .score-num { font-size: 30px; font-weight: 800; line-height: 1; }
-    .score-word { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--warn-text); }
-    .meter { height: 10px; border-radius: 99px; background: var(--line-soft); overflow: hidden; }
-    .meter > span { display: block; height: 100%; border-radius: 99px; background: var(--meter); }
-    .gap { border-left: 4px solid var(--warn); background: var(--tint); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
-    .gap-type { font-size: 12px; font-weight: 800; color: var(--warn-text); }
-    .gap-desc { font-size: 15px; font-weight: 800; }
-    .gap-evidence { font-size: 13px; font-weight: 700; color: var(--muted); }
-    .sample-note { font-size: 12px; font-weight: 700; color: var(--muted); text-align: right; }
+    /* ===== 数字の帯 ===== */
+    .facts { background: var(--board); color: var(--board-ink); }
+    .facts .wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .fact { padding: 22px 12px; text-align: center; border-left: 1px solid rgba(255, 255, 255, 0.16); }
+    .fact:first-child { border-left: none; }
+    .fact b { display: block; font-size: clamp(34px, 4.4vw, 52px); font-weight: 900; line-height: 1.1; }
+    .fact b small { font-size: 0.42em; font-weight: 700; margin-left: 2px; }
+    .fact span { display: block; font-size: 13px; font-weight: 700; opacity: 0.9; word-break: auto-phrase; line-height: 1.6; }
 
-    /* ===== 復習 ===== */
-    .review { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 12px; }
-    .review > div { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 18px; text-align: center; }
-    .review strong { display: block; font-size: 28px; font-weight: 800; color: var(--accent-text); }
-    .review span { font-size: 13px; font-weight: 700; color: var(--muted); }
+    /* ===== 悩み（吹き出し） ===== */
+    .worries { padding: 96px 0 40px; }
+    .lead-line { text-align: center; font-size: 15px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+    .worries h2 { text-align: center; font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; margin-bottom: 44px; }
+    .bubbles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px 40px; max-width: 900px; margin: 0 auto; }
+    .bubble { position: relative; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 999px; padding: 16px 28px; font-size: 16px; font-weight: 700; text-align: center; }
+    .bubble::after { content: ""; position: absolute; left: 40px; bottom: -9px; width: 15px; height: 15px; background: var(--paper); border-right: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); transform: rotate(45deg); }
+    .bubble:nth-child(2) { margin-top: 26px; }
+    .bubble:nth-child(2)::after, .bubble:nth-child(4)::after { left: auto; right: 40px; }
+    .bubble:nth-child(4) { margin-top: 26px; }
+    .bridge { text-align: center; padding: 56px 0 0; }
+    .bridge::before { content: ""; display: block; width: 0; height: 0; margin: 0 auto 22px; border-left: 22px solid transparent; border-right: 22px solid transparent; border-top: 16px solid var(--rule); }
+    .bridge p { font-size: clamp(20px, 2.8vw, 28px); font-weight: 900; }
+    .bridge .red { color: var(--red); }
 
-    /* ===== できること ===== */
-    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
-    .feature { border: 2px solid var(--line); border-radius: 20px; padding: 22px; display: flex; gap: 14px; background: var(--surface); }
-    .feature-icon { flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; background: var(--green-tint); display: flex; align-items: center; justify-content: center; color: var(--accent-text); }
-    .feature-title { font-size: 17px; font-weight: 800; }
-    .feature-text { font-size: 14px; font-weight: 700; color: var(--sub); }
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
-    .chip { padding: 6px 14px; border-radius: 99px; border: 2px solid var(--line); font-size: 14px; font-weight: 800; background: var(--surface); }
+    /* ===== しくみ（大きな番号＋画面、左右交互） ===== */
+    .how { padding: 72px 0 96px; }
+    .how-title { font-size: clamp(28px, 4vw, 44px); font-weight: 900; margin-bottom: 8px; }
+    .how-sub { font-size: 16px; font-weight: 700; color: var(--ink-soft); margin-bottom: 56px; }
+    .step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: center; padding: 36px 0; border-top: 1px solid var(--rule); }
+    .step:nth-of-type(even) .step-text { order: 2; }
+    .step-num { font-size: clamp(72px, 9vw, 120px); font-weight: 900; line-height: 0.9; color: transparent; -webkit-text-stroke: 2px var(--ink); }
+    .step h3 { font-size: clamp(22px, 2.8vw, 30px); font-weight: 900; margin: 10px 0 12px; }
+    .step p { font-size: 16px; color: var(--ink-soft); font-weight: 500; }
+    .step p strong { color: var(--ink); font-weight: 700; }
+    .step-visual { display: flex; justify-content: center; }
+    .card-screen { width: min(100%, 400px); background: #F0F4F8; border: 1px solid #D5DEE5; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px; color: #2C3A2A; }
+    .cs-head { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid #D5DEE5; font-size: 14px; font-weight: 900; color: #14210F; line-height: 1.2; }
+    .cs-head small { display: block; font-size: 11px; font-weight: 700; color: #4B5A45; }
+    .card-screen .b-feyn, .card-screen .b-me { font-size: 14px; padding: 10px 14px; border-radius: 14px; }
+    .card-screen .b-feyn { border-bottom-left-radius: 4px; }
+    .card-screen .b-me { border-bottom-right-radius: 4px; }
+    .ways { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+    .way { border: 1px solid #C9D4DC; background: #FFFFFF; border-radius: 4px; padding: 4px 10px; font-size: 13px; font-weight: 700; color: #33424D; }
+    .redpen-note { font-family: var(--hand); font-weight: 600; color: #D4352A; font-size: 15px; align-self: flex-start; padding-left: 6px; }
 
-    /* ===== 料金 ===== */
-    .price-wrap { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; align-items: center; }
-    .price-wrap .section-head { align-items: center; text-align: center; margin-bottom: 0; }
-    .plans { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px; }
-    .plan { border: 2px solid var(--line); border-radius: 22px; padding: 28px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
-    .plan-paid { border-color: var(--text); }
-    .plan-name { font-size: 15px; font-weight: 800; color: var(--muted); }
-    .plan-paid .plan-name { color: var(--accent-text); }
-    .plan-price { font-size: 36px; font-weight: 800; line-height: 1.1; }
-    .plan-price small { font-size: 15px; font-weight: 800; color: var(--sub); }
-    .plan-text { font-size: 15px; font-weight: 700; color: var(--sub); }
+    /* ===== 添削された結果のページ ===== */
+    .graded { padding: 96px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--paper-2); }
+    .graded .wrap { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
+    .graded h2 { font-size: clamp(28px, 4vw, 42px); font-weight: 900; }
+    .graded h2 .u { background: linear-gradient(transparent 62%, rgba(212, 53, 42, 0.22) 62%); }
+    .graded-text { display: flex; flex-direction: column; gap: 18px; }
+    .graded-text p { font-size: 16px; color: var(--ink-soft); }
+    .types { border-top: 1px solid var(--rule); }
+    .types div { display: grid; grid-template-columns: 11em 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 15px; }
+    .types dt { font-weight: 900; }
+    .types dd { color: var(--ink-soft); }
+    .sheet {
+      position: relative; background: #FFFFFF; color: #1B2A33; border: 1px solid #CBD7DF; border-radius: 4px;
+      padding: 34px 30px 34px; box-shadow: 0 14px 34px rgba(27, 42, 51, 0.1);   /* 上の余白＝罫線の間隔（34px）にして、文字を罫線の上に乗せる */
+      background-image: repeating-linear-gradient(#FFFFFF 0 33px, #DCE6EE 33px 34px);
+      line-height: 34px;
+    }
+    .sheet p { margin: 0; }
+    .sheet-title { font-weight: 900; font-size: 17px; }
+    .sheet-sub { font-size: 13px; font-weight: 700; color: #4A5A66; }
+    .score-stamp {
+      position: absolute; top: 18px; right: 22px; width: 104px; aspect-ratio: 1; border: 3px solid #D4352A; border-radius: 50%;
+      display: grid; place-items: center; color: #D4352A; transform: rotate(-10deg); text-align: center; line-height: 1;
+      font-family: var(--hand); font-weight: 600; background: rgba(255, 255, 255, 0.85);
+    }
+    .score-stamp b { display: block; font-size: 38px; }
+    .score-stamp small { display: block; font-size: 12px; margin-top: 4px; }
+    .gap-item { display: block; padding-left: 0; }
+    .gap-tag { font-family: var(--hand); font-weight: 600; color: #D4352A; font-size: 15px; }
+    .gap-desc { font-weight: 700; font-size: 16px; }
+    .gap-quote { font-size: 14px; color: #4A5A66; }
+    .sample { font-size: 12px; color: var(--ink-soft); text-align: right; margin-top: 8px; }
 
-    /* ===== よくある質問 ===== */
-    .faq { max-width: 800px; margin: 0 auto; }
-    .faq h2 { font-size: clamp(26px, 3.6vw, 36px); margin-bottom: 24px; }
-    .faq-item { border-top: 2px solid var(--line-soft); padding: 20px 0; display: flex; flex-direction: column; gap: 4px; }
-    .faq-item:last-child { border-bottom: 2px solid var(--line-soft); }
-    .faq-q { font-size: 17px; font-weight: 800; }
-    .faq-a { font-size: 15px; font-weight: 700; color: var(--sub); }
+    /* ===== 復習（線でつないだ印） ===== */
+    .review { padding: 96px 0; }
+    .review h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; max-width: 18em; }
+    .review > .wrap > p { margin-top: 12px; font-size: 16px; color: var(--ink-soft); max-width: 36em; }
+    .timeline { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 48px; position: relative; }
+    .timeline::before { content: ""; position: absolute; left: 10%; right: 10%; top: 31px; height: 2px; background: var(--ink); }
+    .timeline li { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .dot { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); display: grid; place-items: center; font-weight: 900; font-size: 22px; line-height: 1; }
+    .dot small { font-size: 11px; font-weight: 700; }
+    .timeline li:first-child .dot { border-color: var(--red); color: var(--red); }
+    .timeline span { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+
+    /* ===== 申し込みの帯（黒板） ===== */
+    .board-band { background: var(--board); color: var(--board-ink); }
+    .board-band .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; padding-top: 56px; padding-bottom: 56px; }
+    .board-band p.big { font-size: clamp(22px, 3vw, 32px); font-weight: 900; line-height: 1.4; }
+    .chalk { font-family: var(--hand); font-weight: 600; font-size: 16px; opacity: 0.85; display: block; margin-top: 4px; }
+
+    /* ===== Feynの紹介 ===== */
+    .feyn { padding: 96px 0; }
+    .feyn .wrap { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 56px; align-items: center; }
+    .feyn-card { border: 1.5px solid var(--ink); border-radius: 4px; padding: 30px; position: relative; background: var(--paper); }
+    .feyn-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+    .feyn-face { width: 72px; height: 72px; border-radius: 50%; background: var(--brand); display: grid; place-items: center; }
+    .feyn-name { font-size: 26px; font-weight: 900; line-height: 1.2; }
+    .feyn-role { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+    .feyn-says { font-family: var(--hand); font-weight: 600; font-size: 19px; line-height: 1.7; }
+    .feyn h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; margin-bottom: 18px; }
+    .traits { border-top: 1px solid var(--rule); }
+    .traits > div { display: grid; grid-template-columns: 2.4em 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .traits b { font-size: 24px; font-weight: 900; color: var(--red); line-height: 1.2; }
+    .traits h3 { font-size: 17px; font-weight: 900; }
+    .traits p { font-size: 15px; color: var(--ink-soft); }
+
+    /* ===== 料金（罫線の表） ===== */
+    .price { padding: 96px 0; background: var(--paper-2); border-top: 1px solid var(--rule); }
+    .price h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; text-align: center; }
+    .price .lead-line { margin: 8px 0 36px; }
+    .ptable { max-width: 860px; margin: 0 auto; border-collapse: collapse; width: 100%; background: var(--paper); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+    .ptable th, .ptable td { padding: 16px 18px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; font-size: 15px; }
+    .ptable thead th { font-size: 17px; font-weight: 900; border-bottom: 1px solid var(--ink); }
+    .ptable thead th.paid { color: var(--red); }
+    .ptable tbody th { width: 30%; font-weight: 700; color: var(--ink-soft); }
+    .ptable .yen { font-size: 30px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
+    .ptable .yen small { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+    .price .cta { display: flex; margin-top: 36px; }
+
+    /* ===== よくある質問（罫線だけ） ===== */
+    .faq { padding: 96px 0; }
+    .faq h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; margin-bottom: 28px; }
+    .faq .wrap { max-width: 860px; }
+    .faq details { border-top: 1px solid var(--rule); }
+    .faq details:last-of-type { border-bottom: 1px solid var(--rule); }
+    .faq summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 2em 1fr 1.5em; gap: 8px; align-items: baseline; padding: 20px 0; font-size: 17px; font-weight: 900; }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary::before { content: "Q."; color: var(--red); font-size: 20px; }
+    .faq summary::after { content: "+"; font-size: 22px; font-weight: 700; text-align: right; color: var(--ink-soft); }
+    .faq details[open] summary::after { content: "−"; }
+    .faq .a { display: grid; grid-template-columns: 2em 1fr; gap: 8px; padding: 0 1.5em 22px 0; color: var(--ink-soft); font-size: 15px; }
+    .faq .a::before { content: "A."; font-size: 20px; font-weight: 900; color: var(--ink); line-height: 1.5; }
+
+    /* ===== 最後のひと押し ===== */
+    .final { padding: 96px 0 104px; text-align: center; border-top: 1px solid var(--rule); }
+    .final h2 { font-size: clamp(28px, 4.4vw, 48px); font-weight: 900; }
+    .final .hand { display: block; color: var(--red); font-size: 20px; margin: 10px 0 30px; }
 
     /* ===== フッター ===== */
-    .footer { background: var(--footer-bg); color: #E9EBE7; padding: 56px 0 32px; }
-    .footer .wrap { display: flex; flex-direction: column; gap: 28px; }
-    .footer-cta { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
-    .footer-catch { font-size: clamp(24px, 3.4vw, 34px); color: #FFFFFF; }
-    .footer-bottom { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 13px; font-weight: 700; color: #B9BEB5; }
-    .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
-    .footer-links a { color: #B9DE8F; }
+    .footer { background: var(--board); color: var(--board-ink); font-size: 13px; font-weight: 700; }
+    .footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding-top: 26px; padding-bottom: 26px; }
+    .footer a { color: #CFE9B8; }
+    .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
 
-    @media (max-width: 640px) {
-      .section { padding: 72px 0; }
-      .hero { padding: 48px 0 56px; }
-      .nav .nav-link { display: none; }   /* スマホでは「しくみ」「料金」を省き、ボタンだけにする */
-      .compare > div { padding: 24px; }
+    /* ===== スマホの固定ボタン ===== */
+    .sticky-cta { display: none; }
+
+    /* ========================= スマホ ========================= */
+    @media (max-width: 860px) {
+      .hero .wrap, .graded .wrap, .feyn .wrap, .step { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+      .step:nth-of-type(even) .step-text { order: 0; }
+      .catch-note { right: -4px; top: -32px; font-size: 16px; }
+    }
+    @media (max-width: 767px) {
+      .nav .nav-link, .theme-toggle { display: none; }
+      .hero .wrap { padding-top: 48px; padding-bottom: 56px; }
+      .notebook { padding: 20px 16px 22px 40px; transform: rotate(-0.8deg); }
+      .notebook::before { left: 12px; }
+      .nb-line { grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 4px 0 8px; }
+      .nb-note { padding-left: 14px; }
+      .facts .wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0; }
+      .fact { border-left: none; border-top: 1px solid rgba(255, 255, 255, 0.16); }
+      .fact:nth-child(even) { border-left: 1px solid rgba(255, 255, 255, 0.16); }
+      .fact:nth-child(-n+2) { border-top: none; }
+      .worries { padding-top: 72px; }
+      .bubbles { grid-template-columns: minmax(0, 1fr); gap: 22px; }
+      .bubble { border-radius: 26px; text-align: left; padding: 14px 20px; }
+      .bubble:nth-child(2), .bubble:nth-child(4) { margin-top: 0; margin-left: 24px; }
+      .bubble:nth-child(odd) { margin-right: 24px; }
+      .how, .graded, .review, .feyn, .price, .faq, .final { padding-top: 72px; padding-bottom: 72px; }
+      .score-stamp { width: 84px; top: 12px; right: 12px; }
+      .score-stamp b { font-size: 30px; }
+      .sheet { padding: 34px 18px 34px; }
+      .sheet-title { padding-right: 88px; }
+      .types div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+      .timeline { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+      .timeline::before { left: 31px; right: auto; top: 10px; bottom: 10px; width: 2px; height: auto; }
+      .timeline li { flex-direction: row; text-align: left; gap: 16px; }
+      .ptable thead { display: none; }
+      .ptable, .ptable tbody, .ptable tr, .ptable th, .ptable td { display: block; width: 100%; }
+      .ptable tr { padding: 12px 0; border-bottom: 1px solid var(--rule); }
+      .ptable tbody th { padding: 4px 4px 6px; border: none; width: 100%; }
+      .ptable td { padding: 4px 4px; border: none; }
+      .ptable td::before { content: attr(data-plan) "："; font-weight: 900; color: var(--ink); }
+      .ptable td.paid::before { color: var(--red); }
+      .board-band .wrap { flex-direction: column; align-items: flex-start; }
+      .pc-br { display: none; }
+      /* 画面下の固定ボタン（ファーストビューと最後の申し込みが見えている間は隠す） */
+      body { padding-bottom: 76px; }
+      .sticky-cta {
+        display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); gap: 10px; align-items: center;
+        background: var(--paper); border-top: 1px solid var(--rule); box-shadow: 0 -6px 18px rgba(27, 42, 51, 0.08);
+        transform: translateY(0); transition: transform 0.25s;
+      }
+      .sticky-cta.is-hidden { transform: translateY(110%); }
+      .sticky-cta .btn { flex: 1; min-height: 50px; font-size: 16px; padding: 10px 16px; }
+      .sticky-cta .micro { font-size: 12px; line-height: 1.4; width: 7.5em; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .sticky-cta, .btn { transition: none; }
     }
   </style>
 </head>
@@ -223,208 +393,271 @@
       <nav class="nav" aria-label="メインメニュー">
         <a href="#how" class="nav-link">しくみ</a>
         <a href="#price" class="nav-link">料金</a>
+        <a href="#faq" class="nav-link">よくある質問</a>
         <button class="theme-toggle" id="themeToggle" type="button">ダークモード</button>
         <a href="/login" class="nav-link" data-auth-cta data-loggedin-hide>ログイン</a>
-        <a href="/login?signup=1" class="btn btn-ink" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+        <a href="/login?signup=1" class="btn" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
       </nav>
     </div>
   </header>
 
   <main>
-    <section class="hero">
+    <!-- ===== ファーストビュー ===== -->
+    <section class="hero grid-paper">
       <div class="wrap">
-        <span class="eyebrow">ファインマン学習法 × AI</span>
-        <h1 class="heading"><span class="nobr">その「わかった」、</span><br><span class="nobr">説明できる？</span></h1>
-        <p class="lead">説明しようとして言葉に詰まる所が、本当はわかっていない所。Feynは、あなたの説明に「なんで？」を返し続けて、その場所を見つけ出します。</p>
-        <div class="hero-actions">
-          <a href="/login?signup=1" class="btn btn-brand btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
-          <a href="#how" class="btn btn-line btn-lg">しくみを見る</a>
+        <div class="hero-copy">
+          <h1 class="catch">
+            <span class="s">その<span class="mark">「わかった」<span class="catch-note hand" aria-hidden="true">ほんとに？</span></span>、</span>
+            <span class="l nobr">説明できる？</span>
+          </h1>
+          <p class="hero-lead">AIのライバル受験生「Feyn」に、あなたが先生として説明する。言葉に詰まった所に、Feynが赤ペンで「なんで？」を入れてくる。そこが、あなたが本当はわかっていない所。</p>
+          <div class="cta" id="heroCta" style="align-items: flex-start;">
+            <span class="micro">＼ 登録1分・カード登録なし ／</span>
+            <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+          </div>
+          <div class="hero-facts"><span>7科目に対応</span><span>答えは言わずに問いで返す</span><span>スマホでもPCでも</span></div>
         </div>
-        <span class="hero-note">登録1分・カード登録なしで始められます</span>
-      </div>
-    </section>
 
-    <section aria-label="読むだけの勉強との違い" style="padding: 0 0 96px;">
-      <div class="wrap">
-        <div class="compare">
-          <div class="before">
-            <span class="label">読むだけの勉強</span>
-            <span class="title heading">わかった気がする</span>
-            <ul>
-              <li>解説を読むと、なるほどと思う</li>
-              <li>でも、条件が変わると解けない</li>
-              <li>どこが分かっていないのか、自分では気づけない</li>
-            </ul>
-          </div>
-          <div class="after">
-            <span class="label">Feynに説明する勉強</span>
-            <span class="title heading">わかっていない所が見える</span>
-            <ul>
-              <li>自分の言葉で説明するから、ごまかせない</li>
-              <li>曖昧な言葉や飛ばした理由を、その場で聞き返される</li>
-              <li>見つかった穴は、苦手ノートに残る</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="how" class="section section-tint">
-      <div class="wrap">
-        <div class="section-head">
-          <span class="eyebrow">しくみ</span>
-          <h2 class="heading">説明して、突っ込まれて、<br>穴が見つかる。</h2>
-        </div>
-        <div class="steps">
-          <div class="step">
-            <span class="step-num">01</span>
-            <span class="step-title">Feynが問題を出す</span>
-            <span class="step-text">選んだ単元で、受験生が間違えやすいポイントを、具体的な数値つきで聞いてくる。</span>
-          </div>
-          <div class="step">
-            <span class="step-num">02</span>
-            <span class="step-title">あなたが説明する</span>
-            <span class="step-text">文字でも声でもOK。数式も入力できる。</span>
-          </div>
-          <div class="step">
-            <span class="step-num">03</span>
-            <span class="step-title">1つずつ突っ込まれる</span>
-            <span class="step-text">Feynは答えを言わない。返ってくるのは、いつも1つの問いだけ。</span>
-          </div>
-          <div class="step">
-            <span class="step-num">04</span>
-            <span class="step-title">納得したら結果が出る</span>
-            <span class="step-text">理解度と、説明から見つかった理解の穴が、カードで返ってくる。</span>
+        <div class="stage" role="img" aria-label="見本: 生徒がノートに書いた運動量の説明に、Feynが赤ペンで「なんとなくって？」「どこまでを1つと見る？」と書き込んでいる。横にFeynとの会話画面。">
+          <div class="notebook" aria-hidden="true">
+            <div class="nb-head"><span>物理　運動量保存</span><span>No. 12</span></div>
+            <div class="nb-line">
+              <span class="nb-text">壁にぶつかったボールは、<span class="wavy">運動量が保存されない</span>。</span>
+              <span class="nb-note">ほんとに？<br>どこまでを「1つ」と見る？</span>
+            </div>
+            <div class="nb-line">
+              <span class="nb-text"><span class="ring">なんとなく</span>、壁が力を加えるから。</span>
+              <span class="nb-note">「なんとなく」って？</span>
+            </div>
+            <div class="nb-line">
+              <span class="nb-text">外から力がはたらかなければ保存される。</span>
+              <span class="nb-note">じゃあ、壁とボールを<br>まとめて見たら？</span>
+            </div>
+            <div class="nb-score"><span>Feynの納得度</span><span class="nb-meter"><span></span></span><span>50%</span></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section">
-      <div class="wrap split">
-        <div class="split-text">
-          <span class="eyebrow">会話のあとに</span>
-          <h2 class="heading">どこが分かっていないかが、言葉で返ってくる</h2>
-          <p class="lead">「誤解している」「曖昧に理解している」「前提知識が抜けている」。穴の種類と、根拠になったあなたの発言まで、まとめて残ります。</p>
+    <!-- ===== 数字の帯（アプリの事実だけ） ===== -->
+    <section class="facts" aria-label="Feynの概要">
+      <div class="wrap">
+        <div class="fact"><b>7<small>科目</small></b><span>物理・数学・英語・化学・生物・国語・歴史</span></div>
+        <div class="fact"><b>5<small>区分</small></b><span>大学受験〜定期テスト</span></div>
+        <div class="fact"><b>3<small>種類</small></b><span>見つける「理解の穴」の種類</span></div>
+        <div class="fact"><b>30<small>日後</small></b><span>まで間をあけて復習</span></div>
+      </div>
+    </section>
+
+    <!-- ===== 悩み ===== -->
+    <section class="worries">
+      <div class="wrap">
+        <p class="lead-line">＼ 受験勉強で、こんなことありませんか？ ／</p>
+        <h2>「わかったつもり」は、本番まで気づけない</h2>
+        <div class="bubbles">
+          <p class="bubble">解説を読むと、わかった気になる</p>
+          <p class="bubble">数字や条件が変わると、手が止まる</p>
+          <p class="bubble">どこがわかっていないのか、自分ではわからない</p>
+          <p class="bubble">質問しに行くほどじゃないけど、モヤモヤが残る</p>
+        </div>
+        <div class="bridge">
+          <p>説明しようとすると、<span class="red">詰まる所が見つかる</span>。<br class="pc-br">それを手伝うのが、Feynです。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== しくみ ===== -->
+    <section id="how" class="how">
+      <div class="wrap">
+        <h2 class="how-title">Feynとの1回は、こう進む</h2>
+        <p class="how-sub">1回はだいたい数往復。納得させたらクリアです。</p>
+
+        <div class="step">
+          <div class="step-text">
+            <div class="step-num" aria-hidden="true">01</div>
+            <h3>Feynが、ひっかかる問題を出す</h3>
+            <p>科目と単元を選ぶと、Feynが<strong>受験生が間違えやすいポイントを、具体的な数値つき</strong>で聞いてくる。解いている問題集のページを写真で送れば、その問題について聞いてくる。</p>
+          </div>
+          <div class="step-visual">
+            <div class="card-screen" aria-hidden="true">
+              <div class="cs-head"><span class="avatar"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span>Feyn<small>英語担当のライバル</small></span></div>
+              <span class="b-feyn">If I were you の were って、主語が I なのになんで was じゃないの？ これテストに出たら絶対間違えるやつ。</span>
+              <span class="redpen-note">← 1回の発言で、問いは1つだけ</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-text">
+            <div class="step-num" aria-hidden="true">02</div>
+            <h3>あなたが、自分の言葉で説明する</h3>
+            <p>文字で打っても、<strong>声で話しても</strong>OK。数式も入力できる。わからなくなったら「ヒント」でキーワードだけもらえる。</p>
+          </div>
+          <div class="step-visual">
+            <div class="card-screen" aria-hidden="true">
+              <div class="cs-head"><span class="avatar"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span>Feyn<small>英語担当のライバル</small></span></div>
+              <span class="b-me">事実と違うことを言う仮定法だから、形を過去にずらしてるんだよ。</span>
+              <div class="ways"><span class="way">文字で入力</span><span class="way">声で入力</span><span class="way">数式</span><span class="way">写真で出題</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-text">
+            <div class="step-num" aria-hidden="true">03</div>
+            <h3>答えは言わない。問いで返ってくる</h3>
+            <p>曖昧な言葉、飛ばした理由、前提の抜け。Feynは<strong>答えを言わずに、問いだけを1つずつ</strong>返してくる。説明しきって納得させたら、クリア。</p>
+          </div>
+          <div class="step-visual">
+            <div class="card-screen" aria-hidden="true">
+              <div class="cs-head"><span class="avatar"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span>Feyn<small>英語担当のライバル</small></span></div>
+              <span class="b-feyn">「過去にずらす」って、今の話なのに過去形を使う理由になる？</span>
+              <span class="b-me">現実から距離がある、っていう気持ちを時制で表してるから。</span>
+              <span class="b-feyn">なるほど…！ やっとわかった。ありがとう！</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 添削された結果 ===== -->
+    <section class="graded">
+      <div class="wrap">
+        <div class="graded-text">
+          <h2>会話のあとに、<br><span class="u">どこが穴だったか</span>が返ってくる</h2>
+          <p>会話が終わると、理解度と、説明から見つかった「理解の穴」が返ってきます。根拠になったあなたの発言つきで、苦手ノートに残ります。</p>
+          <dl class="types">
+            <div><dt>誤解している</dt><dd>まちがった理解のまま覚えている</dd></div>
+            <div><dt>曖昧に理解している</dt><dd>なんとなくは分かるが、説明しきれない</dd></div>
+            <div><dt>前提知識が抜けている</dt><dd>その前に必要な知識が足りない</dd></div>
+          </dl>
         </div>
         <div>
-          <div class="result-card" role="img" aria-label="結果画面の見本: 数学、理解度64点、理解の穴が2つ">
-            <div>
-              <div class="result-sub">数学 クリア</div>
-              <div class="result-theme">テーマ：放物線と直線で囲まれた面積</div>
-            </div>
-            <div class="result-score">
-              <div class="score-row"><span class="result-sub">理解度</span><span class="score-num">64</span><span class="result-sub">/ 100</span><span class="score-word">だいたいOK・あと一歩</span></div>
-              <div class="meter"><span style="width: 64%;"></span></div>
-            </div>
-            <div class="gap">
-              <span class="gap-type">曖昧に理解している</span>
-              <span class="gap-desc">公式が「交点が2つあるときだけ」使える理由を説明できていない</span>
-              <span class="gap-evidence">あなたの説明：「なんとなく公式に当てはめた」</span>
-            </div>
-            <div class="gap">
-              <span class="gap-type">前提知識が抜けている</span>
-              <span class="gap-desc">定積分と面積の関係</span>
-            </div>
+          <div class="sheet" role="img" aria-label="結果の見本: 数学、放物線と直線で囲まれた面積、理解度64点。曖昧に理解している点と、前提知識が抜けている点が赤ペンで書かれている。">
+            <div class="score-stamp" aria-hidden="true"><span><b>64</b><small>理解度</small></span></div>
+            <p class="sheet-sub" aria-hidden="true">数学　クリア</p>
+            <p class="sheet-title" aria-hidden="true">放物線と直線で囲まれた面積</p>
+            <p aria-hidden="true">&nbsp;</p>
+            <p class="gap-tag" aria-hidden="true">曖昧に理解している</p>
+            <p class="gap-desc" aria-hidden="true">公式が「交点が2つあるとき」だけ使える理由</p>
+            <p class="gap-quote" aria-hidden="true">あなたの説明：「なんとなく公式に当てはめた」</p>
+            <p aria-hidden="true">&nbsp;</p>
+            <p class="gap-tag" aria-hidden="true">前提知識が抜けている</p>
+            <p class="gap-desc" aria-hidden="true">定積分と面積の関係</p>
           </div>
-          <p class="sample-note">※ 画面の見本です</p>
+          <p class="sample">※ 画面の見本です</p>
         </div>
       </div>
     </section>
 
-    <section class="section section-tint">
+    <!-- ===== 復習 ===== -->
+    <section class="review">
       <div class="wrap">
-        <div class="section-head">
-          <span class="eyebrow">復習</span>
-          <h2 class="heading">忘れかけたころに、Feynがまた聞きに来る</h2>
-          <p class="lead">穴が解決しても、忘却曲線に合わせて同じ所をもう一度。説明し直せたら、次の復習はもっと先へ。</p>
-        </div>
-        <div class="review">
-          <div><strong>1日後</strong><span>1回目の復習</span></div>
-          <div><strong>3日後</strong><span>2回目</span></div>
-          <div><strong>7日後</strong><span>3回目</span></div>
-          <div><strong>14日後</strong><span>4回目</span></div>
-          <div><strong>30日後</strong><span>5回目</span></div>
-        </div>
+        <h2>忘れかけたころに、Feynがまた聞きに来る</h2>
+        <p>苦手ノートの穴は、忘却曲線に合わせて同じ所をもう一度。説明し直せたら、次の復習はもっと先へ延びます。</p>
+        <ol class="timeline">
+          <li><span class="dot">1<small>日後</small></span><span>1回目の復習</span></li>
+          <li><span class="dot">3<small>日後</small></span><span>2回目</span></li>
+          <li><span class="dot">7<small>日後</small></span><span>3回目</span></li>
+          <li><span class="dot">14<small>日後</small></span><span>4回目</span></li>
+          <li><span class="dot">30<small>日後</small></span><span>5回目</span></li>
+        </ol>
       </div>
     </section>
 
-    <section class="section">
+    <!-- ===== 中盤の申し込み（黒板） ===== -->
+    <section class="board-band on-board" aria-label="申し込み">
       <div class="wrap">
-        <div class="section-head">
-          <span class="eyebrow">できること</span>
-          <h2 class="heading">机でも、スマホでも</h2>
-        </div>
-        <div class="features">
-          <div class="feature">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
-            <div><div class="feature-title">解いている問題を写真で</div><div class="feature-text">問題集のページを撮れば、Feynがその問題について質問してくる。</div></div>
-          </div>
-          <div class="feature">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg></span>
-            <div><div class="feature-title">声で説明できる</div><div class="feature-text">口で説明するほうが、本当に分かっているかがはっきり出る。</div></div>
-          </div>
-          <div class="feature">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg></span>
-            <div><div class="feature-title">詰まったらヒント</div><div class="feature-text">考えるきっかけのキーワードだけをくれる。どうしても無理なら答えも見られる。</div></div>
-          </div>
-          <div class="feature">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22c4 0 7-3 7-7 0-4-3-6-4-9-1 2-2 3-4 3 0-2-1-4-2-6-2 3-4 6-4 12 0 4 3 7 7 7z"/></svg></span>
-            <div><div class="feature-title">連続学習日数</div><div class="feature-text">1日1回クリアすると記録がのびる。毎日続ける目安になる。</div></div>
-          </div>
-        </div>
-        <div class="chips" aria-label="対応している科目">
-          <span class="chip">物理</span><span class="chip">数学</span><span class="chip">英語</span><span class="chip">化学</span><span class="chip">生物</span><span class="chip">国語</span><span class="chip">歴史</span>
+        <p class="big">今日習ったことを、1つFeynに説明してみる。<span class="chalk">どこで詰まるかが、今日の収穫。</span></p>
+        <div class="cta">
+          <span class="micro">＼ 登録1分・カード登録なし ／</span>
+          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
         </div>
       </div>
     </section>
 
-    <section id="price" class="section section-tint">
-      <div class="wrap price-wrap">
-        <div class="section-head">
-          <span class="eyebrow">料金</span>
-          <h2 class="heading">無料で始めて、合えば続ける</h2>
-        </div>
-        <div class="plans">
-          <div class="plan">
-            <span class="plan-name">無料プラン</span>
-            <span class="plan-price">¥0</span>
-            <span class="plan-text">新しい会話はライフ3つまで。2時間で1つ回復する。苦手ノート・復習・学習のきろくは使える。</span>
+    <!-- ===== Feynの紹介 ===== -->
+    <section class="feyn">
+      <div class="wrap">
+        <div class="feyn-card">
+          <div class="feyn-head">
+            <span class="feyn-face"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span>
+            <span><span class="feyn-name">Feyn</span><br><span class="feyn-role">あなたと同じ受験生（AI）</span></span>
           </div>
-          <div class="plan plan-paid">
-            <span class="plan-name">受験生プラン</span>
-            <span class="plan-price">¥980 <small>/ 月（税込）</small></span>
-            <span class="plan-text">会話・ヒント・答えを見る、すべて無制限。いつでも解約できる。</span>
+          <p class="feyn-says">「ねえ、それってほんとに説明できてる？ ちゃんとわかるまで、何回でも聞くからね。」</p>
+        </div>
+        <div>
+          <h2>ちょっと生意気な、同じ受験生</h2>
+          <div class="traits">
+            <div><b>一</b><div><h3>答えは言わない</h3><p>返すのはいつも問い。考えるのはあなた。</p></div></div>
+            <div><b>二</b><div><h3>1回に聞くのは1つだけ</h3><p>一度にたくさん聞いて混乱させない。</p></div></div>
+            <div><b>三</b><div><h3>「なんとなく」は見逃さない</h3><p>曖昧な言葉が出たら、意味を具体的に聞き返す。</p></div></div>
+            <div><b>四</b><div><h3>納得したら、素直に感謝する</h3><p>説明しきれたら「なるほど、ありがとう」。そこでクリア。</p></div></div>
           </div>
         </div>
-        <a href="/login?signup=1" class="btn btn-brand btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
       </div>
     </section>
 
-    <section class="section">
-      <div class="wrap faq">
-        <h2 class="heading">よくある質問</h2>
-        <div class="faq-item"><span class="faq-q">答えは教えてくれないの？</span><span class="faq-a">Feynは問いを返す役。詰まったときは「ヒント」と「答えを見る」で助けを出せます。</span></div>
-        <div class="faq-item"><span class="faq-q">どの科目・試験に使える？</span><span class="faq-a">物理・数学・英語・化学・生物・国語・歴史の7科目。大学受験・高校受験・中学受験・定期テスト・大学の試験に合わせて、問いのレベルが変わります。</span></div>
-        <div class="faq-item"><span class="faq-q">スマホでも使える？</span><span class="faq-a">スマホ・タブレット・PCで使えます。ホーム画面に追加すれば、アプリのように開けます。</span></div>
-        <div class="faq-item"><span class="faq-q">ファインマン学習法とは？</span><span class="faq-a">「人に説明できれば本当に理解している」という考え方の勉強法です。説明できない所が、まだ分かっていない所です。</span></div>
-        <div class="faq-item" id="teachers"><span class="faq-q">塾・学校の先生も使える？</span><span class="faq-a">先生用のアカウントがあります。生徒ごとの学習状況や苦手、クラス全体のつまずきを一覧で確認でき、課題も出せます。登録には運営が発行する先生コードが必要です。</span></div>
+    <!-- ===== 料金 ===== -->
+    <section id="price" class="price">
+      <div class="wrap">
+        <h2>料金</h2>
+        <p class="lead-line">無料のまま使い続けられます。たくさん使いたいときだけ、受験生プランへ。</p>
+        <table class="ptable">
+          <thead><tr><th scope="col"><span class="sr-only">項目</span></th><th scope="col">無料プラン</th><th scope="col" class="paid">受験生プラン</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">料金</th><td data-plan="無料プラン"><span class="yen">¥0</span></td><td data-plan="受験生プラン" class="paid"><span class="yen">¥980<small> / 月（税込）</small></span></td></tr>
+            <tr><th scope="row">新しい会話</th><td data-plan="無料プラン">ライフ3つまで。1回始めるごとに1つ使い、2時間で1つ回復</td><td data-plan="受験生プラン" class="paid">無制限</td></tr>
+            <tr><th scope="row">ヒント・答えを見る</th><td data-plan="無料プラン">使える</td><td data-plan="受験生プラン" class="paid">無制限</td></tr>
+            <tr><th scope="row">苦手ノート・復習・学習のきろく</th><td data-plan="無料プラン">使える</td><td data-plan="受験生プラン" class="paid">使える</td></tr>
+            <tr><th scope="row">解約</th><td data-plan="無料プラン">—</td><td data-plan="受験生プラン" class="paid">いつでもできる</td></tr>
+          </tbody>
+        </table>
+        <div class="cta">
+          <span class="micro">＼ まずは無料プランから ／</span>
+          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== よくある質問 ===== -->
+    <section id="faq" class="faq">
+      <div class="wrap">
+        <h2>よくある質問</h2>
+        <details><summary>答えは教えてくれないの？</summary><div class="a"><p>Feynは問いを返す役です。詰まったときは「ヒント」でキーワードだけ、どうしても無理なときは「答えを見る」で解説を出せます。</p></div></details>
+        <details><summary>どの科目・試験に使える？</summary><div class="a"><p>物理・数学・英語・化学・生物・国語・歴史の7科目です。大学受験・高校受験・中学受験・定期テスト・大学の試験に合わせて、問いのレベルが変わります。</p></div></details>
+        <details><summary>スマホでも使える？</summary><div class="a"><p>スマホ・タブレット・PCで使えます。ホーム画面に追加すれば、アプリのように開けます。問題集を写真で送ったり、声で説明したりもできます。</p></div></details>
+        <details><summary>ファインマン学習法って？</summary><div class="a"><p>「人に説明できれば、本当に理解している」という考え方の勉強法です。説明しようとして詰まる所が、まだわかっていない所です。</p></div></details>
+        <details><summary>お金はかかる？</summary><div class="a"><p>無料プランのまま使い続けられます。新しい会話をもっと始めたい人は、月980円（税込）の受験生プランにでき、いつでも解約できます。</p></div></details>
+        <details id="teachers"><summary>塾・学校の先生も使える？</summary><div class="a"><p>先生用のアカウントがあります。生徒ごとの学習状況や苦手、クラス全体のつまずきを一覧で確認でき、課題も出せます。登録には運営が発行する先生コードが必要です。</p></div></details>
+      </div>
+    </section>
+
+    <!-- ===== 最後のひと押し ===== -->
+    <section class="final grid-paper" id="finalCta">
+      <div class="wrap">
+        <h2>説明できたら、本物。</h2>
+        <span class="hand">まずは1問、Feynに教えてみよう</span>
+        <div class="cta">
+          <span class="micro">＼ 登録1分・カード登録なし ／</span>
+          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+        </div>
       </div>
     </section>
   </main>
 
   <footer class="footer">
     <div class="wrap">
-      <div class="footer-cta">
-        <span class="footer-catch heading">説明できたら、本物。</span>
-        <a href="/login?signup=1" class="btn btn-brand btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Feyn — ファインマン学習法AIアプリ</span>
-        <span class="footer-links"><a href="#teachers">塾・学校の先生へ</a><a href="/tokushoho">特定商取引法に基づく表記</a></span>
-      </div>
+      <span>© 2026 Feyn — ファインマン学習法AIアプリ</span>
+      <span class="footer-links"><a href="#teachers">塾・学校の先生へ</a><a href="/tokushoho">特定商取引法に基づく表記</a></span>
     </div>
   </footer>
+
+  <!-- スマホの画面下に固定する申し込みボタン -->
+  <div class="sticky-cta is-hidden" id="stickyCta">
+    <span class="micro">登録1分・カード登録なし</span>
+    <a href="/login?signup=1" class="btn" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+  </div>
 
   <script>
     // ===== ダークモードの切り替え（アプリ本体と同じ保存先 feynTheme を使う） =====
@@ -444,6 +677,19 @@
       try { localStorage.setItem('feynTheme', next); } catch (e) { /* 保存できなくても切り替えは効く */ }
       updateThemeLabel();
     });
+
+    // ===== スマホの固定ボタン: ページ内の申し込みボタンが見えている間は隠す（重なって押しにくくならないように） =====
+    (() => {
+      const bar = document.getElementById('stickyCta');
+      const watched = [...document.querySelectorAll('main .cta'), document.getElementById('finalCta')];
+      if (!('IntersectionObserver' in window)) { bar.classList.remove('is-hidden'); return; }
+      const visible = new Set();
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => (e.isIntersecting ? visible.add(e.target) : visible.delete(e.target)));
+        bar.classList.toggle('is-hidden', visible.size > 0);
+      });
+      watched.forEach(el => io.observe(el));
+    })();
 
     // ===== ログイン中なら、ボタンを「アプリへ戻る」に出し分ける =====
     // ログイン中にロゴなどからLPへ来ても、再ログイン画面を踏まずに戻れるようにする

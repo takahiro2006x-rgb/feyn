@@ -51,6 +51,18 @@ def test_pricing_facts_match_the_app(fact):
     assert fact in LANDING
 
 
+def test_mobile_sticky_button_starts_hidden_and_goes_to_signup():
+    # スマホの画面下の固定ボタン。最初は隠しておき、ページ内の申し込みボタンが見えていないときだけ出す
+    sticky = LANDING[LANDING.index('id="stickyCta"') - 40:LANDING.index('id="stickyCta"') + 400]
+    assert 'is-hidden' in sticky
+    assert 'href="/login?signup=1"' in sticky
+    assert 'IntersectionObserver' in LANDING
+
+
+def test_ogp_has_japanese_locale():
+    assert '<meta property="og:locale" content="ja_JP">' in LANDING
+
+
 def test_does_not_claim_to_be_completely_free():
     # 以前のLPは有料プランがあるのに「完全無料」と書いていた
     assert '完全無料' not in LANDING

@@ -94,3 +94,20 @@ def test_ogp_has_japanese_locale():
 def test_does_not_claim_to_be_completely_free():
     # 以前のLPは有料プランがあるのに「完全無料」と書いていた
     assert '完全無料' not in LANDING
+
+
+def test_price_table_scrolls_sideways_on_phones():
+    # スマホでは無料プランと受験生プランを左右に並べたまま、表を横にスワイプして見比べる
+    assert 'class="ptable-scroll"' in LANDING
+    assert '横にスワイプして見比べてね' in LANDING
+    css = LANDING[LANDING.index('<style>'):LANDING.index('</style>')]
+    assert 'overflow-x: auto' in css
+    assert 'position: sticky; left: 0' in css   # 項目名の列は左に残す
+    assert '.ptable thead { display: none; }' not in css   # 以前の縦積み表示に戻っていない
+
+
+def test_fact_numbers_are_not_shrunk_by_the_caption_style():
+    # 数字のカウントアップは数字を span で包む。説明文の小さい文字の指定がその span に効かないこと
+    css = LANDING[LANDING.index('<style>'):LANDING.index('</style>')]
+    assert '.fact > span {' in css
+    assert '.fact span {' not in css

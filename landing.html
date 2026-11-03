@@ -177,11 +177,11 @@
     /* ===== 数字の帯 ===== */
     .facts { background: var(--board); color: var(--board-ink); }
     .facts .wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .fact { padding: 22px 12px; text-align: center; border-left: 1px solid rgba(255, 255, 255, 0.16); }
+    .fact { padding: 26px 12px 24px; text-align: center; border-left: 1px solid rgba(255, 255, 255, 0.16); }
     .fact:first-child { border-left: none; }
-    .fact b { display: block; font-size: clamp(34px, 4.4vw, 52px); font-weight: 900; line-height: 1.1; }
-    .fact b small { font-size: 0.42em; font-weight: 700; margin-left: 2px; }
-    .fact span { display: block; font-size: 13px; font-weight: 700; opacity: 0.9; word-break: auto-phrase; line-height: 1.6; }
+    .fact b { display: block; font-size: clamp(54px, 6.6vw, 84px); font-weight: 900; line-height: 1; letter-spacing: -0.01em; }
+    .fact b small { font-size: 0.34em; font-weight: 900; margin-left: 3px; letter-spacing: 0.02em; }
+    .fact > span { display: block; margin-top: 6px; font-size: 14px; font-weight: 700; opacity: 0.9; word-break: auto-phrase; line-height: 1.6; }
 
     /* ===== 悩み（吹き出し） ===== */
     .worries { padding: 96px 0 40px; }
@@ -301,6 +301,11 @@
     .ptable .yen { font-size: 30px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
     .ptable .yen small { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
     .price .cta { display: flex; margin-top: 36px; }
+    .ptable-wrap { position: relative; max-width: 860px; margin: 0 auto; }
+    .ptable-scroll:focus-visible { outline-offset: 4px; }
+    .swipe-hint { display: none; }
+    /* 右端のぼかし: 「まだ右に続きがある」ことを示す。右端まで動かしたら消す */
+    .ptable-wrap::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 40px; background: linear-gradient(90deg, rgba(243, 248, 251, 0), var(--paper-2)); pointer-events: none; display: none; }
 
     /* ===== よくある質問（罫線だけ） ===== */
     .faq { padding: 96px 0; }
@@ -446,13 +451,19 @@
       .y-tick { font-size: 10px; }
       .curve-note { font-size: 12px; }
       .day { font-size: 10.5px; }
-      .ptable thead { display: none; }
-      .ptable, .ptable tbody, .ptable tr, .ptable th, .ptable td { display: block; width: 100%; }
-      .ptable tr { padding: 12px 0; border-bottom: 1px solid var(--rule); }
-      .ptable tbody th { padding: 4px 4px 6px; border: none; width: 100%; }
-      .ptable td { padding: 4px 4px; border: none; }
-      .ptable td::before { content: attr(data-plan) "："; font-weight: 900; color: var(--ink); }
-      .ptable td.paid::before { color: var(--red); }
+      .swipe-hint { display: block; text-align: right; color: var(--red); font-size: 15px; margin-bottom: 6px; }
+      .ptable-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+      .ptable-wrap::after { display: block; }
+      .ptable-wrap.at-end::after { visibility: hidden; }
+      .swipe-hint.is-off { display: none; }   /* 表が画面に収まるときは案内を出さない */
+      .ptable { width: auto; min-width: 100%; }
+      .ptable th, .ptable td { padding: 14px 14px; font-size: 14px; }
+      .ptable td { width: 13.5em; min-width: 13.5em; }
+      .ptable thead th:first-child, .ptable tbody th {
+        position: sticky; left: 0; z-index: 1; width: 6.8em; min-width: 6.8em;
+        background: var(--paper); box-shadow: 1px 0 0 var(--rule);   /* スワイプしても項目名は左に残す */
+      }
+      .ptable .yen { font-size: 26px; }
       .board-band .wrap { flex-direction: column; align-items: flex-start; }
       .pc-br { display: none; }
       /* 画面下の固定ボタン（ファーストビューと最後の申し込みが見えている間は隠す） */
@@ -721,7 +732,7 @@
             <span class="day rv-label" style="left: 61.59%; --t: 4.27s;">14日後</span>
             <span class="day rv-label" style="left: 87.26%; --t: 5.32s;">30日後</span>
           </div>
-          <p class="curve-notes-sp" aria-hidden="true"><span class="hand red">赤い丸</span>＝忘れかけたころの復習。<span class="hand">灰色の線</span>＝復習しないと、ほとんど忘れる。</p>
+          <p class="curve-notes-sp" aria-hidden="true"><span class="hand red">赤い丸</span>＝忘れかけたころの復習。<br><span class="hand">灰色の線</span>＝復習しないと、ほとんど忘れる。</p>
           <figcaption>※ 説明のためのイメージ図です。実際の覚え方・忘れ方は、人や内容によって違います。</figcaption>
         </figure>
       </div>
@@ -743,6 +754,9 @@
       <div class="wrap">
         <h2>料金</h2>
         <p class="lead-line">無料のまま使い続けられます。たくさん使いたいときだけ、受験生プランへ。</p>
+        <p class="swipe-hint hand" id="swipeHint" aria-hidden="true">横にスワイプして見比べてね →</p>
+        <div class="ptable-wrap" id="ptableWrap">
+        <div class="ptable-scroll" id="ptableScroll" role="region" tabindex="0" aria-label="料金表。横にスクロールすると、無料プランと受験生プランを見比べられます">
         <table class="ptable">
           <thead><tr><th scope="col"><span class="sr-only">項目</span></th><th scope="col">無料プラン</th><th scope="col" class="paid">受験生プラン</th></tr></thead>
           <tbody>
@@ -753,6 +767,8 @@
             <tr><th scope="row">解約</th><td data-plan="無料プラン">—</td><td data-plan="受験生プラン" class="paid">いつでもできる</td></tr>
           </tbody>
         </table>
+        </div>
+        </div>
         <div class="cta">
           <span class="micro">＼ まずは無料プランから ／</span>
           <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
@@ -826,7 +842,7 @@
       // ふわっと出す所と、中身を順番に動かす所（.seq）
       const fade = ['.worries h2', '.bridge', '.how-title', '.how-sub', '.step-text', '.graded-text', '.sheet',
                     '.review h2', '.review > .wrap > p', '.board-band .wrap',
-                    '.price h2', '.ptable', '.faq h2', '.final h2'];
+                    '.price h2', '.ptable-wrap', '.faq h2', '.final h2'];
       const seq = ['.hero', '.stage', '.facts', '.bubbles', '.step-visual', '.curve'];
       fade.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal')));
       seq.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal', 'seq')));
@@ -853,6 +869,7 @@
             const to = parseInt(node.textContent, 10);
             if (!isNaN(to)) {
               const span = document.createElement('span');
+              span.className = 'num';   // 数字の部分（下の説明文の小さい文字の指定を受けないよう、b の中に置く）
               node.replaceWith(span);
               countUp(span, to, { delay: i * 120 });
             }
@@ -872,6 +889,37 @@
         });
       }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
       targets.forEach(el => io.observe(el));
+    })();
+
+    // ===== 料金表（スマホ）: 横にスクロールできることを伝える =====
+    (() => {
+      const box = document.getElementById('ptableScroll');
+      const wrap = document.getElementById('ptableWrap');
+      if (!box || !wrap) return;
+      const updateEdge = () => {
+        const atEnd = box.scrollLeft + box.clientWidth >= box.scrollWidth - 4;
+        wrap.classList.toggle('at-end', atEnd);
+        const hint = document.getElementById('swipeHint');
+        if (hint) hint.classList.toggle('is-off', box.scrollWidth <= box.clientWidth + 4);
+      };
+      box.addEventListener('scroll', updateEdge, { passive: true });
+      window.addEventListener('resize', updateEdge);
+      updateEdge();
+
+      // 表が画面に入ったら、一度だけ少し右に動かして戻す（動きを減らす設定の人には出さない）
+      if (!document.documentElement.classList.contains('js') || !('IntersectionObserver' in window)) return;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (!e.isIntersecting) return;
+          io.disconnect();
+          if (box.scrollWidth <= box.clientWidth + 4 || box.scrollLeft > 0) return;   // はみ出していない・もう動かした
+          setTimeout(() => {
+            box.scrollTo({ left: 72, behavior: 'smooth' });
+            setTimeout(() => box.scrollTo({ left: 0, behavior: 'smooth' }), 700);
+          }, 600);
+        });
+      }, { threshold: 0.6 });
+      io.observe(box);
     })();
 
     // ===== スマホの固定ボタン: ページ内の申し込みボタンが見えている間は隠す（重なって押しにくくならないように） =====

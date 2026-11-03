@@ -59,6 +59,22 @@ def test_mobile_sticky_button_starts_hidden_and_goes_to_signup():
     assert 'IntersectionObserver' in LANDING
 
 
+def test_animations_are_off_for_reduced_motion_and_without_js():
+    # 演出の「隠れた初期状態」は、html に js の印が付いたときだけ効く。
+    # 印は「動きを減らす」設定の人には付けない → その人と、JSが動かない環境では最初から全部見える
+    head = LANDING[:LANDING.index('</head>')]
+    assert "prefers-reduced-motion: reduce" in head
+    assert "classList.add('js')" in head
+    css = LANDING[LANDING.index('<style>'):LANDING.index('</style>')]
+    hiding = re.compile(r'opacity:\s*0\s*[;}]|clip-path:\s*inset\(0 100%|stroke-dashoffset:\s*1\s*[;}]')
+    hidden_rules = [line for line in css.splitlines()
+                    if hiding.search(line) and '{' in line
+                    and not line.strip().startswith(('from', 'to', '0%', '60%', '100%', '@keyframes'))]
+    assert hidden_rules, '演出の初期状態が見つからない'
+    for rule in hidden_rules:
+        assert rule.strip().startswith('.js '), f'.js が付いていない隠しルール: {rule.strip()}'
+
+
 def test_ogp_has_japanese_locale():
     assert '<meta property="og:locale" content="ja_JP">' in LANDING
 

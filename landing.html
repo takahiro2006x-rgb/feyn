@@ -18,6 +18,10 @@
         localStorage.getItem('feynTheme') ||
         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
     } catch (e) {}
+    // 演出を有効にする印。動きを減らす設定の人には付けない（＝最初から全部見える）
+    if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.documentElement.classList.add('js');
+    }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Klee+One:wght@600&display=swap" rel="stylesheet">
@@ -125,11 +129,11 @@
     .catch .s { display: block; font-size: clamp(26px, 3.4vw, 40px); }
     .catch .l { display: block; font-size: clamp(42px, 7vw, 86px); }
     .catch .mark { position: relative; display: inline-block; }
-    .catch .mark::after {                      /* 赤ペンの丸囲み */
-      content: ""; position: absolute; inset: -6px -10px -4px -12px;
-      border: 3px solid var(--red); border-radius: 50% 46% 52% 44%;
-      transform: rotate(-3deg); pointer-events: none;
+    .pen-ring {                                /* 赤ペンの丸囲み（手で描いたように、少し重ねて閉じる） */
+      position: absolute; left: -18px; top: -12px; width: calc(100% + 30px); height: calc(100% + 22px);
+      overflow: visible; pointer-events: none; transform: rotate(-2deg);
     }
+    .pen-ring path { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
     .catch-note { position: absolute; top: -34px; right: -96px; color: var(--red); font-size: 18px; transform: rotate(6deg); white-space: nowrap; }
     .hero-lead { font-size: 17px; font-weight: 700; color: var(--ink-soft); max-width: 31em; }
     .hero-facts { display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 14px; font-weight: 700; color: var(--ink-soft); }
@@ -323,6 +327,79 @@
     /* ===== スマホの固定ボタン ===== */
     .sticky-cta { display: none; }
 
+    /* =========================================================
+       演出（html.js のときだけ。JSが動かない・動きを減らす設定なら、最初から全部見える）
+       .reveal は画面に入ったら .is-in が付いてふわっと出る。
+       .seq は箱そのものは動かさず、中身を順番に動かす（赤ペンの書き込み・吹き出しなど）
+       ========================================================= */
+    .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .js .reveal.is-in { opacity: 1; transform: none; }
+    .js .reveal.seq { opacity: 1; transform: none; transition: none; }
+
+    @keyframes pen-draw   { to { stroke-dashoffset: 0; } }
+    @keyframes pen-write  { to { clip-path: inset(0 0 0 0); } }
+    @keyframes pen-ink    { to { text-decoration-color: #D4352A; } }
+    @keyframes pen-circle { from { border-color: transparent; transform: scale(1.3); } to { border-color: #D4352A; transform: scale(1); } }
+    @keyframes pop-in     { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: none; } }
+    @keyframes meter-fill { from { width: 0; } }
+    @keyframes stamp {
+      0%   { opacity: 0; transform: scale(1.8) rotate(-30deg); }
+      60%  { opacity: 1; transform: scale(0.92) rotate(-8deg); }
+      100% { opacity: 1; transform: scale(1) rotate(-10deg); }
+    }
+    @keyframes line-x { from { transform: scaleX(0); } }
+    @keyframes line-y { from { transform: scaleY(0); } }
+
+    /* ファーストビュー: 赤ペンが「わかった」を丸で囲み、「ほんとに？」と書き込む */
+    .js .hero .pen-ring path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+    .js .hero.is-in .pen-ring path { animation: pen-draw 0.8s 0.4s cubic-bezier(0.6, 0.1, 0.3, 1) forwards; }
+    .js .hero .catch-note { clip-path: inset(0 100% 0 0); }
+    .js .hero.is-in .catch-note { animation: pen-write 0.6s 1.2s ease-out forwards; }
+
+    /* ノート: 赤ペンの書き込みが1つずつ入り、最後にFeynの納得度が伸びる */
+    .js .notebook .wavy { text-decoration-color: transparent; }
+    .js .notebook .ring { display: inline-block; border-color: transparent; }
+    .js .notebook .nb-note { clip-path: inset(0 100% 0 0); }
+    .js .notebook .nb-meter span { width: 0; }
+    .js .stage.is-in .nb-line:nth-child(2) .wavy    { animation: pen-ink 0.4s 0.6s forwards; }
+    .js .stage.is-in .nb-line:nth-child(2) .nb-note { animation: pen-write 0.7s 0.9s ease-out forwards; }
+    .js .stage.is-in .nb-line:nth-child(3) .ring    { animation: pen-circle 0.35s 1.8s ease-out forwards; }
+    .js .stage.is-in .nb-line:nth-child(3) .nb-note { animation: pen-write 0.6s 2.1s ease-out forwards; }
+    .js .stage.is-in .nb-line:nth-child(4) .nb-note { animation: pen-write 0.7s 2.8s ease-out forwards; }
+    .js .stage.is-in .nb-meter span { width: 50%; animation: meter-fill 1s 3.6s ease-out both; }
+
+    /* 悩み: 吹き出しが順にポンと出る */
+    .js .bubbles .bubble { opacity: 0; }
+    .js .bubbles.is-in .bubble { animation: pop-in 0.45s ease-out forwards; }
+    .js .bubbles.is-in .bubble:nth-child(2) { animation-delay: 0.25s; }
+    .js .bubbles.is-in .bubble:nth-child(3) { animation-delay: 0.5s; }
+    .js .bubbles.is-in .bubble:nth-child(4) { animation-delay: 0.75s; }
+
+    /* しくみ: 会話画面の吹き出しが、チャットのように1つずつ出る */
+    .js .step-visual .card-screen > :not(.cs-head) { opacity: 0; }
+    .js .step-visual.is-in .card-screen > :not(.cs-head) { animation: pop-in 0.45s ease-out forwards; }
+    .js .step-visual.is-in .card-screen > :nth-child(2) { animation-delay: 0.3s; }
+    .js .step-visual.is-in .card-screen > :nth-child(3) { animation-delay: 1.1s; }
+    .js .step-visual.is-in .card-screen > :nth-child(4) { animation-delay: 1.9s; }
+
+    /* 結果の見本: 点数の丸印をハンコのように押し、穴の書き込みが続く */
+    .js .sheet .score-stamp { opacity: 0; }
+    .js .sheet.is-in .score-stamp { animation: stamp 0.55s 0.7s cubic-bezier(0.3, 1.3, 0.5, 1) forwards; }
+    .js .sheet .gap-tag { clip-path: inset(0 100% 0 0); }
+    .js .sheet .gap-desc, .js .sheet .gap-quote { opacity: 0; }
+    .js .sheet.is-in .gap-tag { animation: pen-write 0.6s var(--d, 1.4s) ease-out forwards; }
+    .js .sheet.is-in .gap-desc, .js .sheet.is-in .gap-quote { animation: pop-in 0.45s var(--d, 1.6s) ease-out forwards; }
+
+    /* 復習: 線が引かれ、印が順に灯る */
+    .js .timeline::before { transform-origin: left center; transform: scaleX(0); }
+    .js .timeline.is-in::before { transform: none; animation: line-x 1.2s ease-out both; }
+    .js .timeline .dot { opacity: 0; }
+    .js .timeline.is-in .dot { animation: pop-in 0.4s ease-out forwards; }
+    .js .timeline.is-in li:nth-child(2) .dot { animation-delay: 0.25s; }
+    .js .timeline.is-in li:nth-child(3) .dot { animation-delay: 0.5s; }
+    .js .timeline.is-in li:nth-child(4) .dot { animation-delay: 0.75s; }
+    .js .timeline.is-in li:nth-child(5) .dot { animation-delay: 1s; }
+
     /* ========================= スマホ ========================= */
     @media (max-width: 860px) {
       .hero .wrap, .graded .wrap, .feyn .wrap, .step { grid-template-columns: minmax(0, 1fr); gap: 36px; }
@@ -353,6 +430,8 @@
       .types div { grid-template-columns: minmax(0, 1fr); gap: 0; }
       .timeline { grid-template-columns: minmax(0, 1fr); gap: 18px; }
       .timeline::before { left: 31px; right: auto; top: 10px; bottom: 10px; width: 2px; height: auto; }
+      .js .timeline::before { transform-origin: center top; transform: scaleY(0); }
+      .js .timeline.is-in::before { transform: none; animation-name: line-y; }
       .timeline li { flex-direction: row; text-align: left; gap: 16px; }
       .ptable thead { display: none; }
       .ptable, .ptable tbody, .ptable tr, .ptable th, .ptable td { display: block; width: 100%; }
@@ -407,7 +486,7 @@
       <div class="wrap">
         <div class="hero-copy">
           <h1 class="catch">
-            <span class="s">その<span class="mark">「わかった」<span class="catch-note hand" aria-hidden="true">ほんとに？</span></span>、</span>
+            <span class="s">その<span class="mark">「わかった」<svg class="pen-ring" viewBox="0 0 220 70" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M20 40 C 12 16, 110 4, 192 16 C 222 24, 216 56, 150 62 C 82 68, 14 62, 12 42 C 10 26, 44 13, 80 10"/></svg><span class="catch-note hand" aria-hidden="true">ほんとに？</span></span>、</span>
             <span class="l nobr">説明できる？</span>
           </h1>
           <p class="hero-lead">AIのライバル受験生「Feyn」に、あなたが先生として説明する。言葉に詰まった所に、Feynが赤ペンで「なんで？」を入れてくる。そこが、あなたが本当はわかっていない所。</p>
@@ -538,12 +617,12 @@
             <p class="sheet-sub" aria-hidden="true">数学　クリア</p>
             <p class="sheet-title" aria-hidden="true">放物線と直線で囲まれた面積</p>
             <p aria-hidden="true">&nbsp;</p>
-            <p class="gap-tag" aria-hidden="true">曖昧に理解している</p>
-            <p class="gap-desc" aria-hidden="true">公式が「交点が2つあるとき」だけ使える理由</p>
-            <p class="gap-quote" aria-hidden="true">あなたの説明：「なんとなく公式に当てはめた」</p>
+            <p class="gap-tag" style="--d: 1.4s;" aria-hidden="true">曖昧に理解している</p>
+            <p class="gap-desc" style="--d: 1.8s;" aria-hidden="true">公式が「交点が2つあるとき」だけ使える理由</p>
+            <p class="gap-quote" style="--d: 2.1s;" aria-hidden="true">あなたの説明：「なんとなく公式に当てはめた」</p>
             <p aria-hidden="true">&nbsp;</p>
-            <p class="gap-tag" aria-hidden="true">前提知識が抜けている</p>
-            <p class="gap-desc" aria-hidden="true">定積分と面積の関係</p>
+            <p class="gap-tag" style="--d: 2.6s;" aria-hidden="true">前提知識が抜けている</p>
+            <p class="gap-desc" style="--d: 3s;" aria-hidden="true">定積分と面積の関係</p>
           </div>
           <p class="sample">※ 画面の見本です</p>
         </div>
@@ -677,6 +756,62 @@
       try { localStorage.setItem('feynTheme', next); } catch (e) { /* 保存できなくても切り替えは効く */ }
       updateThemeLabel();
     });
+
+    // ===== 演出: 画面に入った所から、順番に動かす =====
+    // html.js が無い（動きを減らす設定）ときは何もしない＝最初から全部見えたまま
+    (() => {
+      if (!document.documentElement.classList.contains('js')) return;
+
+      // ふわっと出す所と、中身を順番に動かす所（.seq）
+      const fade = ['.worries h2', '.bridge', '.how-title', '.how-sub', '.step-text', '.graded-text', '.sheet',
+                    '.review h2', '.review > .wrap > p', '.board-band .wrap', '.feyn-card', '.feyn h2', '.traits',
+                    '.price h2', '.ptable', '.faq h2', '.final h2'];
+      const seq = ['.hero', '.stage', '.facts', '.bubbles', '.step-visual', '.timeline'];
+      fade.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal')));
+      seq.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal', 'seq')));
+
+      // 数字を0から数え上げる（7科目・5区分…、ノートの納得度）
+      function countUp(el, to, { delay = 0, duration = 800, suffix = '' } = {}) {
+        el.textContent = '0' + suffix;
+        setTimeout(() => {
+          const start = performance.now();
+          const tick = (now) => {
+            const t = Math.min(1, (now - start) / duration);
+            el.textContent = Math.round(to * (1 - Math.pow(1 - t, 3))) + suffix;
+            if (t < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }, delay);
+      }
+
+      function onEnter(el) {
+        el.classList.add('is-in');
+        if (el.classList.contains('facts')) {
+          el.querySelectorAll('.fact b').forEach((b, i) => {
+            const node = b.firstChild;            // 「7」「30」などの数字の部分（単位の <small> はそのまま）
+            const to = parseInt(node.textContent, 10);
+            if (!isNaN(to)) {
+              const span = document.createElement('span');
+              node.replaceWith(span);
+              countUp(span, to, { delay: i * 120 });
+            }
+          });
+        }
+        if (el.classList.contains('stage')) {
+          const pct = el.querySelector('.nb-score > span:last-child');
+          if (pct) countUp(pct, 50, { delay: 3600, duration: 1000, suffix: '%' });
+        }
+      }
+
+      const targets = document.querySelectorAll('.reveal');
+      if (!('IntersectionObserver' in window)) { targets.forEach(onEnter); return; }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) { onEnter(e.target); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+      targets.forEach(el => io.observe(el));
+    })();
 
     // ===== スマホの固定ボタン: ページ内の申し込みボタンが見えている間は隠す（重なって押しにくくならないように） =====
     (() => {

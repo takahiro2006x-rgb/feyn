@@ -367,7 +367,44 @@ EVENT_TYPES = {
     'life_blocked',            # 無料プランのライフ切れで始められなかった
     'subscription_started',    # 無料 → 有料になった
     'subscription_ended',      # 有料 → 無料に戻った（解約・支払い失敗など）
+    # 紹介ページ（LP）の効果測定。誰が見た・押したかは記録しない（user_id は入れない）
+    'lp_view',                 # LPが表示された（ログイン中の人は数えない）
+    'lp_cta_click',            # LPの「無料で始める」が押された（mode: どのボタンか → LP_CTA_PLACES）
+    'lp_contact_click',        # LPの先生向け「導入について相談する」が押された
 }
+
+# LPの「無料で始める」ボタンの場所（events.mode に入れる値）
+LP_CTA_PLACES = {'header', 'hero', 'board', 'price', 'final', 'sticky'}
+
+
+def compute_lp_metrics(days=30, now=None):
+    """LPの表示回数と、ボタンごとのクリック回数（直近 days 日）。
+    確認の例: py -c "import core; print(core.compute_lp_metrics())"
+    """
+    days = max(1, min(int(days), 365))
+    now = now or datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')   # DBの時刻はUTC
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT event_type, mode, COUNT(*) AS cnt FROM events "
+            "WHERE event_type IN ('lp_view', 'lp_cta_click', 'lp_contact_click') AND created_at >= ? "
+            'GROUP BY event_type, mode',
+            (since,)
+        ).fetchall()
+    views = sum(r['cnt'] for r in rows if r['event_type'] == 'lp_view')
+    clicks = {place: 0 for place in sorted(LP_CTA_PLACES)}
+    for r in rows:
+        if r['event_type'] == 'lp_cta_click' and r['mode'] in clicks:
+            clicks[r['mode']] += r['cnt']
+    total_clicks = sum(clicks.values())
+    return {
+        'days': days,
+        'views': views,
+        'cta_clicks': clicks,
+        'cta_clicks_total': total_clicks,
+        'cta_click_rate': round(total_clicks / views, 3) if views else None,
+        'contact_clicks': sum(r['cnt'] for r in rows if r['event_type'] == 'lp_contact_click'),
+    }
 
 
 def log_event(event_type, user_id=None, conv_id=None, subject=None, mode=None, turn=None):

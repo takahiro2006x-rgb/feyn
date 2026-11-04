@@ -530,7 +530,7 @@
         <a href="#faq" class="nav-link">よくある質問</a>
         <button class="theme-toggle" id="themeToggle" type="button">ダークモード</button>
         <a href="/login" class="nav-link" data-auth-cta data-loggedin-hide>ログイン</a>
-        <a href="/login?signup=1" class="btn" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+        <a href="/login?signup=1" class="btn" data-auth-cta data-track-cta="header" data-loggedin-text="アプリへ戻る">無料で始める</a>
       </nav>
     </div>
   </header>
@@ -547,7 +547,7 @@
           <p class="hero-lead">AIの生徒役「Feyn」に、習ったことを教えてみよう。Feynが「なんで？」と書き込んでくる所が、まだわかっていない所です。</p>
           <div class="cta" id="heroCta" style="align-items: flex-start;">
             <span class="micro">＼ 登録1分・カード登録なし ／</span>
-            <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+            <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-track-cta="hero" data-loggedin-text="アプリへ戻る">無料で始める</a>
           </div>
         </div>
 
@@ -787,7 +787,7 @@
         <p class="big">今日習ったことを、1つFeynに説明してみる。<span class="chalk">どこで詰まるかが、今日の収穫。</span></p>
         <div class="cta">
           <span class="micro">＼ 登録1分・カード登録なし ／</span>
-          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-track-cta="board" data-loggedin-text="アプリへ戻る">無料で始める</a>
         </div>
       </div>
     </section>
@@ -829,7 +829,7 @@
         </div>
         <div class="cta">
           <span class="micro">＼ まずは無料プランから ／</span>
-          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-track-cta="price" data-loggedin-text="アプリへ戻る">無料で始める</a>
         </div>
 
         <aside class="parents" aria-labelledby="parentsTitle">
@@ -862,7 +862,7 @@
           <p class="teacher-note">先生用のアカウントは、運営が発行する先生コードで登録します。導入の方法は、まずはご相談ください。</p>
           <div class="cta teacher-cta">
             <!-- 【要確認】相談を受け付けるメールアドレス。ここ1か所（href の mailto: の後ろ）を書き換える -->
-            <a href="mailto:contact@example.com?subject=Feyn%E3%81%AE%E5%B0%8E%E5%85%A5%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6" class="btn btn-ghost" id="contactBtn">導入について相談する</a>
+            <a href="mailto:contact@example.com?subject=Feyn%E3%81%AE%E5%B0%8E%E5%85%A5%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6" class="btn btn-ghost" id="contactBtn" data-track-contact>導入について相談する</a>
             <span class="micro">メールが開きます</span>
           </div>
         </div>
@@ -902,7 +902,7 @@
         <span class="hand">まずは1問、Feynに教えてみよう</span>
         <div class="cta">
           <span class="micro">＼ 登録1分・カード登録なし ／</span>
-          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+          <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-track-cta="final" data-loggedin-text="アプリへ戻る">無料で始める</a>
         </div>
       </div>
     </section>
@@ -918,7 +918,7 @@
   <!-- スマホの画面下に固定する申し込みボタン -->
   <div class="sticky-cta is-hidden" id="stickyCta">
     <span class="micro">登録1分・カード登録なし</span>
-    <a href="/login?signup=1" class="btn" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
+    <a href="/login?signup=1" class="btn" data-auth-cta data-track-cta="sticky" data-loggedin-text="アプリへ戻る">無料で始める</a>
   </div>
 
   <script>
@@ -998,12 +998,28 @@
       watched.forEach(el => io.observe(el));
     })();
 
+    // ===== LPの効果測定（表示と、どのボタンが押されたか。誰が見た・押したかは送らない） =====
+    let lpLoggedIn = false;   // ログイン中の人（アプリへ戻る人）は数えない
+    function trackLp(type, place) {
+      if (lpLoggedIn) return;
+      try {
+        const body = JSON.stringify({ type, place });
+        if (navigator.sendBeacon) navigator.sendBeacon('/api/lp-event', new Blob([body], { type: 'application/json' }));
+        else fetch('/api/lp-event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true });
+      } catch (e) { /* 計測に失敗しても、ページの動きには影響させない */ }
+    }
+    document.querySelectorAll('[data-track-cta]').forEach(el =>
+      el.addEventListener('click', () => trackLp('cta', el.dataset.trackCta)));
+    document.querySelectorAll('[data-track-contact]').forEach(el =>
+      el.addEventListener('click', () => trackLp('contact')));
+
     // ===== ログイン中なら、ボタンを「アプリへ戻る」に出し分ける =====
     // ログイン中にロゴなどからLPへ来ても、再ログイン画面を踏まずに戻れるようにする
     (async () => {
       try {
         const res = await fetch('/api/me');
-        if (!res.ok) return; // 未ログインなら何もしない（通常の登録・ログイン導線のまま）
+        if (!res.ok) { trackLp('view'); return; } // 未ログインなら表示を1回数え、通常の登録・ログイン導線のまま
+        lpLoggedIn = true;
         document.querySelectorAll('[data-auth-cta]').forEach(el => {
           if (el.hasAttribute('data-loggedin-hide')) {
             el.style.display = 'none';
@@ -1013,7 +1029,7 @@
             if (label) el.textContent = label;
           }
         });
-      } catch (e) {}
+      } catch (e) { trackLp('view'); }
     })();
   </script>
 </body>

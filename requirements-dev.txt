@@ -1,2 +1,4 @@
 -r requirements.txt
 pytest
+playwright   # scripts/lp_shots.py（LP用の画面を撮る。本番では使わない）
+pillow

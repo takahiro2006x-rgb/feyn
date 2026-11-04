@@ -332,6 +332,9 @@ def shoot_lp(out_dir, prefix=''):
             ctx = browser.new_context(reduced_motion='reduce', locale='ja-JP', color_scheme='light', **opts)
             page = ctx.new_page()
             page.goto(BASE + '/landing')
+            # 遅延読み込みの画像も写るように、先に全部読み込ませる
+            page.evaluate("() => { for (const img of document.images) { img.loading = 'eager'; img.decoding = 'sync'; } }")
+            page.wait_for_function('[...document.images].every(i => i.complete && i.naturalWidth > 0)', timeout=15000)
             page.wait_for_timeout(800)
             path = os.path.join(out_dir, f'{prefix}{name}-full.png')
             page.screenshot(path=path, full_page=True)

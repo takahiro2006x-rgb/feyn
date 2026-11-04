@@ -111,3 +111,35 @@ def test_fact_numbers_are_not_shrunk_by_the_caption_style():
     css = LANDING[LANDING.index('<style>'):LANDING.index('</style>')]
     assert '.fact > span {' in css
     assert '.fact span {' not in css
+
+
+def test_teacher_section_is_reachable_from_header_footer_and_faq():
+    assert '<section id="teachers" class="teachers">' in LANDING
+    assert '<a href="#teachers" class="nav-link">先生の方へ</a>' in LANDING
+    assert '<a href="#teachers">塾・学校の先生へ</a>' in LANDING
+    faq = LANDING[LANDING.index('id="faq"'):LANDING.index('id="finalCta"')]
+    assert 'href="#teachers"' in faq
+    assert LANDING.index('id="price"') < LANDING.index('id="teachers"') < LANDING.index('id="faq"')
+
+
+def test_teacher_section_lists_only_real_features():
+    section = LANDING[LANDING.index('id="teachers"'):LANDING.index('id="faq"')]
+    for feature in ['学習状況', '苦手ノート', '会話ログ', '課題を出す', 'パスワードの再発行']:
+        assert feature in section
+
+
+def test_contact_button_uses_a_single_mailto_address():
+    # 相談先のアドレスは1か所だけ。差し替え忘れに気づけるよう【要確認】の印を付けておく
+    assert len(re.findall(r'href="mailto:', LANDING)) == 1
+    assert 'id="contactBtn"' in LANDING
+    contact = LANDING[LANDING.index('id="contactBtn"') - 400:LANDING.index('id="contactBtn"')]
+    assert '【要確認】' in contact
+
+
+def test_real_app_screenshots_exist_and_are_served(client):
+    images = re.findall(r'<img src="(/static/lp/[^"]+\.webp)" width="\d+" height="\d+"[^>]*alt="[^"]+"', LANDING)
+    assert len(images) >= 5
+    for src in images:
+        resp = client.get(src)
+        assert resp.status_code == 200, src
+        assert resp.mimetype == 'image/webp'

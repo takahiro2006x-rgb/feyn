@@ -143,3 +143,18 @@ def test_real_app_screenshots_exist_and_are_served(client):
         resp = client.get(src)
         assert resp.status_code == 200, src
         assert resp.mimetype == 'image/webp'
+
+
+def test_feyn_is_described_consistently_as_the_student_you_teach():
+    # Feynは「あなたが教える相手の生徒役（鋭く質問してくる）」。ライバル・あなたが先生、の言い方を混ぜない
+    for old in ['ライバル', 'あなたが先生として', '赤ペンで']:
+        assert old not in LANDING, old
+    assert '生徒役' in LANDING
+    assert 'Feynからの質問' in LANDING
+
+
+def test_first_view_says_really_only_once_and_keeps_the_lead_short():
+    body = LANDING[LANDING.index('<body>'):]
+    assert body.count('ほんとに？') == 1
+    lead = re.search(r'<p class="hero-lead">(.*?)</p>', LANDING).group(1)
+    assert lead.count('。') <= 2

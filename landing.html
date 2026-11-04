@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feyn - その「わかった」、説明できる？｜ファインマン学習法AIアプリ</title>
-  <meta name="description" content="AIのライバル受験生「Feyn」に説明して学ぶ、ファインマン学習法のアプリ。説明に詰まる所を赤ペンで突っ込まれ、苦手ノートと復習で埋めていく。7科目対応・無料で始められます。">
+  <meta name="description" content="AIの生徒役「Feyn」に教えて学ぶ、ファインマン学習法のアプリ。Feynの鋭い質問に答えるうちに、わかったつもりの所が見つかり、苦手ノートと復習で埋めていく。7科目対応・無料で始められます。">
   <meta property="og:title" content="Feyn - その「わかった」、説明できる？">
-  <meta property="og:description" content="AIのライバル受験生に説明して学ぶ、ファインマン学習法のアプリ。無料で始められます。">
+  <meta property="og:description" content="AIの生徒役「Feyn」に教えて学ぶ、ファインマン学習法のアプリ。Feynの質問に詰まった所が、まだわかっていない所。無料で始められます。">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="ja_JP">
   <meta name="theme-color" content="#1E4D2B">
@@ -28,8 +28,8 @@
   <style>
     /* =========================================================
        核のモチーフ: 「ノートと赤ペン」
-       あなたの説明＝方眼ノートに書いた文、Feynの突っ込み＝赤ペンの書き込み。
-       赤ペンの赤は「突っ込みの印」と「申し込みボタン」だけに使う。
+       あなたの説明＝方眼ノートに書いた文、Feyn（あなたが教える生徒役）からの質問＝赤字の書き込み。
+       赤は「Feynからの質問」と「申し込みボタン」だけに使う。
        ========================================================= */
     :root {
       --paper:      #FFFFFF;   /* ノートの紙 */
@@ -39,7 +39,7 @@
       --ink:        #1B2A33;   /* 文字（墨） */
       --ink-soft:   #4A5A66;   /* 補足 */
       --pencil:     #33424D;   /* 生徒の鉛筆書き */
-      --red:        #D4352A;   /* 赤ペン（突っ込み・CTA） */
+      --red:        #D4352A;   /* 赤字（Feynからの質問・CTA） */
       --red-dark:   #A8261E;
       --board:      #1E4D2B;   /* 黒板の緑（濃い面） */
       --board-ink:  #F4F7F2;
@@ -141,7 +141,7 @@
     .hero-facts span::before { content: "・"; color: var(--red); }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-    /* ノートのページ（Feynの赤ペンが入った、あなたの説明） */
+    /* ノートのページ（あなたの説明に、Feynが質問を書き込んでいる） */
     .stage { position: relative; }
     .notebook {
       position: relative; background-color: #FFFFFF; color: #1B2A33;
@@ -158,6 +158,7 @@
       content: ""; position: absolute; left: 16px; top: 24px; bottom: 24px; width: 12px;
       background: radial-gradient(circle at 6px 6px, #D6DEE4 5px, transparent 5.5px) 0 0 / 12px 44px repeat-y;
     }
+    .nb-legend { color: #D4352A; }
     .nb-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 700; color: #4A5A66; border-bottom: 2px solid #1B2A33; padding-bottom: 6px; margin-bottom: 14px; }
     .nb-line { display: grid; grid-template-columns: minmax(0, 1fr) 13em; gap: 14px; align-items: start; padding: 6px 0; }
     .nb-text { font-family: var(--hand); font-weight: 600; font-size: 18px; color: #33424D; line-height: 1.75; }
@@ -219,7 +220,7 @@
     .way { border: 1px solid #C9D4DC; background: #FFFFFF; border-radius: 4px; padding: 4px 10px; font-size: 13px; font-weight: 700; color: #33424D; }
     .redpen-note { font-family: var(--hand); font-weight: 600; color: #D4352A; font-size: 15px; align-self: flex-start; padding-left: 6px; }
 
-    /* ===== 添削された結果のページ ===== */
+    /* ===== 会話のあとの結果 ===== */
     .graded { padding: 96px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--paper-2); }
     .graded .wrap { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
     .graded h2 { font-size: clamp(28px, 4vw, 42px); font-weight: 900; }
@@ -373,7 +374,7 @@
     .js .hero .catch-note { clip-path: inset(0 100% 0 0); }
     .js .hero.is-in .catch-note { animation: pen-write 0.6s 1.2s ease-out forwards; }
 
-    /* ノート: 赤ペンの書き込みが1つずつ入り、最後にFeynの納得度が伸びる */
+    /* ノート: Feynからの質問が1つずつ書き込まれ、最後にFeynの納得度が伸びる */
     .js .notebook .wavy { text-decoration-color: transparent; }
     .js .notebook .ring { display: inline-block; border-color: transparent; }
     .js .notebook .nb-note { clip-path: inset(0 100% 0 0); }
@@ -425,7 +426,11 @@
     }
     @media (max-width: 767px) {
       .nav .nav-link, .theme-toggle { display: none; }
-      .hero .wrap { padding-top: 48px; padding-bottom: 56px; }
+      .hero .wrap { padding-top: 34px; padding-bottom: 56px; gap: 26px; }
+      /* 1画面目にノートの絵ができるだけ入るよう、詰める（箇条の3点は下の帯と重なるので隠す） */
+      .hero-copy { gap: 16px; }
+      .hero-lead { font-size: 16px; line-height: 1.75; }
+      .hero-facts { display: none; }
       .notebook { padding: 20px 16px 22px 40px; transform: rotate(-0.8deg); }
       .notebook::before { left: 12px; }
       .nb-line { grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 4px 0 8px; }
@@ -520,7 +525,7 @@
             <span class="s">その<span class="mark">「わかった」<svg class="pen-ring" viewBox="0 0 220 70" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M20 40 C 12 16, 110 4, 192 16 C 222 24, 216 56, 150 62 C 82 68, 14 62, 12 42 C 10 26, 44 13, 80 10"/></svg><span class="catch-note hand" aria-hidden="true">ほんとに？</span></span>、</span>
             <span class="l nobr">説明できる？</span>
           </h1>
-          <p class="hero-lead">AIのライバル受験生「Feyn」に、あなたが先生として説明する。言葉に詰まった所に、Feynが赤ペンで「なんで？」を入れてくる。そこが、あなたが本当はわかっていない所。</p>
+          <p class="hero-lead">AIの生徒役「Feyn」に、習ったことを教えてみよう。Feynが「なんで？」と書き込んでくる所が、まだわかっていない所です。</p>
           <div class="cta" id="heroCta" style="align-items: flex-start;">
             <span class="micro">＼ 登録1分・カード登録なし ／</span>
             <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
@@ -528,16 +533,16 @@
           <div class="hero-facts"><span>7科目に対応</span><span>答えは言わずに問いで返す</span><span>スマホでもPCでも</span></div>
         </div>
 
-        <div class="stage" role="img" aria-label="見本: 生徒がノートに書いた運動量の説明に、Feynが赤ペンで「なんとなくって？」「どこまでを1つと見る？」と書き込んでいる。横にFeynとの会話画面。">
+        <div class="stage" role="img" aria-label="見本: あなたがノートに書いた運動量の説明に、Feynからの質問「どこまでを1つと見る？」「なんとなくって？」が赤字で書き込まれている。">
           <div class="notebook" aria-hidden="true">
-            <div class="nb-head"><span>物理　運動量保存</span><span>No. 12</span></div>
+            <div class="nb-head"><span>物理　運動量保存</span><span class="nb-legend">赤字＝Feynからの質問</span></div>
             <div class="nb-line">
               <span class="nb-text">壁にぶつかったボールは、<span class="wavy">運動量が保存されない</span>。</span>
-              <span class="nb-note">ほんとに？<br>どこまでを「1つ」と見る？</span>
+              <span class="nb-note">どこまでを「1つ」と<br>見てるの？</span>
             </div>
             <div class="nb-line">
               <span class="nb-text"><span class="ring">なんとなく</span>、壁が力を加えるから。</span>
-              <span class="nb-note">「なんとなく」って？</span>
+              <span class="nb-note">「なんとなく」じゃなくて、<br>なんで？</span>
             </div>
             <div class="nb-line">
               <span class="nb-text">外から力がはたらかなければ保存される。</span>
@@ -585,8 +590,8 @@
         <div class="step">
           <div class="step-text">
             <div class="step-num" aria-hidden="true">01</div>
-            <h3>Feynが、ひっかかる問題を出す</h3>
-            <p>科目と単元を選ぶと、Feynが<strong>受験生が間違えやすいポイントを、具体的な数値つき</strong>で聞いてくる。解いている問題集のページを写真で送れば、その問題について聞いてくる。</p>
+            <h3>Feynが、ひっかかる所を質問してくる</h3>
+            <p>科目と単元を選ぶと、生徒役のFeynが<strong>受験生が間違えやすいポイントを、具体的な数値つき</strong>で質問してくる。解いている問題集のページを写真で送れば、その問題について聞いてくる。</p>
           </div>
           <div class="step-visual shot-visual">
             <figure class="phone">
@@ -605,7 +610,7 @@
           </div>
           <div class="step-visual">
             <div class="card-screen" aria-hidden="true">
-              <div class="cs-head"><span class="avatar"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span>Feyn<small>英語担当のライバル</small></span></div>
+              <div class="cs-head"><span class="avatar"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span>Feyn<small>あなたに英語を教わる生徒役</small></span></div>
               <span class="b-me">事実と違うことを言う仮定法だから、形を過去にずらしてるんだよ。</span>
               <div class="ways"><span class="way">文字で入力</span><span class="way">声で入力</span><span class="way">数式</span><span class="way">写真で出題</span></div>
             </div>
@@ -616,11 +621,11 @@
           <div class="step-text">
             <div class="step-num" aria-hidden="true">03</div>
             <h3>答えは言わない。問いで返ってくる</h3>
-            <p>曖昧な言葉、飛ばした理由、前提の抜け。Feynは<strong>答えを言わずに、問いだけを1つずつ</strong>返してくる。説明しきって納得させたら、クリア。</p>
+            <p>曖昧な言葉、飛ばした理由、前提の抜け。Feynは<strong>答えを言わずに、質問だけを1つずつ</strong>返してくる。説明しきってFeynが納得したら、クリア。</p>
           </div>
           <div class="step-visual">
             <div class="card-screen" aria-hidden="true">
-              <div class="cs-head"><span class="avatar"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span>Feyn<small>英語担当のライバル</small></span></div>
+              <div class="cs-head"><span class="avatar"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span>Feyn<small>あなたに英語を教わる生徒役</small></span></div>
               <span class="b-feyn">「過去にずらす」って、今の話なのに過去形を使う理由になる？</span>
               <span class="b-me">現実から距離がある、っていう気持ちを時制で表してるから。</span>
               <span class="b-feyn">なるほど…！ やっとわかった。ありがとう！</span>
@@ -630,7 +635,7 @@
       </div>
     </section>
 
-    <!-- ===== 添削された結果 ===== -->
+    <!-- ===== 会話のあとの結果 ===== -->
     <section class="graded">
       <div class="wrap">
         <div class="graded-text">
@@ -823,7 +828,7 @@
     <section id="faq" class="faq">
       <div class="wrap">
         <h2>よくある質問</h2>
-        <details><summary>答えは教えてくれないの？</summary><div class="a"><p>Feynは問いを返す役です。詰まったときは「ヒント」でキーワードだけ、どうしても無理なときは「答えを見る」で解説を出せます。</p></div></details>
+        <details><summary>答えは教えてくれないの？</summary><div class="a"><p>Feynは、あなたが教える相手の生徒役なので、答えは言わずに質問を返してきます。詰まったときは「ヒント」でキーワードだけ、どうしても無理なときは「答えを見る」で解説を出せます。</p></div></details>
         <details><summary>どの科目・試験に使える？</summary><div class="a"><p>物理・数学・英語・化学・生物・国語・歴史の7科目です。大学受験・高校受験・中学受験・定期テスト・大学の試験に合わせて、問いのレベルが変わります。</p></div></details>
         <details><summary>スマホでも使える？</summary><div class="a"><p>スマホ・タブレット・PCで使えます。ホーム画面に追加すれば、アプリのように開けます。問題集を写真で送ったり、声で説明したりもできます。</p></div></details>
         <details><summary>ファインマン学習法って？</summary><div class="a"><p>「人に説明できれば、本当に理解している」という考え方の勉強法です。説明しようとして詰まる所が、まだわかっていない所です。</p></div></details>

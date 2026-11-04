@@ -212,3 +212,14 @@ def test_parents_block_covers_card_cancel_and_data():
     parents = parents[:parents.index('</aside>')]
     for text in ['カードの登録がいりません', 'いつでも解約', 'href="/privacy"', 'Gemini', 'Groq']:
         assert text in parents, text
+
+
+def test_ogp_image_and_card_are_set(client):
+    assert '<meta property="og:image" content="https://feyn-28kg.onrender.com/static/lp/ogp.png">' in LANDING
+    assert '<meta property="og:url" content="https://feyn-28kg.onrender.com/landing">' in LANDING
+    assert '<meta name="twitter:card" content="summary_large_image">' in LANDING
+    resp = client.get('/static/lp/ogp.png')
+    assert resp.status_code == 200 and resp.mimetype == 'image/png'
+    from PIL import Image
+    import io
+    assert Image.open(io.BytesIO(resp.data)).size == (1200, 630)

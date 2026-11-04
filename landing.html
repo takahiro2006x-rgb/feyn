@@ -20,7 +20,7 @@
   <meta name="theme-color" content="#1E4D2B">
   <link rel="icon" href="/icons/icon-192.png">
   <script>
-    // ちらつき防止のため、描画前に保存済みテーマを適用する（アプリ本体と同じ保存先）
+    // 描画前にテーマを決める: アプリで保存した設定があればそれ、無ければOSの設定に従う（切り替えボタンはアプリ側だけ）
     try {
       document.documentElement.setAttribute('data-theme',
         localStorage.getItem('feynTheme') ||
@@ -126,7 +126,6 @@
     .nav { display: flex; align-items: center; gap: 6px 22px; }
     .nav-link { text-decoration: none; font-size: 15px; font-weight: 700; color: var(--ink-soft); padding: 8px 0; }
     .nav-link:hover { color: var(--ink); }
-    .theme-toggle { min-height: 40px; padding: 4px 12px; border: 1px solid var(--rule); border-radius: 4px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
     .header .btn { min-height: 44px; padding: 8px 18px; font-size: 15px; box-shadow: 0 3px 0 var(--red-dark); }
 
     /* ===== ファーストビュー ===== */
@@ -450,7 +449,7 @@
       .catch-note { right: -4px; top: -32px; font-size: 16px; }
     }
     @media (max-width: 767px) {
-      .nav .nav-link, .theme-toggle { display: none; }
+      .nav .nav-link { display: none; }
       .hero .wrap { padding-top: 34px; padding-bottom: 56px; gap: 26px; }
       /* 1画面目にノートの絵ができるだけ入るよう、詰める */
       .hero-copy { gap: 16px; }
@@ -528,7 +527,6 @@
         <a href="#price" class="nav-link">料金</a>
         <a href="#teachers" class="nav-link">先生の方へ</a>
         <a href="#faq" class="nav-link">よくある質問</a>
-        <button class="theme-toggle" id="themeToggle" type="button">ダークモード</button>
         <a href="/login" class="nav-link" data-auth-cta data-loggedin-hide>ログイン</a>
         <a href="/login?signup=1" class="btn" data-auth-cta data-track-cta="header" data-loggedin-text="アプリへ戻る">無料で始める</a>
       </nav>
@@ -922,24 +920,6 @@
   </div>
 
   <script>
-    // ===== ダークモードの切り替え（アプリ本体と同じ保存先 feynTheme を使う） =====
-    const themeToggle = document.getElementById('themeToggle');
-
-    function updateThemeLabel() {
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeToggle.textContent = isDark ? 'ライトモード' : 'ダークモード';
-      themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
-    }
-    updateThemeLabel();
-
-    themeToggle.addEventListener('click', () => {
-      const html = document.documentElement;
-      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      html.setAttribute('data-theme', next);
-      try { localStorage.setItem('feynTheme', next); } catch (e) { /* 保存できなくても切り替えは効く */ }
-      updateThemeLabel();
-    });
-
     // ===== 演出: 画面に入った所から、順番に動かす =====
     // html.js が無い（動きを減らす設定）ときは何もしない＝最初から全部見えたまま
     (() => {

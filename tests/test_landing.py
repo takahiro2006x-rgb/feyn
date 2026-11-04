@@ -35,10 +35,14 @@ def test_buttons_switch_to_back_to_app_when_logged_in():
     assert "fetch('/api/me')" in LANDING
 
 
-def test_legal_link_and_theme_toggle_are_kept():
+def test_legal_link_is_kept_and_theme_follows_app_setting_or_os():
+    # LPには切り替えボタンを置かない。アプリで保存した設定（feynTheme）か、OSの設定に従う
     assert 'href="/tokushoho"' in LANDING
-    assert 'id="themeToggle"' in LANDING
-    assert "localStorage.setItem('feynTheme'" in LANDING   # アプリ本体と同じ保存先
+    assert 'id="themeToggle"' not in LANDING and 'theme-toggle' not in LANDING
+    head = LANDING[:LANDING.index('</head>')]
+    assert "localStorage.getItem('feynTheme')" in head
+    assert 'prefers-color-scheme: dark' in head
+    assert "localStorage.setItem('feynTheme'" not in LANDING
 
 
 @pytest.mark.parametrize('fact', [

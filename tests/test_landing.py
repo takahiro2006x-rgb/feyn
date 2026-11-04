@@ -96,14 +96,25 @@ def test_does_not_claim_to_be_completely_free():
     assert '完全無料' not in LANDING
 
 
-def test_price_table_scrolls_sideways_on_phones():
-    # スマホでは無料プランと受験生プランを左右に並べたまま、表を横にスワイプして見比べる
-    assert 'class="ptable-scroll"' in LANDING
-    assert '横にスワイプして見比べてね' in LANDING
-    css = LANDING[LANDING.index('<style>'):LANDING.index('</style>')]
-    assert 'overflow-x: auto' in css
-    assert 'position: sticky; left: 0' in css   # 項目名の列は左に残す
-    assert '.ptable thead { display: none; }' not in css   # 以前の縦積み表示に戻っていない
+def test_pricing_is_shown_as_plan_cards_with_shared_features():
+    # スマホでも横スクロールさせず、プランごとのカードを縦に並べる。両プランで同じものは表の外にまとめる
+    assert '<table class="ptable">' not in LANDING
+    assert 'ptableScroll' not in LANDING and 'swipe-hint' not in LANDING   # 横スクロール用のCSS・JSは残さない
+    assert LANDING.count('<article class="plan') == 2
+    assert '<article class="plan paid"' in LANDING
+    common = LANDING[LANDING.index('class="plan-common"'):]
+    common = common[:common.index('</div>')]
+    assert 'ヒント・答えを見る（回数の制限なし）' in common
+    assert '苦手ノート' in common
+
+
+def test_hints_and_answers_have_no_plan_limit_in_the_app():
+    # 料金の書き方の根拠: ヒント・答えの API はプランで回数を分けていない
+    src = open('blueprints/chat.py', encoding='utf-8').read()
+    for route in ["'/api/hint'", "'/api/reveal'"]:
+        body = src[src.index(route):]
+        body = body[:body.index('@chat_bp.route', 1)] if '@chat_bp.route' in body[1:] else body
+        assert 'check_and_consume_life' not in body and 'subscription' not in body
 
 
 def test_fact_numbers_are_not_shrunk_by_the_caption_style():

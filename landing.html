@@ -295,13 +295,6 @@
     .price { padding: 96px 0; background: var(--paper-2); border-top: 1px solid var(--rule); }
     .price h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 900; text-align: center; }
     .price .lead-line { margin: 8px 0 36px; }
-    .ptable { max-width: 860px; margin: 0 auto; border-collapse: collapse; width: 100%; background: var(--paper); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
-    .ptable th, .ptable td { padding: 16px 18px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; font-size: 15px; }
-    .ptable thead th { font-size: 17px; font-weight: 900; border-bottom: 1px solid var(--ink); }
-    .ptable thead th.paid { color: var(--red); }
-    .ptable tbody th { width: 30%; font-weight: 700; color: var(--ink-soft); }
-    .ptable .yen { font-size: 30px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
-    .ptable .yen small { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
     .price .cta { display: flex; margin-top: 36px; }
     .parents { max-width: 860px; margin: 48px auto 0; background: var(--paper); border: 1px solid var(--rule); border-top: 3px solid var(--board); border-radius: 4px; padding: 24px 28px 8px; }
     .parents h3 { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
@@ -309,11 +302,23 @@
     .parents dt { font-weight: 900; }
     .parents dd { color: var(--ink-soft); }
     .parents a { color: var(--red); font-weight: 700; }
-    .ptable-wrap { position: relative; max-width: 860px; margin: 0 auto; }
-    .ptable-scroll:focus-visible { outline-offset: 4px; }
-    .swipe-hint { display: none; }
-    /* 右端のぼかし: 「まだ右に続きがある」ことを示す。右端まで動かしたら消す */
-    .ptable-wrap::after { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 40px; background: linear-gradient(90deg, rgba(243, 248, 251, 0), var(--paper-2)); pointer-events: none; display: none; }
+    .plans { max-width: 860px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: stretch; }
+    .plan { position: relative; background: var(--paper); border: 1px solid var(--rule); border-top: 3px solid var(--ink); border-radius: 4px; padding: 24px 24px 12px; }
+    .plan.paid { border: 2px solid var(--red); border-top-width: 6px; box-shadow: 0 12px 30px rgba(212, 53, 42, 0.12); }
+    .plan h3 { font-size: 19px; font-weight: 900; }
+    .plan.paid h3 { color: var(--red); }
+    .plan-badge { position: absolute; top: -16px; right: 18px; background: var(--red); color: #FFFFFF; font-size: 13px; font-weight: 900; padding: 3px 12px; border-radius: 99px; }
+    [data-theme="dark"] .plan-badge { color: #1A0D0B; }
+    .plan-price { margin: 6px 0 10px; }
+    .plan .yen { font-size: 36px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
+    .plan-price small { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+    .plan dl > div { padding: 12px 0; border-top: 1px solid var(--rule); font-size: 15px; }
+    .plan dt { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+    .plan dd strong { font-weight: 900; color: var(--ink); }
+    .plan-common { max-width: 860px; margin: 24px auto 0; padding: 18px 24px; border: 1px dashed var(--rule); border-radius: 4px; background: var(--paper); }
+    .plan-common h3 { font-size: 15px; font-weight: 900; margin-bottom: 6px; }
+    .plan-common ul { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 15px; color: var(--ink-soft); }
+    .plan-common li::before { content: "✓ "; color: var(--red); font-weight: 900; }
 
     /* ===== 塾・学校の先生へ ===== */
     .teachers { padding: 96px 0; border-top: 1px solid var(--rule); }
@@ -474,19 +479,11 @@
       .y-tick { font-size: 10px; }
       .curve-note { font-size: 12px; }
       .day { font-size: 10.5px; }
-      .swipe-hint { display: block; text-align: right; color: var(--red); font-size: 15px; margin-bottom: 6px; }
-      .ptable-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
-      .ptable-wrap::after { display: block; }
-      .ptable-wrap.at-end::after { visibility: hidden; }
-      .swipe-hint.is-off { display: none; }   /* 表が画面に収まるときは案内を出さない */
-      .ptable { width: auto; min-width: 100%; }
-      .ptable th, .ptable td { padding: 14px 14px; font-size: 14px; }
-      .ptable td { width: 13.5em; min-width: 13.5em; }
-      .ptable thead th:first-child, .ptable tbody th {
-        position: sticky; left: 0; z-index: 1; width: 6.8em; min-width: 6.8em;
-        background: var(--paper); box-shadow: 1px 0 0 var(--rule);   /* スワイプしても項目名は左に残す */
-      }
-      .ptable .yen { font-size: 26px; }
+      /* 料金はプランごとに縦に並べる */
+      .plans { grid-template-columns: minmax(0, 1fr); gap: 30px; }
+      .plan { padding: 22px 18px 10px; }
+      .plan-common { padding: 16px 18px; }
+      .plan-common ul { flex-direction: column; }
       .board-band .wrap { flex-direction: column; align-items: flex-start; }
       .voice-list { grid-template-columns: minmax(0, 1fr); gap: 14px; }
       .voices { padding-bottom: 72px; }
@@ -792,20 +789,35 @@
       <div class="wrap">
         <h2>料金</h2>
         <p class="lead-line">無料のまま使い続けられます。たくさん使いたいときだけ、受験生プランへ。</p>
-        <p class="swipe-hint hand" id="swipeHint" aria-hidden="true">横にスワイプして見比べてね →</p>
-        <div class="ptable-wrap" id="ptableWrap">
-        <div class="ptable-scroll" id="ptableScroll" role="region" tabindex="0" aria-label="料金表。横にスクロールすると、無料プランと受験生プランを見比べられます">
-        <table class="ptable">
-          <thead><tr><th scope="col"><span class="sr-only">項目</span></th><th scope="col">無料プラン</th><th scope="col" class="paid">受験生プラン</th></tr></thead>
-          <tbody>
-            <tr><th scope="row">料金</th><td data-plan="無料プラン"><span class="yen">¥0</span></td><td data-plan="受験生プラン" class="paid"><span class="yen">¥980<small> / 月（税込）</small></span></td></tr>
-            <tr><th scope="row">新しい会話</th><td data-plan="無料プラン">ライフ3つまで。1回始めるごとに1つ使い、2時間で1つ回復</td><td data-plan="受験生プラン" class="paid">無制限</td></tr>
-            <tr><th scope="row">ヒント・答えを見る</th><td data-plan="無料プラン">使える</td><td data-plan="受験生プラン" class="paid">無制限</td></tr>
-            <tr><th scope="row">苦手ノート・復習・学習のきろく</th><td data-plan="無料プラン">使える</td><td data-plan="受験生プラン" class="paid">使える</td></tr>
-            <tr><th scope="row">解約</th><td data-plan="無料プラン">—</td><td data-plan="受験生プラン" class="paid">いつでもできる</td></tr>
-          </tbody>
-        </table>
+        <div class="plans">
+          <article class="plan" aria-labelledby="planFree">
+            <h3 id="planFree">無料プラン</h3>
+            <p class="plan-price"><span class="yen">¥0</span></p>
+            <dl>
+              <div><dt>新しい会話</dt><dd>ライフ3つまで。1回始めるごとに1つ使い、2時間で1つ回復</dd></div>
+              <div><dt>やめるとき</dt><dd>手続きはいりません</dd></div>
+            </dl>
+          </article>
+          <article class="plan paid" aria-labelledby="planPaid">
+            <p class="plan-badge">たくさん使いたい人に</p>
+            <h3 id="planPaid">受験生プラン</h3>
+            <p class="plan-price"><span class="yen">¥980</span><small> / 月（税込）</small></p>
+            <dl>
+              <div><dt>新しい会話</dt><dd><strong>無制限</strong>（ライフを気にせず始められる）</dd></div>
+              <div><dt>やめるとき</dt><dd>マイページから、いつでも解約できる</dd></div>
+            </dl>
+          </article>
         </div>
+        <div class="plan-common">
+          <h3>どちらのプランでも使える機能</h3>
+          <ul>
+            <li>ヒント・答えを見る（回数の制限なし）</li>
+            <li>苦手ノート</li>
+            <li>忘れかけたころの復習</li>
+            <li>学習のきろく</li>
+            <li>問題集の写真から出題</li>
+            <li>声で説明する（対応しているブラウザのみ）</li>
+          </ul>
         </div>
         <div class="cta">
           <span class="micro">＼ まずは無料プランから ／</span>
@@ -928,7 +940,7 @@
       // ふわっと出す所と、中身を順番に動かす所（.seq）
       const fade = ['.worries h2', '.bridge', '.how-title', '.how-sub', '.step-text', '.graded-text', '.phones',
                     '.review h2', '.review > .wrap > p', '.board-band .wrap',
-                    '.price h2', '.ptable-wrap', '.parents', '.teachers-text', '.teachers-shots', '.faq h2', '.final h2'];
+                    '.price h2', '.plans', '.plan-common', '.parents', '.teachers-text', '.teachers-shots', '.faq h2', '.final h2'];
       const seq = ['.hero', '.stage', '.facts', '.bubbles', '.step-visual', '.curve'];
       fade.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal')));
       seq.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal', 'seq')));
@@ -963,37 +975,6 @@
         });
       }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
       targets.forEach(el => io.observe(el));
-    })();
-
-    // ===== 料金表（スマホ）: 横にスクロールできることを伝える =====
-    (() => {
-      const box = document.getElementById('ptableScroll');
-      const wrap = document.getElementById('ptableWrap');
-      if (!box || !wrap) return;
-      const updateEdge = () => {
-        const atEnd = box.scrollLeft + box.clientWidth >= box.scrollWidth - 4;
-        wrap.classList.toggle('at-end', atEnd);
-        const hint = document.getElementById('swipeHint');
-        if (hint) hint.classList.toggle('is-off', box.scrollWidth <= box.clientWidth + 4);
-      };
-      box.addEventListener('scroll', updateEdge, { passive: true });
-      window.addEventListener('resize', updateEdge);
-      updateEdge();
-
-      // 表が画面に入ったら、一度だけ少し右に動かして戻す（動きを減らす設定の人には出さない）
-      if (!document.documentElement.classList.contains('js') || !('IntersectionObserver' in window)) return;
-      const io = new IntersectionObserver((entries) => {
-        entries.forEach(e => {
-          if (!e.isIntersecting) return;
-          io.disconnect();
-          if (box.scrollWidth <= box.clientWidth + 4 || box.scrollLeft > 0) return;   // はみ出していない・もう動かした
-          setTimeout(() => {
-            box.scrollTo({ left: 72, behavior: 'smooth' });
-            setTimeout(() => box.scrollTo({ left: 0, behavior: 'smooth' }), 700);
-          }, 600);
-        });
-      }, { threshold: 0.6 });
-      io.observe(box);
     })();
 
     // ===== スマホの固定ボタン: ページ内の申し込みボタンが見えている間は隠す（重なって押しにくくならないように） =====

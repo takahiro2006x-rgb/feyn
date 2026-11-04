@@ -158,3 +158,21 @@ def test_first_view_says_really_only_once_and_keeps_the_lead_short():
     assert body.count('ほんとに？') == 1
     lead = re.search(r'<p class="hero-lead">(.*?)</p>', LANDING).group(1)
     assert lead.count('。') <= 2
+
+
+@pytest.mark.parametrize('svg_class, top, bottom', [('curve-svg pc', 30, 250), ('curve-svg sp', 30, 290)])
+def test_forgetting_curve_does_not_overstate(svg_class, top, bottom):
+    # 復習しない線はゼロに張り付かない。復習で戻る所も100%ちょうどにしない
+    svg = LANDING[LANDING.index(f'<svg class="{svg_class}"'):]
+    svg = svg[:svg.index('</svg>')]
+    gray = re.search(r'class="curve-none" pathLength="1" d="([^"]+)"', svg).group(1)
+    gray_y = [float(y) for y in re.findall(r'[ML][\d.]+ ([\d.]+)', gray)]
+    assert max(gray_y) < bottom - (bottom - top) * 0.15
+    dots_y = [float(y) for y in re.findall(r'class="rv-dot"[^>]*cy="([\d.]+)"', svg)]
+    assert len(dots_y) == 5 and all(y > top + 5 for y in dots_y)
+
+
+def test_forgetting_text_is_not_absolute():
+    assert 'ほとんど忘れ' not in LANDING
+    assert '数日でほとんど' not in LANDING
+    assert 'イメージ図' in LANDING

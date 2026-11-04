@@ -136,9 +136,6 @@
     .pen-ring path { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
     .catch-note { position: absolute; top: -34px; right: -96px; color: var(--red); font-size: 18px; transform: rotate(6deg); white-space: nowrap; }
     .hero-lead { font-size: 17px; font-weight: 700; color: var(--ink-soft); max-width: 31em; }
-    .hero-facts { display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 14px; font-weight: 700; color: var(--ink-soft); }
-    .hero-facts span { margin-right: 16px; white-space: nowrap; }
-    .hero-facts span::before { content: "・"; color: var(--red); }
     .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
     /* ノートのページ（あなたの説明に、Feynが質問を書き込んでいる） */
@@ -175,14 +172,14 @@
     .b-feyn { align-self: flex-start; background: #FFFFFF; border-radius: 12px 12px 12px 3px; }
     .b-me { align-self: flex-end; background: var(--brand); color: var(--on-brand); border-radius: 12px 12px 3px 12px; }
 
-    /* ===== 数字の帯 ===== */
+    /* ===== Feynでできること（黒板の帯） ===== */
     .facts { background: var(--board); color: var(--board-ink); }
     .facts .wrap { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .fact { padding: 26px 12px 24px; text-align: center; border-left: 1px solid rgba(255, 255, 255, 0.16); }
+    .fact { padding: 30px 16px 28px; text-align: center; border-left: 1px solid rgba(255, 255, 255, 0.16); }
     .fact:first-child { border-left: none; }
-    .fact b { display: block; font-size: clamp(54px, 6.6vw, 84px); font-weight: 900; line-height: 1; letter-spacing: -0.01em; }
-    .fact b small { font-size: 0.34em; font-weight: 900; margin-left: 3px; letter-spacing: 0.02em; }
-    .fact > span { display: block; margin-top: 6px; font-size: 14px; font-weight: 700; opacity: 0.9; word-break: auto-phrase; line-height: 1.6; }
+    .fact b { display: block; font-size: clamp(19px, 2vw, 24px); font-weight: 900; line-height: 1.45; word-break: auto-phrase; }
+    .fact b em { font-style: normal; color: var(--meter); font-size: 1.15em; letter-spacing: 0.02em; }
+    .fact > span { display: block; margin-top: 8px; font-size: 14px; font-weight: 700; opacity: 0.9; word-break: auto-phrase; line-height: 1.6; }
 
     /* ===== 悩み（吹き出し） ===== */
     .worries { padding: 96px 0 40px; }
@@ -279,6 +276,15 @@
     .curve-notes-sp .red { color: #D4352A; }
     .curve figcaption { margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
 
+    /* ===== 使った人の声（data-placeholder が付いている間は出さない） ===== */
+    [data-placeholder] { display: none !important; }
+    .voices { padding: 0 0 96px; }
+    .voices h2 { font-size: clamp(24px, 3.2vw, 34px); font-weight: 900; margin-bottom: 24px; }
+    .voice-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+    .voice { background: var(--paper); border: 1px solid var(--rule); border-left: 4px solid var(--red); border-radius: 4px; padding: 20px 22px; }
+    .voice blockquote { font-size: 16px; font-weight: 700; }
+    .voice figcaption { margin-top: 10px; font-size: 13px; color: var(--ink-soft); }
+
     /* ===== 申し込みの帯（黒板） ===== */
     .board-band { background: var(--board); color: var(--board-ink); }
     .board-band .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; padding-top: 56px; padding-bottom: 56px; }
@@ -297,6 +303,12 @@
     .ptable .yen { font-size: 30px; font-weight: 900; line-height: 1.2; white-space: nowrap; }
     .ptable .yen small { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
     .price .cta { display: flex; margin-top: 36px; }
+    .parents { max-width: 860px; margin: 48px auto 0; background: var(--paper); border: 1px solid var(--rule); border-top: 3px solid var(--board); border-radius: 4px; padding: 24px 28px 8px; }
+    .parents h3 { font-size: 20px; font-weight: 900; margin-bottom: 8px; }
+    .parents dl > div { display: grid; grid-template-columns: 8em minmax(0, 1fr); gap: 12px; padding: 12px 0; border-top: 1px solid var(--rule); font-size: 15px; }
+    .parents dt { font-weight: 900; }
+    .parents dd { color: var(--ink-soft); }
+    .parents a { color: var(--red); font-weight: 700; }
     .ptable-wrap { position: relative; max-width: 860px; margin: 0 auto; }
     .ptable-scroll:focus-visible { outline-offset: 4px; }
     .swipe-hint { display: none; }
@@ -427,10 +439,9 @@
     @media (max-width: 767px) {
       .nav .nav-link, .theme-toggle { display: none; }
       .hero .wrap { padding-top: 34px; padding-bottom: 56px; gap: 26px; }
-      /* 1画面目にノートの絵ができるだけ入るよう、詰める（箇条の3点は下の帯と重なるので隠す） */
+      /* 1画面目にノートの絵ができるだけ入るよう、詰める */
       .hero-copy { gap: 16px; }
       .hero-lead { font-size: 16px; line-height: 1.75; }
-      .hero-facts { display: none; }
       .notebook { padding: 20px 16px 22px 40px; transform: rotate(-0.8deg); }
       .notebook::before { left: 12px; }
       .nb-line { grid-template-columns: minmax(0, 1fr); gap: 2px; padding: 4px 0 8px; }
@@ -453,7 +464,8 @@
       .phones .phone:nth-child(2) { margin-top: 24px; }
       .phone-cap { font-size: 12px; bottom: -28px; }
       .teachers-shots .browser.sub { width: 88%; margin-top: -24px; }
-      .types div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+      .types div, .parents dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+      .parents { padding: 20px 18px 6px; }
       .curve { padding: 16px 12px 14px; }
       .curve-svg.pc, .curve-note { display: none; }
       .curve-svg.sp, .curve-notes-sp { display: block; }
@@ -476,6 +488,8 @@
       }
       .ptable .yen { font-size: 26px; }
       .board-band .wrap { flex-direction: column; align-items: flex-start; }
+      .voice-list { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .voices { padding-bottom: 72px; }
       .pc-br { display: none; }
       /* 画面下の固定ボタン（ファーストビューと最後の申し込みが見えている間は隠す） */
       body { padding-bottom: 76px; }
@@ -530,7 +544,6 @@
             <span class="micro">＼ 登録1分・カード登録なし ／</span>
             <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
           </div>
-          <div class="hero-facts"><span>7科目に対応</span><span>答えは言わずに問いで返す</span><span>スマホでもPCでも</span></div>
         </div>
 
         <div class="stage" role="img" aria-label="見本: あなたがノートに書いた運動量の説明に、Feynからの質問「どこまでを1つと見る？」「なんとなくって？」が赤字で書き込まれている。">
@@ -554,13 +567,13 @@
       </div>
     </section>
 
-    <!-- ===== 数字の帯（アプリの事実だけ） ===== -->
-    <section class="facts" aria-label="Feynの概要">
+    <!-- ===== Feynでできること（黒板の帯） ===== -->
+    <section class="facts" aria-label="Feynでできること">
       <div class="wrap">
-        <div class="fact"><b>7<small>科目</small></b><span>物理・数学・英語・化学・生物・国語・歴史</span></div>
-        <div class="fact"><b>5<small>区分</small></b><span>大学受験〜定期テスト</span></div>
-        <div class="fact"><b>3<small>種類</small></b><span>見つける「理解の穴」の種類</span></div>
-        <div class="fact"><b>30<small>日後</small></b><span>まで間をあけて復習</span></div>
+        <div class="fact"><b>答えを言わず、<br>質問で返してくる</b><span>だから、自分の言葉で考える</span></div>
+        <div class="fact"><b>詰まった所が、<br>苦手ノートに残る</b><span>根拠になった自分の発言つき</span></div>
+        <div class="fact"><b>忘れかけたころ、<br>聞き直しに来る</b><span>1・3・7・14・30日後に復習</span></div>
+        <div class="fact"><b><em>7</em>科目に対応</b><span>大学受験・高校受験・定期テストなど、レベルに合わせて</span></div>
       </div>
     </section>
 
@@ -748,6 +761,21 @@
       </div>
     </section>
 
+    <!-- ===== 使った人の声 =====
+         【要確認】実際の利用者からもらった声だけを載せる。架空の声は書かない。
+         中身を本物に差し替えたら、section の data-placeholder を消すと表示される（付いている間は表示されない） -->
+    <section class="voices" aria-labelledby="voicesTitle" data-placeholder>
+      <div class="wrap">
+        <h2 id="voicesTitle">使った人の声</h2>
+        <div class="voice-list">
+          <figure class="voice"><blockquote><p>【要確認：実際の利用者からもらう】</p></blockquote><figcaption>【要確認：学年・使った科目など】</figcaption></figure>
+          <figure class="voice"><blockquote><p>【要確認：実際の利用者からもらう】</p></blockquote><figcaption>【要確認：学年・使った科目など】</figcaption></figure>
+          <figure class="voice"><blockquote><p>【要確認：実際の利用者からもらう】</p></blockquote><figcaption>【要確認：学年・使った科目など】</figcaption></figure>
+        </div>
+        <p class="sample">※ 掲載の許可をいただいた方の声です。感じ方には個人差があります。</p>
+      </div>
+    </section>
+
     <!-- ===== 中盤の申し込み（黒板） ===== -->
     <section class="board-band on-board" aria-label="申し込み">
       <div class="wrap">
@@ -783,6 +811,16 @@
           <span class="micro">＼ まずは無料プランから ／</span>
           <a href="/login?signup=1" class="btn btn-lg" data-auth-cta data-loggedin-text="アプリへ戻る">無料で始める</a>
         </div>
+
+        <aside class="parents" aria-labelledby="parentsTitle">
+          <h3 id="parentsTitle">保護者の方へ</h3>
+          <dl>
+            <div><dt>身につくこと</dt><dd>習ったことを自分の言葉で説明する練習と、「どこがわかっていないか」に自分で気づく習慣。答えをすぐに教えるアプリではありません。</dd></div>
+            <div><dt>始めるとき</dt><dd>メールアドレスだけで登録でき、無料プランはカードの登録がいりません。</dd></div>
+            <div><dt>やめるとき</dt><dd>受験生プランは、マイページからいつでも解約できます。アカウントも本人が削除できます。</dd></div>
+            <div><dt>学習データ</dt><dd>会話の内容は、質問や分析を作るために外部のAIサービス（Google Gemini、Groq）に送られます。塾・学校で先生用アカウントを使う場合は、先生も学習の記録を見られます。くわしくは<a href="/privacy">プライバシーポリシー</a>をご覧ください。</dd></div>
+          </dl>
+        </aside>
       </div>
     </section>
 
@@ -792,7 +830,7 @@
         <div class="teachers-text">
           <p class="kicker hand">塾・学校の先生へ</p>
           <h2>生徒がどこで詰まったか、<br class="pc-br">説明の記録から見える</h2>
-          <p>先生用のアカウントでは、担当の生徒がFeynに説明した記録をもとに、一人ひとりのつまずきを確認できます。</p>
+          <p>先生用のアカウントでは、生徒がFeynに説明した記録をもとに、一人ひとりのつまずきを確認できます。</p>
           <ul class="teacher-list">
             <li><b>生徒ごとの学習状況</b>科目ごとのクリア数、最後に学習した日、テーマごとの理解度</li>
             <li><b>苦手ノート</b>会話から見つかった「理解の穴」を、根拠になった生徒の発言つきで</li>
@@ -890,12 +928,12 @@
       // ふわっと出す所と、中身を順番に動かす所（.seq）
       const fade = ['.worries h2', '.bridge', '.how-title', '.how-sub', '.step-text', '.graded-text', '.phones',
                     '.review h2', '.review > .wrap > p', '.board-band .wrap',
-                    '.price h2', '.ptable-wrap', '.teachers-text', '.teachers-shots', '.faq h2', '.final h2'];
+                    '.price h2', '.ptable-wrap', '.parents', '.teachers-text', '.teachers-shots', '.faq h2', '.final h2'];
       const seq = ['.hero', '.stage', '.facts', '.bubbles', '.step-visual', '.curve'];
       fade.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal')));
       seq.forEach(sel => document.querySelectorAll(sel).forEach(el => el.classList.add('reveal', 'seq')));
 
-      // 数字を0から数え上げる（7科目・5区分…、ノートの納得度）
+      // 数字を0から数え上げる（ノートの納得度）
       function countUp(el, to, { delay = 0, duration = 800, suffix = '' } = {}) {
         el.textContent = '0' + suffix;
         setTimeout(() => {
@@ -911,18 +949,6 @@
 
       function onEnter(el) {
         el.classList.add('is-in');
-        if (el.classList.contains('facts')) {
-          el.querySelectorAll('.fact b').forEach((b, i) => {
-            const node = b.firstChild;            // 「7」「30」などの数字の部分（単位の <small> はそのまま）
-            const to = parseInt(node.textContent, 10);
-            if (!isNaN(to)) {
-              const span = document.createElement('span');
-              span.className = 'num';   // 数字の部分（下の説明文の小さい文字の指定を受けないよう、b の中に置く）
-              node.replaceWith(span);
-              countUp(span, to, { delay: i * 120 });
-            }
-          });
-        }
         if (el.classList.contains('stage')) {
           const pct = el.querySelector('.nb-score > span:last-child');
           if (pct) countUp(pct, 50, { delay: 3600, duration: 1000, suffix: '%' });

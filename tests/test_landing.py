@@ -176,3 +176,28 @@ def test_forgetting_text_is_not_absolute():
     assert 'ほとんど忘れ' not in LANDING
     assert '数日でほとんど' not in LANDING
     assert 'イメージ図' in LANDING
+
+
+def test_band_tells_what_the_reader_gets():
+    band = LANDING[LANDING.index('<section class="facts"'):]
+    band = band[:band.index('</section>')]
+    for text in ['質問で返してくる', '苦手ノートに残る', '1・3・7・14・30日後', '7</em>科目']:
+        assert text in band, text
+    assert '区分' not in band and '種類' not in band   # 機能の数ではなく、何ができるか
+
+
+def test_voices_section_stays_hidden_until_real_voices_are_added():
+    # 架空の声は書かない。中身が【要確認】のダミーの間は data-placeholder で表示しない
+    section = LANDING[LANDING.index('<section class="voices"'):]
+    section = section[:section.index('</section>')]
+    assert 'data-placeholder' in section.split('>')[0]
+    assert '[data-placeholder] { display: none !important; }' in LANDING
+    quotes = re.findall(r'<blockquote><p>(.*?)</p></blockquote>', section)
+    assert quotes and all('【要確認' in q for q in quotes)
+
+
+def test_parents_block_covers_card_cancel_and_data():
+    parents = LANDING[LANDING.index('class="parents"'):]
+    parents = parents[:parents.index('</aside>')]
+    for text in ['カードの登録がいりません', 'いつでも解約', 'href="/privacy"', 'Gemini', 'Groq']:
+        assert text in parents, text

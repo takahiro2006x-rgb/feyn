@@ -27,6 +27,18 @@ def tokushoho_page():
     return send_from_directory('.', 'tokushoho.html')
 
 
+@pages_bp.route('/privacy')
+def privacy_page():
+    # プライバシーポリシー（下書き）。docs/drafts/privacy_policy.md から scripts/build_legal_pages.py で作る
+    return send_from_directory('.', 'privacy.html')
+
+
+@pages_bp.route('/terms')
+def terms_page():
+    # 利用規約（下書き）。docs/drafts/terms_of_service.md から scripts/build_legal_pages.py で作る
+    return send_from_directory('.', 'terms.html')
+
+
 @pages_bp.route('/login')
 def login_page():
     if session.get('user_id'):

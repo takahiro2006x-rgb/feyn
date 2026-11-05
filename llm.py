@@ -42,10 +42,23 @@ def classify_error(exc):
         return ERROR_OVERLOADED
     # 提供が終わったモデルは「見つからない（404 NOT_FOUND）」になる。
     # 予備の並びに古いモデルが残っていても、そこで止まらずに次の予備へ進めるようにする
-    if (code == 404 or '404' in text or 'NOT_FOUND' in text
+    if (code in (404, 410) or '404' in text or 'NOT_FOUND' in text
             or 'is not found' in text or 'no longer available' in text):
         return ERROR_NOT_FOUND
+    # 提供元によっては、提供終了を 404 ではなく 400 で返す
+    # （Groq は 400 で code が model_decommissioned、「has been decommissioned and is no longer supported」）。
+    # 「モデル」についての提供終了・存在しないの文言があるときだけ、次の予備へ進む（入力の誤りの400は打ち切る）
+    lowered = text.lower()
+    if 'model' in lowered and any(word in lowered for word in _RETIRED_MODEL_WORDS):
+        return ERROR_NOT_FOUND
     return ERROR_OTHER
+
+
+# 提供が終わった・存在しないモデルのエラーに出てくる言葉（小文字で比べる）
+_RETIRED_MODEL_WORDS = (
+    'model_decommissioned', 'decommissioned', 'model_not_found', 'does not exist',
+    'no longer supported', 'has been deprecated', 'is deprecated', 'was deprecated', 'been retired', 'is retired',
+)
 
 
 class GeminiChatSession:

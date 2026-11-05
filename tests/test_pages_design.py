@@ -30,3 +30,20 @@ def test_buttons_and_headings_have_no_emoji(path):
 def test_theme_css_is_served(client):
     resp = client.get('/theme.css')
     assert resp.status_code == 200 and resp.mimetype == 'text/css'
+
+
+@pytest.mark.parametrize('path', ['mypage.html', 'student_detail.html'])
+def test_conversation_logs_use_the_chat_bubbles(path):
+    """会話ログの吹き出しは、チャット画面と同じ形。生徒の発言を赤で塗らない（赤は Feyn の質問と決定ボタンだけ）"""
+    style = ''.join(re.findall(r'<style>(.*?)</style>', open(path, encoding='utf-8').read(), flags=re.S))
+    user_rule = re.search(r'\.msg\.user \.bubble \{([^}]*)\}', style).group(1)
+    feyn_rule = re.search(r'\.msg\.feyn \.bubble \{([^}]*)\}', style).group(1)
+    assert 'var(--me-bubble)' in user_rule and 'var(--red)' not in user_rule
+    assert 'var(--feyn-bubble)' in feyn_rule and 'border-left: 3px solid var(--red)' in feyn_rule
+
+
+def test_student_detail_header_keeps_long_names_visible():
+    """スマホで、長い名前が「…」で切れたり、プランの印が画面の外に出たりしない"""
+    html = open('student_detail.html', encoding='utf-8').read()
+    assert 'class="header-name"' in html
+    assert '.header-title .plan-tag { flex-shrink: 0; }' in html

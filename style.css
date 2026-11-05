@@ -23,7 +23,12 @@
   --brand:      #58CC02;
   --on-brand:   #10240A;
   --meter:      #F2B705;
-  --me-bubble:  #E6EEF5;
+  --note-paper: #FFFEFA;                    /* 会話の地: 罫線ノートの紙（少し生成り） */
+  --note-rule:  rgba(40, 110, 170, 0.13);   /* ノートの罫線 */
+  --margin-line: rgba(212, 53, 42, 0.35);   /* ノートの左の赤い余白線 */
+  --feyn-bubble: #FFFFFF;
+  --me-bubble:  #FFFFFF;
+  --shadow-note: 0 2px 10px rgba(27, 42, 51, 0.07);   /* ノートに貼ったメモ（吹き出し） */
   --hint-bg:    rgba(242, 183, 5, 0.16);
   --hint-line:  rgba(196, 146, 0, 0.45);
   --answer-bg:  rgba(30, 77, 43, 0.08);
@@ -61,7 +66,12 @@
   --red-dark:   #FF8C82;
   --on-red:     #1A0D0B;
   --board:      #0E2416;
-  --me-bubble:  #24322A;
+  --note-paper: #131A16;
+  --note-rule:  rgba(200, 230, 210, 0.08);
+  --margin-line: rgba(255, 107, 94, 0.40);
+  --feyn-bubble: #1B241E;
+  --me-bubble:  #1B241E;
+  --shadow-note: 0 2px 10px rgba(0, 0, 0, 0.30);
   --hint-bg:    rgba(242, 183, 5, 0.14);
   --hint-line:  rgba(242, 183, 5, 0.40);
   --answer-bg:  rgba(120, 200, 140, 0.10);
@@ -305,8 +315,8 @@ a { color: inherit; }
   align-items: center;
   gap: 24px;
   padding: 12px max(24px, calc((100% - var(--col)) / 2));
-  background: var(--paper);
-  border-bottom: 1px solid var(--rule);
+  background: var(--note-paper);
+  border-bottom: 2px solid var(--ink);   /* ノートの見出しの線 */
 }
 
 .feyn-id { display: flex; align-items: center; gap: 12px; min-width: 0; }
@@ -403,16 +413,19 @@ a { color: inherit; }
      ページ全体（body）を基準にしてチャット欄の外にはみ出し、ページが縦に伸びて
      送信時にページごと上にずれる（下に余白が出る）原因になっていた。チャット欄を基準にして中に収める */
   position: relative;
-  padding: 24px max(24px, calc((100% - var(--col)) / 2)) 32px;
+  --pad: max(24px, calc((100% - var(--col)) / 2));
+  --margin-x: calc(var(--pad) + 36px);   /* 赤い余白線の位置（アイコンと吹き出しの間） */
+  padding: 24px var(--pad) 32px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* うっすら方眼（ノートの紙） */
-  background-color: var(--paper);
+  /* 罫線ノートの紙。左に赤い余白線。線は会話と一緒にスクロールする */
+  background-color: var(--note-paper);
   background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 24px 24px;
+    linear-gradient(90deg, transparent calc(var(--margin-x) - 1px), var(--margin-line) calc(var(--margin-x) - 1px),
+                    var(--margin-line) calc(var(--margin-x) + 1px), transparent calc(var(--margin-x) + 1px)),
+    repeating-linear-gradient(transparent 0 31px, var(--note-rule) 31px 32px);
+  background-attachment: local;
 }
 .messages::-webkit-scrollbar { width: 8px; }
 .messages::-webkit-scrollbar-track { background: transparent; }
@@ -427,36 +440,36 @@ a { color: inherit; }
   to   { opacity: 1; transform: none; }
 }
 
-/* Feyn（左）: 白い紙・罫線の枠 */
+/* Feyn（左）: ノートに貼ったメモに、赤ペンで書き込み（左に赤い線） */
 .message.feyn { align-self: flex-start; }
 .message.feyn .bubble {
   padding: 12px 16px;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: var(--r-sm) var(--r-lg) var(--r-lg) var(--r-lg);
+  background: var(--feyn-bubble);
+  border-left: 3px solid var(--red);
+  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  box-shadow: var(--shadow-note);
   color: var(--ink);
   font-size: 16px;
   line-height: 1.75;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-/* Feynの質問の要点（最後の「？」の文）に赤ペンの下線 */
+/* Feynの質問の要点（最後の「？」の文）: 赤ペンの字に、蛍光ペンを引いたように */
 .bubble .ask {
   font-weight: 700;
-  text-decoration: underline;
-  text-decoration-color: var(--red);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 5px;
-  text-decoration-skip-ink: none;
+  color: var(--red);
+  background: linear-gradient(transparent 62%, color-mix(in srgb, var(--red) 14%, transparent) 62%);
 }
 
-/* あなた（右）: ノートの淡い青 */
+/* あなた（右）: 自分で書いた説明のメモ（鉛筆の文字・罫線の枠） */
 .message.user { align-self: flex-end; flex-direction: row-reverse; }
 .message.user .bubble {
   padding: 12px 16px;
   background: var(--me-bubble);
+  border: 1px solid var(--rule);
   border-radius: var(--r-lg) var(--r-sm) var(--r-lg) var(--r-lg);
-  color: var(--ink);
+  box-shadow: var(--shadow-note);
+  color: var(--pencil);
   font-size: 16px;
   line-height: 1.75;
   white-space: pre-wrap;
@@ -473,8 +486,9 @@ a { color: inherit; }
 .bubble img { max-width: 100%; height: auto; }
 
 /* ヒント（蛍光ペンのメモ）・答え（板書） */
-.message.feyn .bubble.hint { background: var(--hint-bg); border-color: var(--hint-line); }
-.message.feyn .bubble.answer { background: var(--answer-bg); border-color: var(--answer-line); }
+.message.feyn .bubble.hint { background: var(--hint-bg); border-left-color: var(--meter); box-shadow: none; }
+.message.feyn .bubble.answer { background: var(--answer-bg); border-left-color: var(--board); box-shadow: none; }
+[data-theme="dark"] .message.feyn .bubble.answer { border-left-color: var(--brand); }
 .bubble.hint strong, .bubble.answer strong { font-size: 14px; font-weight: 900; }
 
 /* ===== 単元選択などの選択肢 ===== */
@@ -970,7 +984,7 @@ a { color: inherit; }
   .lives-display { flex-direction: row; align-items: center; }
   .lives-label, .lives-timer { display: none; }
 
-  .messages { padding: 16px 12px 24px; gap: 12px; }
+  .messages { --pad: 12px; --margin-x: calc(12px + 32px); padding: 16px 12px 24px; gap: 12px; }
   .message { max-width: 92%; }
   .message.feyn .avatar { width: 28px; height: 28px; }
   .message.feyn .avatar svg { width: 18px; height: 18px; }

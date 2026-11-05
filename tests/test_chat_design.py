@@ -111,3 +111,13 @@ def test_font_sizes_use_the_scale():
     # 12（注記）・14（小）・16（本文）・18・20・24（見出し）と、大きな数字・判子・数式だけ
     sizes = {int(x) for x in re.findall(r'font-size: (\d+)px', CSS)}
     assert sizes <= {12, 14, 16, 18, 20, 22, 24, 30, 32}, sorted(sizes)
+
+
+def test_chat_is_a_ruled_notebook_with_red_pen():
+    # 2026-11-05 に選んだC案「ノートと赤ペン」: 罫線ノートの地・左の赤い余白線・Feynの質問は赤ペンの字
+    assert 'repeating-linear-gradient(transparent 0 31px, var(--note-rule) 31px 32px)' in CSS
+    assert 'var(--margin-line)' in CSS
+    feyn = re.search(r'\.message\.feyn \.bubble \{([^}]*)\}', CSS).group(1)
+    assert 'border-left: 3px solid var(--red)' in feyn
+    ask = re.search(r'\.bubble \.ask \{([^}]*)\}', CSS).group(1)
+    assert 'color: var(--red)' in ask

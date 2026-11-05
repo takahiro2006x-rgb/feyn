@@ -81,7 +81,8 @@ def test_features_are_all_still_on_the_page():
 
 def test_clear_celebration_is_skipped_for_reduced_motion():
     fn = JS[JS.index('function launchConfetti()'):]
-    assert fn.index("prefers-reduced-motion: reduce") < fn.index('clear-stamp')
+    assert fn.index("prefers-reduced-motion: reduce") < fn.index("getElementById('confettiCanvas')")
+    assert 'clear-stamp' not in JS and 'result-emoji' not in JS    # 丸い「納得！」の判子はやめた
     assert '@media (prefers-reduced-motion: reduce)' in CSS
 
 

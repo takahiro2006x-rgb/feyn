@@ -280,13 +280,8 @@ function setXP(percent) {
 
 // ===== 紙吹雪 =====
 function launchConfetti() {
+  // 動きを減らす設定の人には出さない（納得度バーの「納得！」と結果の画面はそのまま出る）
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const stamp = document.createElement('div');
-  stamp.className = 'clear-stamp';
-  stamp.setAttribute('aria-hidden', 'true');
-  stamp.textContent = '納得！';
-  document.querySelector('.chat-main').appendChild(stamp);
-  setTimeout(() => stamp.remove(), 1700);
 
   const canvas = document.getElementById('confettiCanvas');
   const ctx    = canvas.getContext('2d');
@@ -681,7 +676,6 @@ function resultHtml(result) {
 
   let html = `
     <div class="result-head">
-      <div class="result-emoji" aria-hidden="true">納得！</div>
       <div class="result-title" id="resultTitle">${escText(result.subject)} クリア！</div>
       ${a && a.topic ? `<div class="result-topic">テーマ：${escText(a.topic)}</div>` : ''}
     </div>`;

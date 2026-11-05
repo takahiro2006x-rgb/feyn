@@ -186,30 +186,13 @@ Feynの画面（LP・アプリ・先生の画面）を作る・直すときは�
 
 ## 8. 今のアプリとのずれ（2026-11-05 時点）
 
-チャット画面（`style.css`・`index.html`）は、このルールに合わせて作り直した（`docs/chat-redesign/REPORT.md`）。
-「全体」は、チャット画面以外にまだ残っているずれ。新しく画面を直すときは、チャット画面の `style.css` の書き方を手本にする。
+全部の画面（チャット・マイページ・ログイン・先生の画面・特商法・規約）を、このルールにそろえた（`docs/chat-redesign/REPORT.md`・`docs/pages-redesign/REPORT.md`）。
+トークンは `theme.css` の1か所にあり、全部の画面が読み込む。新しく画面を作るときも `theme.css` を読み込み、チャット画面の `style.css` やマイページの書き方を手本にする。
 
-### 全体
+まだ残っているずれ:
 
 | ずれ | 場所 |
 |---|---|
-| フォントが M PLUS Rounded 1c（丸ゴシック）。LPは Zen Kaku Gothic New | `mypage.html`・`dashboard.html`・`student_detail.html`・`login.html`・`tokushoho.html`・`privacy.html`・`terms.html` |
-| 色のトークンが別（`--bg #F0F4F8`・`--card`・`--card-border #E5E5E5`・`--text #3C3C3C`・`--subtext #AFAFAF`）。`--subtext` の `#AFAFAF` は白地で約2.3:1で、文字には薄すぎる | 上の各ページの `<style>` |
-| ダークモードがGitHub風の青黒（`#0D1117`・`#161B22`）。LPは「夜の黒板」の緑黒 | 上の各ページ |
-| メインの色が Duolingo 風の緑 `#58CC02` で、決定ボタンも緑（`#58CC02` に `0 4px 0 #46A302` の影）。ルールでは決定ボタンは赤、緑はFeynだけ | `mypage.html`・`login.html`・`dashboard.html` |
-
-### チャット画面を作り直す前にあったもの（`style.css`・`index.html`・`script.js`）
-
-調査の記録として残す。
-
-| ずれ | 数・例 |
-|---|---|
-| 直書きの色 | `style.css` に30種類（`#58CC02`×10、`#46A302`×7、`#FF4B4B`×6、`#CB6CE6`×4、`#FFC200`×3、ほか） |
-| 科目の色で面を塗っていた | `script.js` の `SUBJECT_COLORS`（7科目×2色）で、選んだ科目・自分の吹き出し・送信ボタン・納得度バーを塗っていた |
-| 角の丸みが9種類 | 4・10・12・14・16・20・24・99px と、吹き出しの `4px 20px 20px 20px` など |
-| 文字の大きさが16段 | 10・11・12・13・14・15・16・18・19・20・22・28・30・36・44・52px |
-| 立体の影（`0 4px 0` 〜 `0 8px 0`）が9か所 | 科目・吹き出し・送信ボタン・アバターなど、押せないものにも付いていた |
-| 太い枠 `2px` | ほぼすべての部品 |
-| 絵文字 | 科目（⚡📐🌍⚗️🌿📖🏛️）、ボタン（🌙🔄❓📊🔐🚪💡🔍🧮🎤🚀）、納得度の⭐×4、ライフの❤️🖤、ストリークの🔥💎 |
-| 直書きの style 属性 | `index.html` に17か所（秘密の質問のダイアログ） |
-| `--subtext: #AFAFAF` | 白地で約2.3:1。補足の文字が読みにくい |
+| PWAの色が以前の緑（`#58CC02`）のまま | `manifest.json` の `theme_color`・`background_color`、`icons/` |
+| 置き換えで直したため、使っていない古い指定が少し残っている | `dashboard.html`・`student_detail.html` の `<style>` |
+| `theme.css` の「古いページの変数名」（`--bg`・`--card` など）を、まだ先生の画面が使っている | `dashboard.html`・`student_detail.html` |

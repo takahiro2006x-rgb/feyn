@@ -420,6 +420,10 @@ a { color: inherit; }
 /* ヒント（蛍光ペンのメモ）・答え（板書） */
 .message.feyn .bubble.hint { background: var(--hint-bg); border-left-color: var(--meter); box-shadow: none; }
 .message.feyn .bubble.answer { background: var(--answer-bg); border-left-color: var(--board); box-shadow: none; }
+/* お知らせ・エラー（Feynのセリフではない案内）。地は淡い帯、エラーは見出しだけ赤の文字（面は塗らない） */
+.message.feyn .bubble.notice { background: var(--paper-2); border-left-color: var(--ink-soft); box-shadow: none; color: var(--ink); }
+.message.feyn .bubble.notice.error { border-left-color: var(--red); }
+.message.feyn .bubble.notice.error strong { color: var(--red); }
 [data-theme="dark"] .message.feyn .bubble.answer { border-left-color: var(--brand); }
 .bubble.hint strong, .bubble.answer strong { font-size: 14px; font-weight: 900; }
 

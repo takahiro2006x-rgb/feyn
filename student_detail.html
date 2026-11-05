@@ -504,7 +504,7 @@
       const more = document.createElement('button');
       more.className = 'session-head load-more-btn';
       more.style.justifyContent = 'center';
-      more.textContent = '⬇️ もっと見る';
+      more.textContent = 'もっと見る';
       more.addEventListener('click', async () => {
         more.disabled = true;
         more.textContent = '読み込み中...';
@@ -516,7 +516,7 @@
           appendSessions(contentEl, data.sessions, data.has_more);
         } catch (e) {
           more.disabled = false;
-          more.textContent = '⬇️ もっと見る（もう一度）';
+          more.textContent = 'もっと見る（もう一度）';
         }
       });
       contentEl.appendChild(more);

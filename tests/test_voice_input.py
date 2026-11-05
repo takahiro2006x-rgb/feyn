@@ -35,6 +35,7 @@ const document = { getElementById: (id) => (id === 'micBtn' ? micEl : null) };
 const store = {};
 const localStorage = { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); } };
 function addMessage(role, text) { log.push(text); }
+function addNotice(text) { log.push(text); }   // お知らせ（音声入力の案内・エラー）
 let lastRec = null;
 class FakeRec {
   constructor() { lastRec = this; this.stopped = false; }

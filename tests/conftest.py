@@ -18,6 +18,14 @@ import db as db_module
 import gap_analyzer as gap_analyzer_module
 import llm as llm_module
 import ratelimit
+import schools
+
+# テスト用の塾。先生（teacher_client）と生徒（student_client・_signup_payload で作る生徒）は、
+# 既定でここに入る（先生は同じ組織の生徒しか見られないため）。DEFAULT の挙動を確かめるテストは、
+# join_code='' を渡して作るか、別の組織を作る
+TEST_SCHOOL_NAME = 'テスト塾'
+TEST_JOIN_CODE = 'JOINCODE2345'
+TEST_TEACHER_CODE = 'TEACHCODE234'
 
 
 class FakeChatSession:
@@ -50,6 +58,8 @@ def app(monkeypatch, tmp_path):
     monkeypatch.setattr(gap_analyzer_module, 'analyze_session', lambda *a, **k: None)
 
     core.init_db()
+    core.ensure_default_school()
+    schools.create_school(TEST_SCHOOL_NAME, join_code=TEST_JOIN_CODE, teacher_code=TEST_TEACHER_CODE)
     core.chat_sessions.clear()
     ratelimit.limiter.reset_all()  # テスト間でログイン失敗の記録が残らないようにする
     return app_module
@@ -91,6 +101,7 @@ def _signup_payload(**overrides):
         'password':          'testpass123',
         'security_question': '好きな食べ物は？',
         'security_answer':   'apple',
+        'join_code':         TEST_JOIN_CODE,
     }
     payload.update(overrides)
     return payload
@@ -110,7 +121,7 @@ def teacher_client(app):
     """新規登録済み・ログイン済みの先生アカウントとしてのtest_client（自分専用のクッキーを持つ）"""
     c = app.app.test_client()
     resp = c.post('/api/signup', json=_signup_payload(
-        name='テスト先生', email='test_teacher@example.com', teacher_code=core.TEACHER_CODE,
+        name='テスト先生', email='test_teacher@example.com', teacher_code=TEST_TEACHER_CODE,
     ))
     assert resp.status_code == 200
     return c

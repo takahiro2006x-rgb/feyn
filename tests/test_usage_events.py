@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import core
-from conftest import FakeChatSession, _signup_payload
+from conftest import FakeChatSession, TEST_TEACHER_CODE, _signup_payload
 
 NOW = datetime(2026, 10, 25, 12, 0, tzinfo=timezone.utc)
 
@@ -137,6 +137,11 @@ def _insert(event_type, user_id, conv_id=None, turn=None, at=None, mode=None):
         conn.commit()
 
 
+def _uid_school(user_id):
+    with core.get_db() as conn:
+        return conn.execute('SELECT school_id FROM users WHERE id = ?', (user_id,)).fetchone()['school_id']
+
+
 def _scenario(student_id, teacher_id, other_school_student_id):
     two_days_ago = NOW - timedelta(days=2)
     # A: 3往復で完了
@@ -171,7 +176,7 @@ def test_usage_metrics(app, student_client, teacher_client):
         conn.commit()
     _scenario(sid, tid, oid)
 
-    m = core.compute_usage_metrics(core.default_school_id(), days=30, now=NOW)
+    m = core.compute_usage_metrics(_uid_school(sid), days=30, now=NOW)
     assert m['started'] == 4
     assert m['completed'] == 1
     assert m['completion_rate'] == 25
@@ -200,7 +205,7 @@ def test_metrics_through_the_postgres_code_path(pg_path, app, monkeypatch):
     student = app.app.test_client()
     student.post('/api/signup', json=_signup_payload())
     teacher = app.app.test_client()
-    teacher.post('/api/signup', json=_signup_payload(email='t@example.com', teacher_code=core.TEACHER_CODE))
+    teacher.post('/api/signup', json=_signup_payload(email='t@example.com', teacher_code=TEST_TEACHER_CODE))
     key = _start(student).get_json()['session_key']
     monkeypatch.setattr(FakeChatSession, 'default_reply', '納得！【会話終了】')
     student.post('/api/chat', json={'message': '説明', 'session_key': key})

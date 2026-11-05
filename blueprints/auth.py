@@ -6,6 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 import core
 import db
 import ratelimit
+import schools
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -25,6 +26,8 @@ def signup():
     name         = data.get('name', '').strip()
     password     = data.get('password', '')
     teacher_code = data.get('teacher_code', '').strip()
+    # 塾・学校から受け取った「参加コード」（生徒だけ。空なら DEFAULT に入る）
+    join_code    = (data.get('join_code') or '').strip()
 
     security_question = data.get('security_question', '').strip()
     security_answer   = data.get('security_answer', '').strip().lower()
@@ -39,25 +42,42 @@ def signup():
         return jsonify({'error': 'ニックネームは20文字以内にしてください'}), 400
     if len(password) < 8:
         return jsonify({'error': 'パスワードは8文字以上にしてください'}), 400
+    # 先生コード: 塾・学校ごとのコード（scripts/orgs.py で発行）なら、その組織の先生になる。
+    # 以前からある共通の TEACHER_CODE（環境変数）でも登録できるが、その先生は DEFAULT に入り、
+    # 組織の先生コードを入れるまで、どの生徒も見えない
+    role, school_id = 'student', None
     if teacher_code:
-        if not core.teacher_signup_enabled():
-            # 本番でTEACHER_CODEが既定値のまま。設定漏れに気づけるようログに残す
-            current_app.logger.error('TEACHER_CODE is not set (or is the public default); teacher signup is disabled')
-            return jsonify({'error': '先生アカウントの登録は現在受け付けていません'}), 503
         # 先生コードの総当たりを防ぐため、間違いが続いたら一定時間受け付けない
         blocked = _too_many_attempts('teacher-code')
         if blocked:
             return blocked
-        if teacher_code != core.TEACHER_CODE:
+        school = schools.find_by_teacher_code(teacher_code)
+        if school:
+            role, school_id = 'teacher', school['id']
+        elif teacher_code == core.TEACHER_CODE:
+            if not core.teacher_signup_enabled():
+                # 本番でTEACHER_CODEが既定値のまま。設定漏れに気づけるようログに残す
+                current_app.logger.error('TEACHER_CODE is not set (or is the public default); teacher signup is disabled')
+                return jsonify({'error': '先生アカウントの登録は現在受け付けていません'}), 503
+            role = 'teacher'
+        else:
             ratelimit.record_failure('teacher-code', ratelimit.client_ip())
             return jsonify({'error': '先生コードが正しくありません'}), 400
+    elif join_code:
+        blocked = _too_many_attempts('join-code')
+        if blocked:
+            return blocked
+        school = schools.find_by_join_code(join_code)
+        if not school:
+            ratelimit.record_failure('join-code', ratelimit.client_ip())
+            return jsonify({'error': '参加コードが正しくありません。塾・学校から受け取ったコードを確認してください'}), 400
+        school_id = school['id']
     if not security_question or security_question not in core.SECURITY_QUESTIONS:
         return jsonify({'error': '秘密の質問を選んでください'}), 400
     if not security_answer:
         return jsonify({'error': '秘密の質問の答えを入力してください'}), 400
 
-    role = 'teacher' if teacher_code == core.TEACHER_CODE else 'student'
-    school_id = core.default_school_id()
+    school_id = school_id or core.default_school_id()
 
     try:
         with core.get_db() as conn:

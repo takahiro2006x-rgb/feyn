@@ -10,15 +10,15 @@ import pytest
 
 HTML = open('index.html', encoding='utf-8').read()
 CSS = open('style.css', encoding='utf-8').read()
+THEME = open('theme.css', encoding='utf-8').read()
 JS = open('script.js', encoding='utf-8').read()
 NODE = shutil.which('node')
 
 
 def _css_outside_tokens():
-    """色のトークンを決めている所（:root と [data-theme="dark"]）を除いたCSS"""
+    """チャット画面のCSSのうち、チャット画面だけの値（:root）を除いた所。色のトークンは theme.css にある"""
     body = re.sub(r'/\*.*?\*/', '', CSS, flags=re.S)
     body = re.sub(r':root\s*\{[^}]*\}', '', body, count=1)
-    body = re.sub(r'\[data-theme="dark"\]\s*\{[^}]*\}', '', body, count=1)
     return body
 
 
@@ -41,7 +41,7 @@ def test_radius_and_shadow_use_the_steps():
 
 
 def test_dark_mode_is_the_night_blackboard_like_the_lp():
-    dark = re.search(r'\[data-theme="dark"\]\s*\{([^}]*)\}', CSS).group(1)
+    dark = re.search(r'\[data-theme="dark"\]\s*\{([^}]*)\}', THEME).group(1)
     assert '--paper:      #131A16' in dark and '--red:        #FF6B5E' in dark
     lp = open('landing.html', encoding='utf-8').read()
     assert '--paper:      #131A16' in lp     # LPと同じ値
@@ -49,7 +49,8 @@ def test_dark_mode_is_the_night_blackboard_like_the_lp():
 
 def test_font_is_the_same_as_the_lp():
     assert 'family=Zen+Kaku+Gothic+New' in HTML and 'M+PLUS+Rounded' not in HTML
-    assert '--sans: "Zen Kaku Gothic New"' in CSS
+    assert '--sans: "Zen Kaku Gothic New"' in THEME
+    assert HTML.index('href="theme.css"') < HTML.index('href="style.css"')
 
 
 def test_buttons_have_no_emoji_and_icon_buttons_have_labels():
@@ -117,7 +118,7 @@ def test_font_sizes_use_the_scale():
 def test_chat_is_a_ruled_notebook_with_red_pen():
     # 2026-11-05 に選んだC案「ノートと赤ペン」: 罫線ノートの地・左の赤い余白線・Feynの質問は赤ペンの字
     assert 'repeating-linear-gradient(transparent 0 31px, var(--note-rule) 31px 32px)' in CSS
-    assert 'var(--margin-line)' in CSS
+    assert 'var(--margin-line)' in CSS and '--margin-line' in THEME
     feyn = re.search(r'\.message\.feyn \.bubble \{([^}]*)\}', CSS).group(1)
     assert 'border-left: 3px solid var(--red)' in feyn
     ask = re.search(r'\.bubble \.ask \{([^}]*)\}', CSS).group(1)

@@ -9,7 +9,7 @@ import ratelimit
 pages_bp = Blueprint('pages', __name__)
 
 # DBや.envを外部に配信しないよう、公開ファイルはホワイトリスト方式にする
-ALLOWED_STATIC = {'style.css', 'script.js'}
+ALLOWED_STATIC = {'theme.css', 'style.css', 'script.js'}
 
 
 @pages_bp.route('/')

@@ -40,7 +40,7 @@ DUMMY_ADDRESS = re.compile(
     r'[\w.+-]*@?[\w-]*\.?(?:example\.(?:com|net|org)|[\w-]+\.(?:test|invalid))\b', re.IGNORECASE)
 DRAFT = re.compile(r'下書き|雛形')
 COMMENT = re.compile(r'<!--.*?-->', re.DOTALL)
-STYLE = re.compile(r'<style.*?</style>', re.DOTALL)
+STYLE = re.compile(r'<style[^a-z-].*?</style>', re.DOTALL)
 PLACEHOLDER_SECTION = re.compile(r'<(section|div|aside)\b[^>]*\bdata-placeholder\b[^>]*>.*?</\1>', re.DOTALL)
 
 

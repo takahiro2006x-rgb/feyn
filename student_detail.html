@@ -170,7 +170,7 @@
 
     .status-badge {
       font-size: 12px; font-weight: 800; padding: 4px 10px;
-      border-radius: var(--r-pill); background: var(--red); color: var(--on-red); color: white; white-space: nowrap;
+      border-radius: var(--r-pill); background: var(--red); color: var(--on-red); white-space: nowrap;
     }
 
     .gap-desc { font-size: 14px; font-weight: 700; line-height: 1.7; }
@@ -397,7 +397,8 @@
       }
       const rows = progress.map(p => {
         const emoji = SUBJECT_EMOJIS[p.subject] || '';
-        const color = p.understanding >= 70 ? 'var(--green)' : (p.understanding >= 40 ? 'var(--yellow)' : 'var(--red)');
+        // マイページと同じ色（--green・--yellow は theme.css に無く、バーが表示されていなかった）
+        const color = p.understanding >= 70 ? 'var(--brand)' : (p.understanding >= 40 ? 'var(--meter)' : 'var(--ink-soft)');
         return `
           <div class="progress-row">
             <span class="progress-name">${emoji} ${escHtml(p.topic)} <small>（${escHtml(p.subject)}・${p.sessions_count}回）</small></span>

@@ -47,3 +47,13 @@ def test_student_detail_header_keeps_long_names_visible():
     html = open('student_detail.html', encoding='utf-8').read()
     assert 'class="header-name"' in html
     assert '.header-title .plan-tag { flex-shrink: 0; }' in html
+
+
+@pytest.mark.parametrize('path', ['dashboard.html', 'student_detail.html'])
+def test_teacher_pages_use_only_defined_colors(path):
+    """theme.css に無い色の変数（--green・--yellow・--blue）を使わない。赤の上の文字は --on-red（ダークでも読める）"""
+    html = open(path, encoding='utf-8').read()
+    theme = open('theme.css', encoding='utf-8').read()
+    for name in set(re.findall(r'var\((--[\w-]+)\)', html)):
+        assert re.search(re.escape(name) + r'\s*:', theme) or re.search(re.escape(name) + r'\s*:', html), (path, name)
+    assert 'color: white' not in html

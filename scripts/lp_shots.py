@@ -2,7 +2,8 @@
 """LP用の画像を作るスクリプト（開発用。本番では動かない）。
 
   py scripts/lp_shots.py app          本物のアプリ画面（デモデータ）を撮って static/lp/ に WebP で保存
-  py scripts/lp_shots.py lp OUTDIR    LPのページ全体を 375px と 1280px で撮って OUTDIR に保存
+  py scripts/lp_shots.py lp OUTDIR [prefix] [URL]   LPのページ全体を 375px と 1280px で撮って OUTDIR に保存
+                                      （URL に起動中の開発サーバーを指定すると、そこを撮る）
   py scripts/lp_shots.py ogp          OGP画像（1200×630）を static/lp/ogp.png に書き出す
 
 安全のために:
@@ -337,10 +338,12 @@ def shoot_app():
         browser.close()
 
 
-def shoot_lp(out_dir, prefix=''):
+def shoot_lp(out_dir, prefix='', base=None):
     """LPのページ全体。動きを減らす設定で開き、演出の途中で写らないようにする"""
     from playwright.sync_api import sync_playwright
-    start_server()
+    if base is None:      # 起動中の開発サーバー（例: http://localhost:5000）を指定しなければ、使い捨てのサーバーを立てる
+        start_server()
+    base = base or BASE
     os.makedirs(out_dir, exist_ok=True)
     with sync_playwright() as p:
         browser = _browser(p)
@@ -349,14 +352,17 @@ def shoot_lp(out_dir, prefix=''):
                            ('pc-1280', dict(viewport={'width': 1280, 'height': 800}, device_scale_factor=1))]:
             ctx = browser.new_context(reduced_motion='reduce', locale='ja-JP', color_scheme='light', **opts)
             page = ctx.new_page()
-            page.goto(BASE + '/landing')
+            page.goto(base + '/landing')
             # 遅延読み込みの画像も写るように、先に全部読み込ませる
             page.evaluate("() => { for (const img of document.images) { img.loading = 'eager'; img.decoding = 'sync'; } }")
             page.wait_for_function('[...document.images].every(i => i.complete && i.naturalWidth > 0)', timeout=15000)
+            # 画面下に固定するボタンは、ページ全体の画像では途中に貼りついて見えるので、撮るときだけ隠す
+            page.add_style_tag(content='#stickyCta { display: none !important; }')
             page.wait_for_timeout(800)
             path = os.path.join(out_dir, f'{prefix}{name}-full.png')
             page.screenshot(path=path, full_page=True)
-            print('saved', os.path.relpath(path, ROOT))
+            height = page.evaluate('document.documentElement.scrollHeight')
+            print('saved', os.path.relpath(path, ROOT), f'height={height}px')
             ctx.close()
         browser.close()
 
@@ -383,7 +389,7 @@ if __name__ == '__main__':
     if cmd == 'app':
         shoot_app()
     elif cmd == 'lp' and len(sys.argv) > 2:
-        shoot_lp(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
+        shoot_lp(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '', sys.argv[4] if len(sys.argv) > 4 else None)
     elif cmd == 'ogp':
         shoot_ogp()
     else:

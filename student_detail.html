@@ -576,7 +576,8 @@
           ? '<span class="plan-tag active">有料</span>'
           : '<span class="plan-tag free">無料</span>';
         document.getElementById('headerName').innerHTML = `${escHtml(data.student.name)} ${planTag}`;
-        document.getElementById('headerEmail').textContent = data.student.email;
+        // 生徒の塾・学校（運営アカウントが、どこの生徒かを確かめられるように）
+        document.getElementById('headerEmail').textContent = data.student.email + (data.school ? `・${data.school}` : '');
         document.title = `Feyn - ${data.student.name}さんの記録`;
 
         renderProgress(data.progress);

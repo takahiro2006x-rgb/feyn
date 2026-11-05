@@ -420,3 +420,21 @@ def test_orgs_script_creates_school_and_grants_operator(app, capsys):
     assert orgs.main(['grant-operator', 'nobody@example.com']) == 1
     assert orgs.main(['rotate', str(core.default_school_id())]) == 1    # DEFAULT にはコードを出さない
     assert orgs.main(['list']) == 0
+
+
+# ---------- 画面（入力欄・表示の置き場があるか） ----------
+
+def _read(name):
+    import os
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), name), encoding='utf-8') as f:
+        return f.read()
+
+
+def test_screens_have_the_school_controls():
+    login = _read('login.html')
+    assert 'id="joinCodeInput"' in login and 'join_code' in login
+    mypage = _read('mypage.html')
+    assert 'id="schoolZone"' in mypage and '/api/school/join' in mypage and '/api/school/leave' in mypage
+    dashboard = _read('dashboard.html')
+    for needle in ('id="scopeBar"', 'id="accessLogSection"', '/api/operator/access-logs', 'id="teacherJoinForm"'):
+        assert needle in dashboard

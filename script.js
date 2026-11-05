@@ -8,7 +8,8 @@ const themeToggle = document.getElementById('themeToggle');
 
 function updateThemeLabel() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+  themeToggle.textContent = isDark ? 'ライトモード' : 'ダークモード';
+  themeToggle.setAttribute('aria-pressed', isDark ? 'true' : 'false');
 }
 updateThemeLabel();
 
@@ -51,6 +52,10 @@ const SUBJECT_COLORS = {
   '国語': { color: '#EF4444', dark: '#B91C1C' },
   '歴史': { color: '#B45309', dark: '#78350F' },
 };
+
+// Feynのアイコン（LPのロゴと同じ、緑の丸に角帽）
+const FEYN_AVATAR = '<div class="avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/>'
+  + '<path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></div>';
 
 // ===== 単元カリキュラム（科目 → 大分類 → 単元） =====
 const UNIT_CURRICULUM = {
@@ -113,9 +118,8 @@ function applySubjectColor(subject) {
 
 // ===== キャラパネル更新 =====
 function updateCharPanel(subject, emoji) {
-  subjectBadge.textContent = `${emoji} ${subject}`;
-  charRole.textContent     = `${subject}担当のライバル`;
-  document.querySelectorAll('.avatar').forEach(el => el.textContent = emoji);
+  subjectBadge.textContent = subject;   // 科目の色は、名前の横の小さな点で見せる（style.css）
+  charRole.textContent     = `${subject}を教わる生徒役`;
   applySubjectColor(subject);
   updateStatsDisplay();
 }
@@ -164,12 +168,27 @@ function scrollToMessage(el) {
 
 // ===== メッセージを追加 =====
 // raw: true の場合のみ text をHTMLとして扱う（開発者が書いた定型文専用。ユーザー入力/AI応答は必ずエスケープする）
+// Feynの返事のうち、最後の質問の文（「？」で終わる文）を赤ペンの下線にする。
+// 数式（$ や \ を含む文）は、数式の描画を壊さないよう印を付けない
+function markQuestion(escaped) {
+  const re = /[^。！？!?\n]*[？?]/g;
+  let last = null;
+  let m;
+  while ((m = re.exec(escaped)) !== null) last = { start: m.index, end: re.lastIndex };
+  if (!last) return escaped;
+  let start = last.start;
+  while (start < last.end && /\s/.test(escaped[start])) start++;
+  const sentence = escaped.slice(start, last.end);
+  if (!sentence || /[$\\]/.test(sentence)) return escaped;
+  return escaped.slice(0, start) + `<span class="ask">${sentence}</span>` + escaped.slice(last.end);
+}
+
 function addMessage(role, text, { raw = false } = {}) {
   const el = document.createElement('div');
   el.classList.add('message', role, 'pop-in');
-  const bubbleHtml = raw ? text : escText(text);
+  const bubbleHtml = raw ? text : (role === 'feyn' ? markQuestion(escText(text)) : escText(text));
   el.innerHTML = role === 'feyn'
-    ? `<div class="avatar">${currentEmoji}</div><div class="bubble">${bubbleHtml}</div>`
+    ? `${FEYN_AVATAR}<div class="bubble">${bubbleHtml}</div>`
     : `<div class="bubble">${bubbleHtml}</div>`;
   messagesEl.appendChild(el);
   renderMath(el.querySelector('.bubble'));
@@ -181,7 +200,7 @@ function addMessage(role, text, { raw = false } = {}) {
 function addHelpMessage(kind, label, text) {
   const el = document.createElement('div');
   el.classList.add('message', 'feyn', 'pop-in');
-  el.innerHTML = `<div class="avatar">${currentEmoji}</div><div class="bubble ${kind}"><strong>${escText(label)}</strong><br>${escText(text)}</div>`;
+  el.innerHTML = `${FEYN_AVATAR}<div class="bubble ${kind}"><strong>${escText(label)}</strong><br>${escText(text)}</div>`;
   messagesEl.appendChild(el);
   renderMath(el.querySelector('.bubble'));
   scrollToMessage(el);
@@ -194,11 +213,11 @@ function showUpgradePrompt(message) {
   const el = document.createElement('div');
   el.classList.add('message', 'feyn', 'pop-in');
   el.innerHTML = `
-    <div class="avatar">${currentEmoji}</div>
+    ${FEYN_AVATAR}
     <div class="bubble">
-      🔒 ${escText(message)}
+      ${escText(message)}
       <div class="quick-replies">
-        <button class="quick-reply" id="upgradeFromLimitBtn">⭐ 有料プランを見る</button>
+        <button class="quick-reply" id="upgradeFromLimitBtn">有料プランを見る</button>
       </div>
     </div>
   `;
@@ -216,7 +235,7 @@ function addThinking() {
   const el = document.createElement('div');
   el.classList.add('message', 'feyn', 'thinking-msg');
   el.innerHTML = `
-    <div class="avatar">${currentEmoji}</div>
+    ${FEYN_AVATAR}
     <div class="bubble thinking"><span></span><span></span><span></span></div>
   `;
   messagesEl.appendChild(el);
@@ -244,6 +263,8 @@ function resetXP() {
   document.querySelector('.xp-fill').style.width = '0%';
   document.querySelector('.xp-percent').textContent = '0%';
   document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+  const area = document.getElementById('xpArea');
+  if (area) area.classList.remove('is-full');
 }
 
 function setXP(percent) {
@@ -252,19 +273,25 @@ function setXP(percent) {
   const stars = document.querySelectorAll('.star');
   const count = Math.floor(percent / 25);
   stars.forEach((s, i) => s.classList.toggle('active', i < count));
+  const area = document.getElementById('xpArea');
+  if (area) area.classList.toggle('is-full', percent >= 100);
 }
 
 
 // ===== 紙吹雪 =====
 function launchConfetti() {
+  // 動きを減らす設定の人には出さない（納得度バーの「納得！」と結果の画面はそのまま出る）
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
   const canvas = document.getElementById('confettiCanvas');
   const ctx    = canvas.getContext('2d');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
   canvas.style.display = 'block';
 
-  const colors = ['#58CC02', '#FFC200', '#FF4B4B', '#1CB0F6', '#8B5CF6', '#FF6B35'];
-  const pieces = Array.from({ length: 130 }, () => ({
+  // 色は docs/DESIGN.md の色だけ（赤ペン・Feynの緑・蛍光ペンの黄・墨）
+  const colors = ['#D4352A', '#58CC02', '#F2B705', '#1B2A33'];
+  const pieces = Array.from({ length: 60 }, () => ({
     x:        Math.random() * canvas.width,
     y:        Math.random() * -200 - 20,
     w:        Math.random() * 12 + 6,
@@ -295,7 +322,7 @@ function launchConfetti() {
       ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
       ctx.restore();
     });
-    if (allDone || Date.now() - startTime > 4500) {
+    if (allDone || Date.now() - startTime > 1800) {
       canvas.style.display = 'none';
       return;
     }
@@ -356,7 +383,7 @@ function updateStatsDisplay() {
   const el = document.getElementById('statsDisplay');
   if (!el) return;
   const count = subjectStats[currentSubject] || 0;
-  el.textContent = `🏆 ${currentSubject}クリア: ${count}回`;
+  el.textContent = `${currentSubject}のクリア ${count}回`;
 }
 
 
@@ -367,7 +394,7 @@ function renderPicker(promptText, buttons, { clear = true } = {}) {
   const btnHtml = buttons.map((b, i) => `<button class="quick-reply" data-idx="${i}">${escText(b.label)}</button>`).join('');
   const el = document.createElement('div');
   el.classList.add('message', 'feyn', 'pop-in');
-  el.innerHTML = `<div class="avatar">${currentEmoji}</div><div class="bubble">${promptText}<div class="quick-replies">${btnHtml}</div></div>`;
+  el.innerHTML = `${FEYN_AVATAR}<div class="bubble">${promptText}<div class="quick-replies">${btnHtml}</div></div>`;
   messagesEl.appendChild(el);
   el.querySelectorAll('.quick-reply').forEach((btn, i) => {
     btn.addEventListener('click', () => {
@@ -388,7 +415,7 @@ function showAssignmentPicker(assignments) {
   setExpression('normal');
 
   const buttons = assignments.map(a => ({
-    label: `📋 ${a.subject}${a.unit ? '・' + a.unit : '（おまかせ）'}`,
+    label: `${a.subject}${a.unit ? '・' + a.unit : '（おまかせ）'}`,
     onClick: () => {
       const btn = document.querySelector(`.subject[data-subject="${a.subject}"]`);
       if (btn) {
@@ -402,10 +429,10 @@ function showAssignmentPicker(assignments) {
       startSession(a.unit || undefined);
     },
   }));
-  buttons.push({ label: '↩️ 自分で科目を選ぶ', onClick: () => showUnitPicker(currentSubject) });
+  buttons.push({ label: '自分で科目を選ぶ', onClick: () => showUnitPicker(currentSubject) });
 
   const plural = assignments.length > 1 ? `（${assignments.length}件）` : '';
-  renderPicker(`📋 先生から課題が届いています！${plural}`, buttons);
+  renderPicker(`先生から課題が届いています！${plural}`, buttons);
 }
 
 function showUnitPicker(subject) {
@@ -418,17 +445,17 @@ function showUnitPicker(subject) {
 
   const categories = Object.keys(UNIT_CURRICULUM[subject] || {});
   const buttons = [
-    { label: '🎲 Feynにおまかせ', onClick: () => startSession() },
-    { label: '📷 今解いてる問題を見せる', onClick: () => showPhotoUploadPrompt() },
+    { label: 'Feynにおまかせ', onClick: () => startSession() },
+    { label: '今解いてる問題を写真で見せる', onClick: () => showPhotoUploadPrompt() },
     ...categories.map(cat => ({ label: cat, onClick: () => showUnitSubPicker(subject, cat) })),
   ];
-  renderPicker('今日はどの単元を教えてくれる？📖', buttons);
+  renderPicker('今日はどの単元を教えてくれる？', buttons);
 }
 
 function showUnitSubPicker(subject, category) {
   const units = (UNIT_CURRICULUM[subject] || {})[category] || [];
   const buttons = [
-    { label: '🎲 この中でおまかせ', onClick: () => startSession(category) },
+    { label: 'この中でおまかせ', onClick: () => startSession(category) },
     ...units.map(u => ({ label: u, onClick: () => startSession(u) })),
     { label: '← 戻る', onClick: () => showUnitPicker(subject) },
   ];
@@ -507,13 +534,13 @@ function showPhotoConfirm(base64, mimeType, dataUrl) {
   const el = document.createElement('div');
   el.classList.add('message', 'feyn', 'pop-in');
   el.innerHTML = `
-    <div class="avatar">${currentEmoji}</div>
+    ${FEYN_AVATAR}
     <div class="bubble">
       この写真でよければ質問するね！
       <div class="photo-preview"><img src="${dataUrl}" alt="アップロードした問題"></div>
       <div class="quick-replies">
-        <button class="quick-reply" id="photoSendBtn">🚀 これで質問してもらう</button>
-        <button class="quick-reply" id="photoRetryBtn">↩️ 選び直す</button>
+        <button class="quick-reply" id="photoSendBtn">これで質問してもらう</button>
+        <button class="quick-reply" id="photoRetryBtn">選び直す</button>
       </div>
     </div>
   `;
@@ -632,9 +659,10 @@ const resultOverlay = document.getElementById('resultOverlay');
 const resultCard    = document.getElementById('resultCard');
 
 function understandingWord(score) {
-  if (score >= 80) return { word: 'しっかり理解できている', color: '#58CC02' };
-  if (score >= 50) return { word: 'だいたいOK・あと一歩', color: '#FFC200' };
-  return { word: 'まだあやふや', color: '#FF9600' };
+  // 色は docs/DESIGN.md のトークン（Feynの緑・蛍光ペンの黄・補足の墨）
+  if (score >= 80) return { word: 'しっかり理解できている', color: 'var(--brand)' };
+  if (score >= 50) return { word: 'だいたいOK・あと一歩', color: 'var(--meter)' };
+  return { word: 'まだあやふや', color: 'var(--ink-soft)' };
 }
 
 function resultHtml(result) {
@@ -643,12 +671,11 @@ function resultHtml(result) {
   const gaps   = a && Array.isArray(a.gaps) ? a.gaps : [];
 
   const badges = [];
-  if (result.wasReview)     badges.push('✅ 苦手を解決');
-  if (result.wasAssignment) badges.push('📮 課題を提出');
+  if (result.wasReview)     badges.push('苦手を解決');
+  if (result.wasAssignment) badges.push('課題を提出');
 
   let html = `
     <div class="result-head">
-      <div class="result-emoji">🎉</div>
       <div class="result-title" id="resultTitle">${escText(result.subject)} クリア！</div>
       ${a && a.topic ? `<div class="result-topic">テーマ：${escText(a.topic)}</div>` : ''}
     </div>`;
@@ -661,10 +688,10 @@ function resultHtml(result) {
     const u = understandingWord(score);
     html += `
       <div class="result-section">
-        <div class="result-label">📈 理解度</div>
+        <div class="result-label">理解度</div>
         <div class="result-score-row">
           <span class="result-score">${score}</span><span class="result-score-max">/ 100</span>
-          <span class="result-score-word" style="color:${u.color}">${u.word}</span>
+          <span class="result-score-word">${u.word}</span>
         </div>
         <div class="result-meter"><div class="result-meter-fill" style="width:0%; background:${u.color}" data-width="${score}"></div></div>
         ${a.summary ? `<div class="result-summary">${escText(a.summary)}</div>` : ''}
@@ -672,7 +699,7 @@ function resultHtml(result) {
     if (gaps.length) {
       html += `
         <div class="result-section">
-          <div class="result-label">🔍 見つかった理解の穴（${gaps.length}件）</div>
+          <div class="result-label">見つかった理解の穴（${gaps.length}件）</div>
           ${gaps.map(g => `
             <div class="result-gap">
               <div class="result-gap-type">${escText(labels[g.gap_type] || '理解の抜け')}</div>
@@ -684,7 +711,7 @@ function resultHtml(result) {
     } else {
       html += `
         <div class="result-section">
-          <div class="result-label">🔍 理解の穴</div>
+          <div class="result-label">理解の穴</div>
           <div class="result-summary">今回は穴が見つからなかった！ 完璧な説明だったね。</div>
         </div>`;
     }
@@ -696,7 +723,7 @@ function resultHtml(result) {
   }
 
   const gapsLink = (gaps.length > 0 || result.wasReview)
-    ? '<a class="result-secondary" href="/mypage?tab=gaps">📝 苦手ノートを見る</a>' : '';
+    ? '<a class="result-secondary" href="/mypage?tab=gaps">苦手ノートを見る</a>' : '';
   html += `<div class="result-actions">${gapsLink}<button class="result-primary" id="resultClose">閉じる</button></div>`;
   return html;
 }
@@ -729,10 +756,10 @@ function addResultReopenButton(result) {
   const el = document.createElement('div');
   el.classList.add('message', 'feyn', 'pop-in');
   el.innerHTML = `
-    <div class="avatar">${currentEmoji}</div>
+    ${FEYN_AVATAR}
     <div class="bubble">
       <div class="quick-replies" style="margin-top:0;">
-        <button class="quick-reply">📊 今回の結果をもう一度見る</button>
+        <button class="quick-reply">今回の結果をもう一度見る</button>
       </div>
     </div>`;
   el.querySelector('.quick-reply').addEventListener('click', () => showResult(result));
@@ -815,16 +842,16 @@ async function sendMessage() {
         // ギャップ分析の結果を「今日の気づき」として表示
         const c = await res.json().catch(() => ({}));
         if (wasReview) {
-          addMessage('feyn', '✅ この苦手は<strong>解決済み</strong>にしたよ！ <a href="/mypage?tab=gaps" style="color:inherit;">📝 苦手ノートを見る</a>', { raw: true });
+          addMessage('feyn', 'この苦手は<strong>解決済み</strong>にしたよ！ <a href="/mypage?tab=gaps">苦手ノートを見る</a>', { raw: true });
         }
         if (wasAssignment) {
-          addMessage('feyn', '✅ 先生からの<strong>課題</strong>を終えたよ！お疲れさま！', { raw: true });
+          addMessage('feyn', '先生からの<strong>課題</strong>を終えたよ！お疲れさま！', { raw: true });
         }
         if (c.analysis && c.analysis.gaps && c.analysis.gaps.length > 0) {
           const items = c.analysis.gaps.map(g => `・${escText(g.description)}`).join('<br>');
           addMessage('feyn',
-            `📝 <strong>今日の気づき</strong>（テーマ: ${escText(c.analysis.topic)}）<br>${items}<br>` +
-            `<a href="/mypage?tab=gaps" style="color:inherit;">→ 苦手ノートに記録したよ。あとで復習しよう！</a>`,
+            `<strong>今日の気づき</strong>（テーマ: ${escText(c.analysis.topic)}）<br>${items}<br>` +
+            `<a href="/mypage?tab=gaps">苦手ノートに記録したよ。あとで復習しよう！</a>`,
             { raw: true });
         }
 
@@ -1070,7 +1097,7 @@ hintBtn.addEventListener('click', async () => {
     if (data.error) {
       addMessage('feyn', `⚠️ ${data.error}`);
     } else {
-      addHelpMessage('hint', '💡 ヒント', data.hint);
+      addHelpMessage('hint', 'ヒント', data.hint);
     }
   } catch (e) {
     thinkingEl.remove();
@@ -1104,10 +1131,10 @@ revealBtn.addEventListener('click', async () => {
       revealBtn.disabled = false;
       return;
     }
-    addHelpMessage('answer', '🔍 答え', data.answer);
+    addHelpMessage('answer', '答え', data.answer);
     renderPicker('答えを確認したね！このあとどうする？', [
-      { label: '💪 今から説明してみる', onClick: () => { textarea.focus(); } },
-      { label: '📌 今日はここまでにする', onClick: () => { window.location.href = '/mypage?tab=history'; } },
+      { label: '今から説明してみる', onClick: () => { textarea.focus(); } },
+      { label: '今日はここまでにする', onClick: () => { window.location.href = '/mypage?tab=history'; } },
     ], { clear: false });
   } catch (e) {
     thinkingEl.remove();
@@ -1205,7 +1232,11 @@ function getLevel(total) {
 
 function updateGapsBadge(count) {
   const btn = document.getElementById('mypageBtn');
-  if (btn) btn.textContent = count > 0 ? `📊 マイページ 🔴${count}` : '📊 マイページ';
+  const n = Number(count) || 0;
+  // 復習どきの苦手の数。スマホではメニューのボタンにも赤い点を出す
+  if (btn) btn.innerHTML = n > 0 ? `マイページ<span class="count" aria-label="復習どき ${n}件">${n}</span>` : 'マイページ';
+  const dot = document.getElementById('menuDot');
+  if (dot) dot.hidden = n === 0;
 }
 
 function updateStatus(totalClears) {
@@ -1214,9 +1245,7 @@ function updateStatus(totalClears) {
   if (xpEl) xpEl.textContent = totalClears * 10;
   if (lvEl) {
     const lv = getLevel(totalClears);
-    lvEl.textContent        = `Lv.${lv.level} ${lv.label}`;
-    lvEl.style.color        = lv.color;
-    lvEl.style.borderColor  = lv.color;
+    lvEl.textContent        = `Lv.${lv.level} ${lv.label}`;   // 色分けはしない（docs/DESIGN.md）
   }
 }
 
@@ -1230,19 +1259,20 @@ async function fetchStreak() {
   } catch (e) {}
 }
 
-// ===== 無料プランのライフ表示（❤️3個・2時間で1回復） =====
+// ===== 無料プランのライフ表示（3個まで・2時間で1つ回復。残りを丸い印と数字で見せる） =====
 function renderLivesDisplay(status) {
   const el = document.getElementById('livesDisplay');
   if (!el) return;
 
   if (!status) {
-    el.innerHTML = '<div class="lives-hearts">👑 無制限</div>';
-    el.style.display = 'block';
+    el.innerHTML = '<div class="lives-row"><span class="lives-label">ライフ</span><span class="lives-value">無制限</span></div>';
+    el.setAttribute('aria-label', 'ライフ 無制限');
+    el.style.display = 'flex';
     return;
   }
 
-  const hearts = Array.from({ length: status.max_lives }, (_, i) =>
-    i < status.lives ? '❤️' : '🖤'
+  const dots = Array.from({ length: status.max_lives }, (_, i) =>
+    `<span class="life${i < status.lives ? ' on' : ''}"></span>`
   ).join('');
 
   let timerHtml = '';
@@ -1250,12 +1280,15 @@ function renderLivesDisplay(status) {
     const mins = Math.max(1, Math.ceil(status.next_recovery_seconds / 60));
     const h = Math.floor(mins / 60);
     const m = mins % 60;
-    const timerText = h > 0 ? `次の回復まで${h}時間${m}分` : `次の回復まで${m}分`;
+    const timerText = h > 0 ? `あと${h}時間${m}分で1つ回復` : `あと${m}分で1つ回復`;
     timerHtml = `<div class="lives-timer">${timerText}</div>`;
   }
 
-  el.innerHTML = `<div class="lives-hearts">${hearts}</div>${timerHtml}`;
-  el.style.display = 'block';
+  el.innerHTML = `<div class="lives-row"><span class="lives-label">ライフ</span>`
+    + `<span class="lives-dots" aria-hidden="true">${dots}</span>`
+    + `<span class="lives-value">${status.lives}/${status.max_lives}</span></div>${timerHtml}`;
+  el.setAttribute('aria-label', `ライフ 残り${status.lives}/${status.max_lives}`);
+  el.style.display = 'flex';
 }
 
 async function refreshLives() {
@@ -1270,11 +1303,11 @@ async function refreshLives() {
 
 // ===== 使い方ガイド（初回登録後に3枚のカードで表示） =====
 const ONBOARDING_STEPS = [
-  { emoji: '🎓', title: 'Feynに教えよう',
+  { emoji: '1', title: 'Feynに教えよう',
     text: 'あなたが「先生」役です。Feynが質問してくるので、自分の言葉で説明してみよう。うまく説明できたら、それが本当の理解です。' },
-  { emoji: '💡', title: '納得度100%でクリア',
-    text: 'Feynが納得すると納得度バーが上がって、100%でクリア！困ったときは「ヒント」「答えを見る」が使えるよ。数式は 🧮 から入力できます。' },
-  { emoji: '❤️', title: 'ライフで学べる回数が決まる',
+  { emoji: '2', title: '納得度100%でクリア',
+    text: 'Feynが納得すると納得度バーが上がって、100%でクリア！困ったときは「ヒント」「答えを見る」が使えるよ。数式は「数式を入力」のボタンから入れられます。' },
+  { emoji: '3', title: 'ライフで学べる回数が決まる',
     text: '新しい会話を始めるたびにライフを1つ使います。3個まで貯まって、2時間で1つ回復。続きから再開するときは減りません。有料プランなら無制限です。' },
 ];
 
@@ -1292,7 +1325,7 @@ function renderOnboardingStep() {
   document.getElementById('onboardingDots').innerHTML = ONBOARDING_STEPS
     .map((_, i) => `<span class="onboarding-dot${i === onboardingIndex ? ' active' : ''}"></span>`).join('');
   const isLast = onboardingIndex === ONBOARDING_STEPS.length - 1;
-  onboardingNextBtn.textContent = isLast ? 'はじめる 🚀' : '次へ →';
+  onboardingNextBtn.textContent = isLast ? 'はじめる' : '次へ';
   onboardingSkipBtn.style.visibility = isLast ? 'hidden' : 'visible';
 }
 
@@ -1327,6 +1360,39 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('guideBtn').addEventListener('click', () => openOnboarding());
 
 
+// ===== スマホのメニュー（使い方・マイページ・設定・ダークモード・ログアウト） =====
+(() => {
+  const sidebar = document.getElementById('sidebar');
+  const menuBtn = document.getElementById('menuBtn');
+  if (!sidebar || !menuBtn) return;
+  const setOpen = (open) => {
+    sidebar.classList.toggle('is-open', open);
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(!sidebar.classList.contains('is-open'));
+  });
+  document.addEventListener('click', (e) => {
+    if (sidebar.classList.contains('is-open') && !document.getElementById('sideMore').contains(e.target)) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && sidebar.classList.contains('is-open')) { setOpen(false); menuBtn.focus(); }
+  });
+})();
+
+// ===== 科目: キーボードでも選べるように・選んでいる科目を読み上げに伝える =====
+document.querySelectorAll('.subject').forEach(el => {
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+  });
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.subject').forEach(b => b.removeAttribute('aria-current'));
+    el.setAttribute('aria-current', 'true');
+  });
+});
+
+
 // ===== 起動 =====
 applySubjectColor(currentSubject);
 
@@ -1351,9 +1417,9 @@ async function init() {
 
     if (user.role === 'teacher') {
       const dashBtn = document.createElement('button');
-      dashBtn.className = 'logout-btn';
-      dashBtn.style.cssText = 'border-color:#58CC02;color:#58CC02;';
-      dashBtn.textContent = '📊 ダッシュボード';
+      dashBtn.className = 'logout-btn side-btn';
+      dashBtn.type = 'button';
+      dashBtn.textContent = '先生のダッシュボード';
       dashBtn.addEventListener('click', () => { window.location.href = '/dashboard'; });
       document.querySelector('.user-info').insertBefore(dashBtn, document.getElementById('logoutBtn'));
     }

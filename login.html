@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feyn - ログイン</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#58CC02">
+  <meta name="theme-color" content="#F3F8FB" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#131A16" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" href="/icons/icon-180.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -17,155 +18,123 @@
       localStorage.getItem('feynTheme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
   <style>
+    /* ログイン・新規登録。ルールは docs/DESIGN.md、色・角・影のトークンは theme.css */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --bg:       #F0F4F8;
-      --card:     #FFFFFF;
-      --border:   #E5E5E5;
-      --text:     #3C3C3C;
-      --subtext:  #AFAFAF;
-      --input-bg: #F0F4F8;
-    }
-
-    [data-theme="dark"] {
-      --bg:       #0D1117;
-      --card:     #161B22;
-      --border:   #30363D;
-      --text:     #E2E8F0;
-      --subtext:  #6E7681;
-      --input-bg: #0D1117;
-    }
-
     body {
-      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 500;
+      color: var(--ink);
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s, color 0.2s;
+      display: flex; align-items: center; justify-content: center;
+      padding: 72px 16px 32px;
+      /* LPのファーストビューと同じ、うっすら方眼 */
+      background-color: var(--paper-2);
+      background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 24px 24px;
     }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
 
     .theme-toggle {
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      padding: 8px 14px;
-      border: 2px solid var(--border);
-      border-radius: 12px;
-      background: var(--card);
-      color: var(--text);
-      font-size: 13px;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      transition: border-color 0.15s, color 0.15s;
+      position: fixed; top: 16px; right: 16px;
+      min-height: 40px; padding: 4px 16px;
+      border: 1px solid var(--rule); border-radius: var(--r-md);
+      background: var(--paper); color: var(--ink);
+      font-size: 14px; font-weight: 700;
     }
-    .theme-toggle:hover { border-color: #58CC02; color: #58CC02; }
+    .theme-toggle:hover { border-color: var(--ink); }
 
     .card {
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 24px;
-      padding: 48px 40px;
-      width: 400px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+      width: 400px; max-width: 100%;
+      display: flex; flex-direction: column; gap: 16px;
+      padding: 32px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-sm);
+      box-shadow: var(--shadow-paper);
     }
+    .logo { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; color: var(--ink); }
+    .logo-mark { width: 36px; height: 36px; border-radius: var(--r-md); background: var(--brand); display: grid; place-items: center; }
+    .logo-mark svg { width: 22px; height: 22px; }
+    .logo-text { font-size: 24px; font-weight: 900; letter-spacing: 0.02em; }
+    .title { text-align: center; font-size: 20px; font-weight: 900; padding-bottom: 8px; border-bottom: 2px solid var(--ink); }
+    .desc { text-align: center; font-size: 14px; color: var(--ink-soft); margin-top: -8px; }
 
-    .logo  {
-      font-size: 36px; font-weight: 800; color: #58CC02; letter-spacing: 3px;
-      text-decoration: none; cursor: pointer; transition: opacity 0.15s;
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label { font-size: 14px; font-weight: 700; color: var(--ink-soft); }
+    .field input, .field select {
+      width: 100%; min-height: 48px; padding: 8px 12px;
+      border: 1px solid var(--rule); border-radius: var(--r-sm);
+      background: var(--paper); color: var(--ink);
+      font-size: 16px;      /* 16px未満だとiOSがフォーカス時に拡大する */
     }
-    .logo:hover { opacity: 0.8; }
-    .title { font-size: 20px; font-weight: 800; color: var(--text); }
-
-    .desc {
-      font-size: 14px; color: var(--subtext); text-align: center;
-      font-weight: 700; line-height: 1.6;
-    }
-
-    .field {
-      width: 100%; display: flex; flex-direction: column; gap: 6px;
-    }
-
-    .field label { font-size: 13px; font-weight: 700; color: var(--subtext); }
-
-    .field input,
-    .field select {
-      width: 100%; padding: 12px 16px;
-      border-radius: 12px; border: 2px solid var(--border);
-      background: var(--input-bg); color: var(--text);
-      font-size: 16px; font-family: inherit; font-weight: 700;
-      outline: none; transition: border-color 0.2s;
-    }
-
-    .field input:focus,
-    .field select:focus { border-color: #58CC02; }
+    .field input::placeholder { color: var(--ink-soft); opacity: 0.7; }
+    .field input:focus, .field select:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px var(--grid-line); }
 
     .pass-wrap { position: relative; }
-    .pass-wrap input { padding-right: 44px; }
+    .pass-wrap input { padding-right: 48px; }
     .eye-btn {
-      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-      background: none; border: none; cursor: pointer;
-      font-size: 18px; line-height: 1; opacity: 0.4; transition: opacity 0.2s; padding: 2px;
+      position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+      width: 44px; height: 44px; display: grid; place-items: center;
+      border: none; background: none; color: var(--ink-soft);
     }
-    .eye-btn:hover { opacity: 0.9; }
+    .eye-btn svg { width: 20px; height: 20px; }
+    .eye-btn:hover { color: var(--ink); }
 
     .question-box {
-      width: 100%; padding: 12px 16px;
-      background: var(--input-bg); border: 2px solid var(--border); border-radius: 12px;
-      font-size: 14px; font-weight: 700; color: #58CC02; line-height: 1.5;
+      padding: 12px; border-radius: var(--r-sm);
+      background: var(--paper-2); border-left: 3px solid var(--red);
+      font-size: 16px; font-weight: 700;
     }
 
-    .error {
-      color: #FF4B4B; font-size: 13px; font-weight: 700;
-      text-align: center; min-height: 20px;
-    }
-
+    .error { min-height: 20px; font-size: 14px; font-weight: 700; color: var(--red); text-align: center; }
     .success {
-      color: #58CC02; font-size: 13px; font-weight: 700;
-      text-align: center; min-height: 20px;
+      padding: 12px; border-radius: var(--r-sm);
+      background: var(--answer-bg); color: var(--ink);
+      font-size: 14px; font-weight: 700; text-align: center; line-height: 1.6;
     }
 
     .submit-btn {
-      width: 100%; padding: 16px;
-      background: #58CC02; color: white; border: none; border-radius: 14px;
-      font-size: 18px; font-weight: 800; font-family: inherit; cursor: pointer;
-      box-shadow: 0 6px 0 #46A302; transition: all 0.1s; margin-top: 4px;
+      width: 100%; min-height: 52px;
+      border: none; border-radius: var(--r-md);
+      background: var(--red); color: var(--on-red);
+      font-size: 18px; font-weight: 900;
+      box-shadow: var(--shadow-press);
+      transition: transform 0.1s, box-shadow 0.1s;
     }
-    .submit-btn:hover  { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 8px 0 #46A302; }
-    .submit-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #46A302; }
-    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: 0 6px 0 #46A302; }
+    .submit-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--red-dark); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-    .toggle { font-size: 13px; font-weight: 700; color: var(--subtext); text-align: center; }
-    .toggle-link { color: #58CC02; cursor: pointer; text-decoration: underline; }
-
+    .toggle { text-align: center; font-size: 14px; color: var(--ink-soft); }
+    .toggle-link {
+      border: none; background: none; padding: 4px;
+      color: var(--ink); font-size: 14px; font-weight: 900;
+      text-decoration: underline; text-decoration-color: var(--red); text-decoration-thickness: 2px; text-underline-offset: 4px;
+    }
     .link-btn {
-      background: none; border: none; font-family: inherit;
-      font-size: 13px; font-weight: 700; color: var(--subtext);
-      cursor: pointer; text-decoration: underline; padding: 0;
-      transition: color 0.2s;
+      align-self: center; min-height: 36px; padding: 4px 8px;
+      border: none; background: none;
+      font-size: 14px; font-weight: 700; color: var(--ink-soft); text-decoration: underline;
     }
-    .link-btn:hover { color: #58CC02; }
+    .link-btn:hover { color: var(--ink); }
 
     @media (max-width: 440px) {
-      .card { width: 90%; padding: 32px 24px; }
+      body { padding-top: 64px; align-items: flex-start; }
+      .card { padding: 24px 16px; }
     }
+    @media (prefers-reduced-motion: reduce) { .submit-btn { transition: none; } }
   </style>
 </head>
 <body>
-  <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
+  <button class="theme-toggle" id="themeToggle" type="button">ダークモード</button>
   <div class="card">
-    <a class="logo" href="/landing">🎓 Feyn</a>
-    <div class="title" id="formTitle">ログイン</div>
+    <a class="logo" href="/landing" aria-label="Feyn トップ"><span class="logo-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span class="logo-text">Feyn</span></a>
+    <h1 class="title" id="formTitle">ログイン</h1>
     <div class="desc" id="formDesc">Feynにわかるように教えよう！</div>
 
     <!-- メールアドレス -->
@@ -185,7 +154,7 @@
       <label>パスワード</label>
       <div class="pass-wrap">
         <input type="password" id="passwordInput" placeholder="8文字以上" autocomplete="current-password">
-        <button type="button" class="eye-btn" id="eyeBtn">👁</button>
+        <button type="button" class="eye-btn" id="eyeBtn" aria-label="パスワードを表示する"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
     </div>
 
@@ -238,16 +207,16 @@
     <button class="submit-btn" id="submitBtn">ログイン</button>
 
     <!-- 「ログインに戻る」（パスワードリセット時） -->
-    <button class="link-btn" id="backBtn" style="display:none">← ログインに戻る</button>
+    <button class="link-btn" id="backBtn" type="button" style="display:none">ログインに戻る</button>
 
     <!-- ログイン ↔ 新規登録 トグル -->
     <div class="toggle" id="toggleArea">
       <span id="toggleDesc">アカウントがない？</span>
-      <span class="toggle-link" id="toggleLink">新規登録はこちら</span>
+      <button class="toggle-link" id="toggleLink" type="button">新規登録はこちら</button>
     </div>
 
     <!-- パスワードを忘れた（ログイン時のみ） -->
-    <button class="link-btn" id="forgotBtn">パスワードを忘れた方はこちら</button>
+    <button class="link-btn" id="forgotBtn" type="button">パスワードを忘れた方はこちら</button>
   </div>
 
   <script>
@@ -256,7 +225,7 @@
 
     function updateThemeLabel() {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+      themeToggle.textContent = isDark ? 'ライトモード' : 'ダークモード';
     }
     updateThemeLabel();
 
@@ -362,7 +331,8 @@
     els.eyeBtn.addEventListener('click', () => {
       const hidden = els.passwordInput.type === 'password';
       els.passwordInput.type  = hidden ? 'text' : 'password';
-      els.eyeBtn.style.opacity = hidden ? '0.9' : '0.4';
+      els.eyeBtn.style.opacity = hidden ? '1' : '0.5';
+      els.eyeBtn.setAttribute('aria-label', hidden ? 'パスワードを隠す' : 'パスワードを表示する');   // 押したあとの状態に合わせる
     });
 
     // ===== トグル（ログイン ↔ 新規登録） =====

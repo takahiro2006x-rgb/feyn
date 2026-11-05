@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Feyn - ファインマン学習アプリ</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#58CC02">
+  <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#131A16" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" href="/icons/icon-180.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -34,8 +35,10 @@
       window.visualViewport.addEventListener('resize', setAppHeight);
     }
   </script>
+  <link rel="stylesheet" href="theme.css">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
@@ -45,53 +48,73 @@
 
   <div class="app">
 
-    <!-- ===== サイドバー ===== -->
-    <aside class="sidebar">
-      <a class="logo" href="/landing">🎓 Feyn</a>
+    <!-- ===== サイドバー（PCは左の列。スマホは上の1段＋メニュー） ===== -->
+    <aside class="sidebar" id="sidebar">
+      <a class="logo" href="/landing" aria-label="Feyn トップ">
+        <span class="logo-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span class="logo-text">Feyn</span>
+      </a>
 
-      <button class="theme-toggle" id="themeToggle">🌙 ダークモード</button>
-
-      <p class="section-label">科目を選ぼう</p>
-      <nav class="subject-list">
-        <div class="subject active" data-subject="物理" data-emoji="⚡">⚡ 物理</div>
-        <div class="subject" data-subject="数学" data-emoji="📐">📐 数学</div>
-        <div class="subject" data-subject="英語" data-emoji="🌍">🌍 英語</div>
-        <div class="subject" data-subject="化学" data-emoji="⚗️">⚗️ 化学</div>
-        <div class="subject" data-subject="生物" data-emoji="🌿">🌿 生物</div>
-        <div class="subject" data-subject="国語" data-emoji="📖">📖 国語</div>
-        <div class="subject" data-subject="歴史" data-emoji="🏛️">🏛️ 歴史</div>
+      <p class="section-label" id="subjectLabel">科目</p>
+      <nav class="subject-list" aria-labelledby="subjectLabel">
+        <div class="subject active" data-subject="物理" data-emoji="⚡" role="button" tabindex="0" aria-current="true">物理</div>
+        <div class="subject" data-subject="数学" data-emoji="📐" role="button" tabindex="0">数学</div>
+        <div class="subject" data-subject="英語" data-emoji="🌍" role="button" tabindex="0">英語</div>
+        <div class="subject" data-subject="化学" data-emoji="⚗️" role="button" tabindex="0">化学</div>
+        <div class="subject" data-subject="生物" data-emoji="🌿" role="button" tabindex="0">生物</div>
+        <div class="subject" data-subject="国語" data-emoji="📖" role="button" tabindex="0">国語</div>
+        <div class="subject" data-subject="歴史" data-emoji="🏛️" role="button" tabindex="0">歴史</div>
       </nav>
 
-      <p class="section-label">設定</p>
-      <div class="settings">
-        <label>ニックネーム</label>
-        <input type="text" id="teacherName" value="" />
-        <label>試験種別</label>
-        <select id="difficulty">
-          <option>大学受験</option>
-          <option>高校受験</option>
-          <option>中学受験</option>
-          <option>定期テスト</option>
-          <option>大学試験</option>
-        </select>
-      </div>
+      <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="sideMore" aria-label="メニュー">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-dot" id="menuDot" hidden></span>
+      </button>
 
-      <button class="reset-btn">🔄 やり直す</button>
+      <div class="side-more" id="sideMore">
+        <div class="side-record" aria-label="きろく">
+          <div class="status-bar">
+            <span class="status-item">連続 <strong id="streakCount">0</strong> 日</span>
+            <span class="status-item"><strong id="xpCount">0</strong> XP</span>
+          </div>
+          <div class="level-badge" id="levelBadge"></div>
+          <div class="stats-display" id="statsDisplay"></div>
+        </div>
 
-      <div class="user-info">
-        <div id="userDisplay" class="user-name-display"></div>
-        <button class="logout-btn" id="guideBtn">❓ 使い方</button>
-        <button class="logout-btn" id="mypageBtn">📊 マイページ</button>
-        <button class="logout-btn" id="securityBtn" style="display:none">🔐 秘密の質問を設定</button>
-        <button class="logout-btn" id="logoutBtn">🚪 ログアウト</button>
+        <details class="side-settings">
+          <summary>設定</summary>
+          <div class="settings">
+            <label for="teacherName">ニックネーム</label>
+            <input type="text" id="teacherName" value="" />
+            <label for="difficulty">試験の種類</label>
+            <select id="difficulty">
+              <option>大学受験</option>
+              <option>高校受験</option>
+              <option>中学受験</option>
+              <option>定期テスト</option>
+              <option>大学試験</option>
+            </select>
+          </div>
+        </details>
+
+        <div class="side-actions">
+          <button class="reset-btn side-btn" type="button">やり直す</button>
+          <button class="theme-toggle side-btn" id="themeToggle" type="button">ダークモード</button>
+        </div>
+
+        <div class="user-info">
+          <div id="userDisplay" class="user-name-display"></div>
+          <button class="logout-btn side-btn" id="guideBtn" type="button">使い方</button>
+          <button class="logout-btn side-btn" id="mypageBtn" type="button">マイページ</button>
+          <button class="logout-btn side-btn" id="securityBtn" type="button" style="display:none">秘密の質問を設定</button>
+          <button class="logout-btn side-btn" id="logoutBtn" type="button">ログアウト</button>
+        </div>
       </div>
 
       <!-- 秘密の質問設定モーダル -->
-      <div id="securityModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200; align-items:center; justify-content:center;">
-        <div style="background:var(--card); border:2px solid var(--card-border); border-radius:20px; padding:28px; width:320px; display:flex; flex-direction:column; gap:14px; box-shadow:0 8px 32px rgba(0,0,0,0.15);">
-          <div style="font-size:16px; font-weight:800; color:var(--text);">🔐 秘密の質問を設定</div>
-          <div style="font-size:13px; font-weight:700; color:var(--subtext);">パスワードを忘れたときに使います</div>
-          <select id="sqSelect" style="padding:10px; border-radius:10px; border:2px solid var(--card-border); background:var(--input-bg); color:var(--text); font-family:inherit; font-weight:700; font-size:13px; outline:none;">
+      <div id="securityModal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="sqTitle">
+        <div class="modal-card">
+          <div class="modal-title" id="sqTitle">秘密の質問を設定</div>
+          <div class="modal-text">パスワードを忘れたときに使います</div>
+          <select id="sqSelect" class="field" aria-label="秘密の質問">
             <option value="">-- 質問を選んでください --</option>
             <option>小学校の名前は？</option>
             <option>初めて飼ったペットの名前は？</option>
@@ -99,10 +122,10 @@
             <option>生まれた市区町村は？</option>
             <option>母親の旧姓は？</option>
           </select>
-          <input type="text" id="sqAnswer" placeholder="答え" style="padding:10px; border-radius:10px; border:2px solid var(--card-border); background:var(--input-bg); color:var(--text); font-family:inherit; font-weight:700; font-size:13px; outline:none;">
-          <div id="sqError" style="font-size:12px; font-weight:700; color:#FF4B4B; min-height:16px;"></div>
-          <button id="sqSave" style="padding:12px; background:#58CC02; color:white; border:none; border-radius:12px; font-size:14px; font-weight:800; font-family:inherit; cursor:pointer; box-shadow:0 4px 0 #46A302;">保存する</button>
-          <button id="sqClose" style="padding:8px; background:none; border:2px solid var(--card-border); border-radius:10px; font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; color:var(--subtext);">キャンセル</button>
+          <input type="text" id="sqAnswer" class="field" placeholder="答え" aria-label="答え">
+          <div id="sqError" class="modal-error" role="alert"></div>
+          <button id="sqSave" class="btn-primary" type="button">保存する</button>
+          <button id="sqClose" class="btn-secondary" type="button">キャンセル</button>
         </div>
       </div>
     </aside>
@@ -115,8 +138,8 @@
         <div class="onboarding-text" id="onboardingText"></div>
         <div class="onboarding-dots" id="onboardingDots"></div>
         <div class="onboarding-actions">
-          <button class="onboarding-skip" id="onboardingSkip">スキップ</button>
-          <button class="onboarding-next" id="onboardingNext">次へ →</button>
+          <button class="onboarding-skip" id="onboardingSkip" type="button">スキップ</button>
+          <button class="onboarding-next" id="onboardingNext" type="button">次へ</button>
         </div>
       </div>
     </div>
@@ -126,18 +149,26 @@
       <div class="result-card" id="resultCard"></div>
     </div>
 
-    <!-- ===== キャラクターパネル ===== -->
-    <div class="character-panel">
-
-      <div class="status-bar">
-        <div class="status-item">🔥 <strong id="streakCount">0</strong></div>
-        <div class="status-item">💎 <strong id="xpCount">0</strong></div>
-      </div>
-
-      <div class="subject-badge" id="subjectBadge">⚡ 物理</div>
-
-      <!-- Feyn キャラクター -->
-      <div class="char-illustration">
+    <!-- ===== チャット ===== -->
+    <main class="chat-main">
+      <!-- 会話の列の上の「欄外」: Feyn・納得度・ライフ -->
+      <header class="chat-head">
+        <div class="feyn-id">
+          <span class="avatar avatar-lg"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span>
+          <div class="feyn-id-text">
+            <div class="char-name">Feyn</div>
+            <div class="char-meta"><span class="subject-badge" id="subjectBadge">物理</span><span class="char-role" id="charRole">物理を教わる生徒役</span></div>
+          </div>
+        </div>
+        <div class="xp-area" id="xpArea">
+          <div class="xp-label"><span>納得度</span><span class="xp-percent">0%</span></div>
+          <div class="xp-bar" role="presentation">
+            <div class="xp-fill" style="width: 0%;"></div>
+            <div class="xp-stars" aria-hidden="true"><span class="star"></span><span class="star"></span><span class="star"></span><span class="star"></span></div>
+          </div>
+        </div>
+        <div id="livesDisplay" class="lives-display" style="display:none;"></div>
+      <div class="char-illustration" hidden>
         <svg width="200" height="230" viewBox="0 0 200 230" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <radialGradient id="face-grad" cx="45%" cy="40%" r="55%">
@@ -192,58 +223,32 @@
           <path id="feynTieTip"  d="M 92 218 L 100 224 L 108 218 L 100 230 Z" fill="#3EA801"/>
         </svg>
       </div>
+      </header>
 
-      <div class="char-name">Feyn</div>
-      <div class="char-role" id="charRole">物理担当のライバル</div>
-      <div class="level-badge" id="levelBadge"></div>
+      <div class="messages" id="messages" role="log" aria-live="polite" aria-label="Feynとの会話"></div>
 
-      <div id="livesDisplay" class="lives-display" style="display:none;"></div>
-
-      <div class="xp-area">
-        <div class="xp-label">
-          <span>💡 納得度</span>
-          <span class="xp-percent">0%</span>
+      <div class="composer">
+        <div class="help-row">
+          <button class="help-btn" id="hintBtn" type="button" disabled><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>ヒント</button>
+          <button class="help-btn" id="revealBtn" type="button" disabled><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>答えを見る</button>
         </div>
-        <div class="xp-bar">
-          <div class="xp-fill" style="width: 0%;"></div>
+        <div class="input-area">
+          <button class="math-btn icon-btn" id="mathBtn" type="button" title="数式を入力" aria-label="数式を入力"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13h3l3 7 5-16h7"/></svg></button>
+          <!-- 音声入力。ブラウザが対応しているときだけ script.js が表示する -->
+          <button class="mic-btn icon-btn" id="micBtn" type="button" title="音声で入力" aria-label="音声で入力" aria-pressed="false" style="display:none;"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+          <textarea placeholder="Feynに説明してみよう" aria-label="Feynへの説明"></textarea>
+          <button class="send-btn" type="button" aria-label="送信"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6"/></svg><span class="send-label">送信</span></button>
         </div>
-        <div class="xp-stars">
-          <span class="star">⭐</span>
-          <span class="star">⭐</span>
-          <span class="star">⭐</span>
-          <span class="star">⭐</span>
-        </div>
-      </div>
-
-      <div class="stats-display" id="statsDisplay"></div>
-
-    </div>
-
-    <!-- ===== チャットパネル ===== -->
-    <main class="chat-main">
-      <div class="messages" id="messages"></div>
-
-      <div class="help-row">
-        <button class="help-btn" id="hintBtn" disabled>💡 ヒント</button>
-        <button class="help-btn" id="revealBtn" disabled>🔍 答えを見る</button>
-      </div>
-
-      <div class="input-area">
-        <button class="math-btn" id="mathBtn" type="button" title="数式を入力">🧮</button>
-        <!-- 音声入力。ブラウザが対応しているときだけ script.js が表示する -->
-        <button class="mic-btn" id="micBtn" type="button" title="音声で入力" aria-label="音声で入力" aria-pressed="false" style="display:none;">🎤</button>
-        <textarea placeholder="Feynに解説を入力してください..."></textarea>
-        <button class="send-btn">🚀 送信</button>
       </div>
     </main>
   </div>
 
-  <input type="file" id="photoUploadInput" accept="image/*" capture="environment" style="display:none;">
+  <input type="file" id="photoUploadInput" accept="image/*" capture="environment" style="display:none;" aria-label="問題の写真を選ぶ">
 
   <!-- ===== 数式入力モーダル ===== -->
-  <div class="math-modal-overlay" id="mathModalOverlay" style="display:none;">
+  <div class="math-modal-overlay" id="mathModalOverlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="mathModalTitle">
     <div class="math-modal">
-      <div class="math-modal-title">🧮 数式を入力</div>
+      <div class="math-modal-title" id="mathModalTitle">数式を入力</div>
       <math-field id="mathField"></math-field>
       <div class="math-quick-row">
         <button type="button" data-insert="\frac{#0}{#0}">分数</button>
@@ -269,7 +274,7 @@
     </div>
   </div>
 
-  <canvas id="confettiCanvas"></canvas>
+  <canvas id="confettiCanvas" aria-hidden="true"></canvas>
 
   <script src="script.js"></script>
 </body>

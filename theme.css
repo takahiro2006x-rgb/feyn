@@ -1,0 +1,91 @@
+/* =========================================================
+   Feyn の共通のデザインのトークン（全部の画面で読み込む）
+   ルールは docs/DESIGN.md。色・角の丸み・影は、ここで決めたものだけを使う
+   ========================================================= */
+
+/* ===== トークン ===== */
+:root {
+  --paper:      #FFFFFF;
+  --paper-2:    #F3F8FB;
+  --grid-line:  rgba(40, 110, 170, 0.085);
+  --rule:       #D9E3EA;
+  --ink:        #1B2A33;
+  --ink-soft:   #4A5A66;
+  --pencil:     #33424D;
+  --red:        #D4352A;
+  --red-dark:   #A8261E;
+  --on-red:     #FFFFFF;
+  --board:      #1E4D2B;
+  --board-ink:  #F4F7F2;
+  --brand:      #58CC02;
+  --on-brand:   #10240A;
+  --meter:      #F2B705;
+  --note-paper: #FFFEFA;                    /* 会話の地: 罫線ノートの紙（少し生成り） */
+  --note-rule:  rgba(40, 110, 170, 0.13);   /* ノートの罫線 */
+  --margin-line: rgba(212, 53, 42, 0.35);   /* ノートの左の赤い余白線 */
+  --feyn-bubble: #FFFFFF;
+  --me-bubble:  #FFFFFF;
+  --shadow-note: 0 2px 10px rgba(27, 42, 51, 0.07);   /* ノートに貼ったメモ（吹き出し） */
+  --hint-bg:    rgba(242, 183, 5, 0.16);
+  --hint-line:  rgba(196, 146, 0, 0.45);
+  --answer-bg:  rgba(30, 77, 43, 0.08);
+  --answer-line: rgba(30, 77, 43, 0.28);
+  --scrim:      rgba(27, 42, 51, 0.45);
+
+  --sans: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --hand: "Klee One", "Zen Kaku Gothic New", sans-serif;
+
+  --r-sm: 4px;      /* カード・入力欄 */
+  --r-md: 6px;      /* ボタン */
+  --r-lg: 12px;     /* 吹き出し */
+  --r-pill: 999px;  /* 小さなタグ・バー */
+
+  --shadow-paper: 0 12px 30px rgba(27, 42, 51, 0.10);
+  --shadow-lift:  0 18px 40px rgba(27, 42, 51, 0.16);
+  --shadow-press: 0 4px 0 var(--red-dark);
+
+}
+
+/* ダークモード: 夜の黒板（LPと同じ） */
+[data-theme="dark"] {
+  --paper:      #131A16;
+  --paper-2:    #18211B;
+  --grid-line:  rgba(200, 230, 210, 0.06);
+  --rule:       #2D3A31;
+  --ink:        #ECF1EC;
+  --ink-soft:   #B8C4BA;
+  --pencil:     #D5DED6;
+  --red:        #FF6B5E;
+  --red-dark:   #FF8C82;
+  --on-red:     #1A0D0B;
+  --board:      #0E2416;
+  --note-paper: #131A16;
+  --note-rule:  rgba(200, 230, 210, 0.08);
+  --margin-line: rgba(255, 107, 94, 0.40);
+  --feyn-bubble: #1B241E;
+  --me-bubble:  #1B241E;
+  --shadow-note: 0 2px 10px rgba(0, 0, 0, 0.30);
+  --hint-bg:    rgba(242, 183, 5, 0.14);
+  --hint-line:  rgba(242, 183, 5, 0.40);
+  --answer-bg:  rgba(120, 200, 140, 0.10);
+  --answer-line: rgba(120, 200, 140, 0.30);
+  --scrim:      rgba(0, 0, 0, 0.6);
+  --shadow-paper: 0 12px 30px rgba(0, 0, 0, 0.35);
+  --shadow-lift:  0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== 古いページの変数名 → トークン =====
+   マイページ・先生の画面などで使っていた名前を、トークンにつなぐ（ページを直したら使わなくなる） */
+:root {
+  --bg:          var(--paper-2);
+  --card:        var(--paper);
+  --border:      var(--rule);
+  --card-border: var(--rule);
+  --text:        var(--ink);
+  --subtext:     var(--ink-soft);
+  --input-bg:    var(--paper);
+  --bubble:      var(--paper-2);
+}
+
+/* ===== ベース ===== */
+:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; border-radius: var(--r-sm); }

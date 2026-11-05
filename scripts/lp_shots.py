@@ -5,6 +5,8 @@
   py scripts/lp_shots.py lp OUTDIR [prefix] [URL]   LPのページ全体を 375px と 1280px で撮って OUTDIR に保存
                                       （URL に起動中の開発サーバーを指定すると、そこを撮る）
   py scripts/lp_shots.py ogp          OGP画像（1200×630）を static/lp/ogp.png に書き出す
+  py scripts/lp_shots.py chat OUTDIR [prefix]   チャット画面をスマホ・PC×ライト・ダーク×3場面で撮る
+  py scripts/lp_shots.py pages OUTDIR [prefix]  マイページ・ログイン・先生の画面・特商法などを撮る
 
 安全のために:
 - Render 上（RENDER）や DATABASE_URL が設定された環境では、何もせずに止まる
@@ -132,6 +134,27 @@ ANALYSES = {
 }
 
 
+# チャット画面の撮影用（py scripts/lp_shots.py chat）。4往復して、最後にFeynが納得する長めの会話。
+# LP用の撮影（app）の会話は変えないよう、chat のときだけ物理の台本をこちらに差し替える
+CHAT_SCRIPT = [
+    'ボールが壁にぶつかって、同じ速さ 5 m/s ではね返ったとする。速さが変わってないなら、ボールの運動量も保存されてるってこと？',
+    'じゃあ聞くけど、運動量が変わったのは何のせい？ 壁はボールに何をしてるの？',
+    '力積ってことは $F\\Delta t = \\Delta p$ だよね。ボールの質量が 0.2 kg なら、運動量の変化は具体的にいくつになる？',
+    'なるほど、向きをマイナスで表すんだね。でも最初「保存されない」って言ってたよね。じゃあ、運動量が保存されるのはどんなとき？',
+    'なるほど…！ ボールだけを見るか、壁までまとめて1つと見るかで答えが変わるんだね。やっとわかった、ありがとう！【会話終了】',
+]
+CHAT_LINES = [
+    '向きが逆になるから、運動量は保存されないと思う。なんとなく、壁が力を加えるから。',
+    '壁がボールに力積を加えるから、その分だけボールの運動量が変わる。',
+    '右向きを正にすると $\\Delta p = 0.2 \\times (-5) - 0.2 \\times 5 = -2$ で、大きさは 2 kg·m/s。',
+    'ボールと壁をまとめて1つと見れば、外から力ははたらかないから保存される。',
+]
+CHAT_WAIT = ['5 m/s', '壁はボールに何をしてるの', '運動量の変化は具体的に', '保存されるのはどんなとき', 'やっとわかった']
+PHOTO_REPLY = ('写真の問題だね！ 質量 0.2 kg のボールが 5 m/s で壁に当たって、同じ速さではね返る…'
+               'ってことは、はね返る前と後で、ボールの運動量はどれだけ変わったの？')
+_chat_mode = False
+
+
 def _subject_of(instruction):
     for subject in SCRIPTS:
         if subject in instruction:
@@ -147,7 +170,10 @@ class ScriptedChat:
         self.history = list(history) if history else []
 
     def send_message(self, text, image=None):
-        lines = SCRIPTS[self.subject]
+        lines = CHAT_SCRIPT if (_chat_mode and self.subject == '物理') else SCRIPTS[self.subject]
+        if image is not None:      # 写真モードの最初の質問
+            self.history += [{'role': 'user', 'message': text}, {'role': 'model', 'message': PHOTO_REPLY}]
+            return SimpleNamespace(text=PHOTO_REPLY)
         n = sum(1 for h in self.history if h['role'] == 'user')
         reply = lines[min(n, len(lines) - 1)]
         self.history.append({'role': 'user', 'message': text})
@@ -338,6 +364,153 @@ def shoot_app():
         browser.close()
 
 
+def _make_problem_photo(path):
+    """写真モード用の「問題集のページ」の画像（架空の問題）"""
+    from PIL import Image, ImageDraw, ImageFont
+    img = Image.new('RGB', (900, 560), '#FBFAF5')
+    d = ImageDraw.Draw(img)
+    for y in range(40, 560, 36):
+        d.line([(30, y), (870, y)], fill='#DCE6EE', width=1)
+    font_path = next((p for p in ['C:/Windows/Fonts/YuGothM.ttc', 'C:/Windows/Fonts/meiryo.ttc'] if os.path.exists(p)), None)
+    big = ImageFont.truetype(font_path, 34) if font_path else ImageFont.load_default()
+    small = ImageFont.truetype(font_path, 28) if font_path else ImageFont.load_default()
+    d.text((40, 52), '問題 12　運動量と力積', fill='#1B2A33', font=big)
+    lines = ['質量 0.2 kg のボールが、なめらかな床の上を', '5 m/s で進んで鉛直な壁に垂直に当たり、',
+             '同じ速さではね返った。', '(1) ボールの運動量の変化を求めよ。', '(2) ボールが壁から受けた力積を求めよ。']
+    for i, line in enumerate(lines):
+        d.text((40, 128 + i * 72), line, fill='#33424D', font=small)
+    img.save(path)
+
+
+def shoot_chat(out_dir, prefix=''):
+    """チャット画面を、スマホ・PC × ライト・ダーク × 3つの場面で撮る（デザインの見直し用）。
+    場面: chat（4往復目・ヒント表示中）／clear（Feynが納得して結果が出たところ）／photo（写真モードの始まり）
+    動きを減らす設定で撮り、演出の途中で写らないようにする"""
+    global _chat_mode
+    from playwright.sync_api import sync_playwright
+    _chat_mode = True
+    install_mocks()
+    start_server()
+    seed()
+    with core.get_db() as conn:   # 何度も会話を始めるので、撮影用の生徒はライフ無制限（有料プラン扱い）にする
+        conn.execute("UPDATE users SET subscription_status = 'active' WHERE email = 'demo-a@example.com'")
+        conn.commit()
+    os.makedirs(out_dir, exist_ok=True)
+    photo = os.path.join(_tmpdir, 'problem.png')
+    _make_problem_photo(photo)
+
+    sizes = [('sp', dict(viewport={'width': 375, 'height': 812}, is_mobile=True, has_touch=True)),
+             ('pc', dict(viewport={'width': 1280, 'height': 800}))]
+    with sync_playwright() as p:
+        browser = _browser(p)
+        for size, opts in sizes:
+            for theme in ['light', 'dark']:
+                ctx = browser.new_context(color_scheme=theme, reduced_motion='reduce', locale='ja-JP',
+                                          device_scale_factor=1, **opts)
+                _login(ctx, 'demo-a@example.com')
+                page = ctx.new_page()
+
+                def shot(state):
+                    page.wait_for_timeout(700)
+                    path = os.path.join(out_dir, f'{prefix}{size}-{theme}-{state}.png')
+                    page.screenshot(path=path)
+                    print('saved', os.path.relpath(path, ROOT))
+
+                def send(text, wait_text):
+                    page.fill('.input-area textarea', text)
+                    page.locator('.input-area .send-btn').click()
+                    page.wait_for_selector(f'#messages .bubble >> text={wait_text}', timeout=15000)
+
+                page.goto(BASE + '/')
+                page.wait_for_load_state('networkidle')
+                page.evaluate('window.launchConfetti = () => {}')   # 紙吹雪の途中で写らないように
+                page.get_by_text('Feynにおまかせ').click()
+                page.wait_for_selector(f'#messages .bubble >> text={CHAT_WAIT[0]}', timeout=15000)
+                for line, wait_text in zip(CHAT_LINES[:3], CHAT_WAIT[1:4]):
+                    send(line, wait_text)
+                page.locator('#hintBtn').click()
+                page.wait_for_selector('#messages .bubble.hint', timeout=15000)
+                shot('chat')
+                send(CHAT_LINES[3], CHAT_WAIT[4])
+                page.wait_for_selector('#resultOverlay', state='visible', timeout=15000)
+                page.evaluate("document.getElementById('resultCard').scrollTop = 0")
+                shot('clear')
+
+                page.goto(BASE + '/')
+                page.wait_for_load_state('networkidle')
+                page.get_by_text('Feynにおまかせ').wait_for(timeout=15000)
+                page.set_input_files('#photoUploadInput', photo)
+                page.wait_for_selector('#photoSendBtn', timeout=15000)
+                page.locator('#photoSendBtn').click()
+                page.wait_for_selector('#messages .bubble >> text=写真の問題だね', timeout=15000)
+                shot('photo')
+                ctx.close()
+        browser.close()
+
+
+def shoot_pages(out_dir, prefix=''):
+    """チャット以外の画面を、スマホ・PC × ライト・ダークで撮る（デザインをそろえる作業の確認用）。
+    マイページ（偏差値・苦手ノート・学習のきろく）・ログイン・先生のダッシュボード・生徒の詳細・特商法・プライバシーポリシー"""
+    from playwright.sync_api import sync_playwright
+    install_mocks()
+    start_server()
+    seed()
+    os.makedirs(out_dir, exist_ok=True)
+    with core.get_db() as conn:
+        sid = conn.execute("SELECT id FROM users WHERE email = 'demo-b@example.com'").fetchone()['id']
+    sizes = [('sp', dict(viewport={'width': 375, 'height': 812}, is_mobile=True, has_touch=True)),
+             ('pc', dict(viewport={'width': 1280, 'height': 800}))]
+
+    with sync_playwright() as p:
+        browser = _browser(p)
+        for size, opts in sizes:
+            for theme in ['light', 'dark']:
+                def shot(page, name):
+                    page.wait_for_timeout(600)
+                    path = os.path.join(out_dir, f'{prefix}{name}-{size}-{theme}.png')
+                    page.screenshot(path=path)
+                    print('saved', os.path.relpath(path, ROOT))
+
+                base = dict(color_scheme=theme, reduced_motion='reduce', locale='ja-JP', device_scale_factor=1, **opts)
+                # 生徒: マイページ
+                ctx = browser.new_context(**base)
+                _login(ctx, 'demo-b@example.com')
+                page = ctx.new_page()
+                for tab in ['hensachi', 'gaps', 'history']:
+                    page.goto(f'{BASE}/mypage?tab={tab}')
+                    page.wait_for_load_state('networkidle')
+                    if tab == 'history':
+                        head = page.locator('.session-head').first
+                        if head.count():
+                            head.click()
+                            page.wait_for_load_state('networkidle')
+                    shot(page, f'mypage-{tab}')
+                ctx.close()
+                # ログイン（未ログイン）・特商法・プライバシーポリシー
+                ctx = browser.new_context(**base)
+                page = ctx.new_page()
+                for path, name in [('/login', 'login'), ('/tokushoho', 'tokushoho'), ('/privacy', 'privacy')]:
+                    page.goto(BASE + path)
+                    page.wait_for_load_state('networkidle')
+                    shot(page, name)
+                ctx.close()
+                # 先生: ダッシュボード・生徒の詳細
+                ctx = browser.new_context(**base)
+                _login(ctx, 'demo-teacher@example.com')
+                page = ctx.new_page()
+                page.goto(BASE + '/dashboard')
+                page.wait_for_load_state('networkidle')
+                shot(page, 'dashboard')
+                page.goto(f'{BASE}/dashboard/student/{sid}')
+                page.wait_for_load_state('networkidle')
+                tab = page.locator('.tab-btn[data-tab="gaps"]')
+                if tab.count():
+                    tab.click()
+                shot(page, 'student')
+                ctx.close()
+        browser.close()
+
+
 def shoot_lp(out_dir, prefix='', base=None):
     """LPのページ全体。動きを減らす設定で開き、演出の途中で写らないようにする"""
     from playwright.sync_api import sync_playwright
@@ -390,6 +563,10 @@ if __name__ == '__main__':
         shoot_app()
     elif cmd == 'lp' and len(sys.argv) > 2:
         shoot_lp(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '', sys.argv[4] if len(sys.argv) > 4 else None)
+    elif cmd == 'pages' and len(sys.argv) > 2:
+        shoot_pages(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
+    elif cmd == 'chat' and len(sys.argv) > 2:
+        shoot_chat(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
     elif cmd == 'ogp':
         shoot_ogp()
     else:

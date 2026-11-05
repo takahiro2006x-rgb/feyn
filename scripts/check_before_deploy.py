@@ -40,6 +40,7 @@ DUMMY_ADDRESS = re.compile(
     r'[\w.+-]*@?[\w-]*\.?(?:example\.(?:com|net|org)|[\w-]+\.(?:test|invalid))\b', re.IGNORECASE)
 DRAFT = re.compile(r'下書き|雛形')
 COMMENT = re.compile(r'<!--.*?-->', re.DOTALL)
+STYLE = re.compile(r'<style[^a-z-].*?</style>', re.DOTALL)
 PLACEHOLDER_SECTION = re.compile(r'<(section|div|aside)\b[^>]*\bdata-placeholder\b[^>]*>.*?</\1>', re.DOTALL)
 
 
@@ -64,8 +65,9 @@ def check(name, text):
     for m in PLACEHOLDER_SECTION.finditer(text):
         if '【' in m.group(0):
             warnings.append('「使った人の声」が data-placeholder 付きのまま（中身が【要確認】のダミーなので表示されない）')
-    # 利用者に見えない所（HTMLのコメント・表示されない声のセクション）は数えない
+    # 利用者に見えない所（HTMLのコメント・CSS・表示されない声のセクション）は数えない
     visible = COMMENT.sub(_blank, text)
+    visible = STYLE.sub(_blank, visible)   # CSS（コメントを含む）は画面に出ない
     visible = PLACEHOLDER_SECTION.sub(_blank, visible)
     for no, line in enumerate(visible.splitlines(), 1):
         plain = re.sub(r'<[^>]+>', '', line).strip()

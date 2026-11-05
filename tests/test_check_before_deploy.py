@@ -40,3 +40,8 @@ def test_lp_with_real_contact_address_has_no_contact_warning(monkeypatch):
     errors, warnings = checker.check('LP', checker.landing_render.render_landing())
     assert not any('CONTACT_EMAIL' in w for w in warnings)
     assert not any('feyn-school' in e for e in errors)
+
+
+def test_ignores_css():
+    errors, _ = checker.check('x', '<style>\n  /* 下書きの注意書き 【メモ】 */\n</style>\n<p>本文</p>')
+    assert errors == []

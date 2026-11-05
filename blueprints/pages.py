@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """HTML/静的ファイルの配信ルート"""
-from flask import Blueprint, abort, redirect, send_from_directory, session
+from flask import Blueprint, Response, abort, redirect, request, send_from_directory, session
+
+import core
+import landing_render
+import ratelimit
 
 pages_bp = Blueprint('pages', __name__)
 
@@ -18,7 +22,8 @@ def index():
 @pages_bp.route('/landing')
 def landing_page():
     # ログイン中でもLPを見られるようにする（LP側でログイン状態に応じてCTAを出し分ける）
-    return send_from_directory('.', 'landing.html')
+    # 相談ボタンの欄だけ、CONTACT_EMAIL に合わせて差し替える（landing_render.py）
+    return Response(landing_render.render_landing(), mimetype='text/html')
 
 
 @pages_bp.route('/tokushoho')
@@ -27,11 +32,51 @@ def tokushoho_page():
     return send_from_directory('.', 'tokushoho.html')
 
 
+@pages_bp.route('/privacy')
+def privacy_page():
+    # プライバシーポリシー（下書き）。docs/drafts/privacy_policy.md から scripts/build_legal_pages.py で作る
+    return send_from_directory('.', 'privacy.html')
+
+
+@pages_bp.route('/terms')
+def terms_page():
+    # 利用規約（下書き）。docs/drafts/terms_of_service.md から scripts/build_legal_pages.py で作る
+    return send_from_directory('.', 'terms.html')
+
+
 @pages_bp.route('/login')
 def login_page():
     if session.get('user_id'):
         return redirect('/')
     return send_from_directory('.', 'login.html')
+
+
+# ===== LPの効果測定 =====
+# 記録するのは「LPが表示された」「どのボタンが押された」だけ。user_id・IPアドレスなど、人を特定する情報は保存しない。
+# ログインなしで呼べるので、1つのIPからの記録は一定回数までにする（数はメモリ上で数えるだけで、保存しない）
+LP_EVENT_LIMIT = 30
+LP_EVENT_WINDOW_SECONDS = 600
+
+
+@pages_bp.route('/api/lp-event', methods=['POST'])
+def lp_event():
+    data = request.get_json(force=True, silent=True) or {}
+    kind, place = data.get('type'), data.get('place')
+    if kind == 'view':
+        event_type, place = 'lp_view', None
+    elif kind == 'cta' and place in core.LP_CTA_PLACES:
+        event_type = 'lp_cta_click'
+    elif kind == 'contact':
+        event_type, place = 'lp_contact_click', None
+    else:
+        return '', 204   # 決まった形以外は記録しない（エラーも返さない）
+
+    key = f'lp-event:{ratelimit.client_ip()}'
+    if ratelimit.limiter.retry_after(key, LP_EVENT_LIMIT, LP_EVENT_WINDOW_SECONDS) > 0:
+        return '', 204
+    ratelimit.limiter.record_failure(key)   # 「失敗の回数」の仕組みを、記録の回数を数えるのに使う
+    core.log_event(event_type, user_id=None, mode=place)
+    return '', 204
 
 
 # 学習のきろく・苦手ノートはマイページのタブに統合したため、旧URLはそちらへ誘導する

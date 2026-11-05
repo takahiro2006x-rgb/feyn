@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!-- OGP画像（1200×630）の元。py scripts/lp_shots.py ogp で static/lp/ogp.png に書き出す。
+     LPのファーストビュー（見出しとノート）を、SNSのカードの大きさに組み直したもの -->
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Klee+One:wght@600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 1200px; height: 630px; overflow: hidden; }
+    body {
+      font-family: "Zen Kaku Gothic New", sans-serif; color: #1B2A33; background-color: #FFFFFF;
+      background-image: linear-gradient(rgba(40, 110, 170, 0.085) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(40, 110, 170, 0.085) 1px, transparent 1px);
+      background-size: 24px 24px;
+      display: grid; grid-template-columns: 540px 1fr; align-items: center; gap: 30px; padding: 0 52px 0 60px;
+      position: relative;
+    }
+    body::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 22px; background: #1E4D2B; }
+    .hand { font-family: "Klee One", sans-serif; font-weight: 600; }
+    .logo { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+    .logo-mark { width: 50px; height: 50px; border-radius: 12px; background: #58CC02; display: grid; place-items: center; }
+    .logo-text { font-size: 34px; font-weight: 900; }
+    .catch { font-weight: 900; line-height: 1.2; }
+    .catch .s { display: block; font-size: 46px; }
+    .catch .l { display: block; font-size: 92px; white-space: nowrap; }
+    .mark { position: relative; display: inline-block; }
+    .ring { position: absolute; left: -20px; top: -12px; width: calc(100% + 34px); height: calc(100% + 24px); overflow: visible; transform: rotate(-2deg); }
+    .ring path { fill: none; stroke: #D4352A; stroke-width: 3.5; stroke-linecap: round; }
+    .note { position: absolute; top: -40px; right: -104px; color: #D4352A; font-size: 24px; transform: rotate(6deg); white-space: nowrap; }
+    .sub { margin-top: 26px; font-size: 25px; font-weight: 700; color: #4A5A66; line-height: 1.6; }
+    .notebook {
+      position: relative; background-color: #FFFFFF; border: 1px solid #CBD7DF; border-radius: 4px 12px 12px 4px;
+      padding: 26px 26px 28px 58px; box-shadow: 0 18px 40px rgba(27, 42, 51, 0.16); transform: rotate(-1.5deg);
+      background-image: linear-gradient(rgba(40, 110, 170, 0.1) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(40, 110, 170, 0.1) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .notebook::before { content: ""; position: absolute; left: 18px; top: 24px; bottom: 24px; width: 12px;
+      background: radial-gradient(circle at 6px 6px, #D6DEE4 5px, transparent 5.5px) 0 0 / 12px 44px repeat-y; }
+    .nb-head { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: #4A5A66; border-bottom: 2px solid #1B2A33; padding-bottom: 6px; margin-bottom: 12px; }
+    .nb-head .red { color: #D4352A; }
+    .line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; padding: 7px 0; }
+    .t { font-family: "Klee One", sans-serif; font-weight: 600; font-size: 20px; color: #33424D; line-height: 1.6; }
+    .q { font-family: "Klee One", sans-serif; font-weight: 600; font-size: 17px; color: #D4352A; line-height: 1.45; transform: rotate(-2deg); white-space: nowrap; }
+    .wavy { text-decoration: underline wavy #D4352A; text-decoration-thickness: 2px; text-underline-offset: 6px; }
+    .circ { border: 2px solid #D4352A; border-radius: 50%; padding: 0 6px; }
+  </style>
+</head>
+<body>
+  <div>
+    <div class="logo">
+      <span class="logo-mark"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span>
+      <span class="logo-text">Feyn</span>
+    </div>
+    <h1 class="catch">
+      <span class="s">その<span class="mark">「わかった」<svg class="ring" viewBox="0 0 220 70" preserveAspectRatio="none"><path d="M20 40 C 12 16, 110 4, 192 16 C 222 24, 216 56, 150 62 C 82 68, 14 62, 12 42 C 10 26, 44 13, 80 10"/></svg><span class="note hand">ほんとに？</span></span>、</span>
+      <span class="l">説明できる？</span>
+    </h1>
+    <p class="sub">AIの生徒役「Feyn」に教えて学ぶ、<br>ファインマン学習法のアプリ</p>
+  </div>
+  <div class="notebook">
+    <div class="nb-head"><span>物理　運動量保存</span><span class="red">赤字＝Feynからの質問</span></div>
+    <div class="line"><span class="t">壁にぶつかったボールは、<span class="wavy">運動量が保存されない</span>。</span><span class="q">どこまでを「1つ」と<br>見てるの？</span></div>
+    <div class="line"><span class="t"><span class="circ">なんとなく</span>、壁が力を加えるから。</span><span class="q">「なんとなく」じゃなくて、<br>なんで？</span></div>
+    <div class="line"><span class="t">外から力がはたらかなければ保存される。</span><span class="q">じゃあ、壁とボールを<br>まとめて見たら？</span></div>
+  </div>
+</body>
+</html>

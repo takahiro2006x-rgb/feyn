@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="google" content="notranslate">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>プライバシーポリシー - Feyn</title>
+  <script>
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --green:   #58CC02;
+      --text:    #3C3C3C;
+      --subtext: #6E6E6E;
+      --bg:      #F0F4F8;
+      --card:    #FFFFFF;
+      --border:  #E5E5E5;
+      --red:     #D93636;
+    }
+    [data-theme="dark"] {
+      --text:    #E2E8F0;
+      --subtext: #9AA4AF;
+      --bg:      #0D1117;
+      --card:    #161B22;
+      --border:  #30363D;
+      --red:     #FF7B7B;
+    }
+    body { font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif; background: var(--bg); color: var(--text); }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+    .header { background: var(--card); border-bottom: 2px solid var(--border); padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 16px; }
+    .header-logo { font-size: 20px; font-weight: 800; color: var(--green); text-decoration: none; }
+    .header-title { font-size: 14px; font-weight: 800; color: var(--subtext); flex: 1; }
+    .back-link { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--subtext); text-decoration: none; }
+    .back-link:hover { color: var(--text); }
+    .container { max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; }
+    .todo-banner { background: #FFF3CD; border: 2px solid #FFE28A; color: #6B5300; border-radius: 14px; padding: 14px 18px; font-size: 13px; font-weight: 700; line-height: 1.8; margin-bottom: 28px; }
+    .todo-banner p + p { margin-top: 6px; }
+    [data-theme="dark"] .todo-banner { background: #3A2E00; border-color: #6B5300; color: #FFD966; }
+    .doc { background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 28px 28px 32px; font-size: 14px; font-weight: 700; line-height: 1.9; }
+    .doc h1 { font-size: 22px; font-weight: 800; margin-bottom: 16px; }
+    .doc h2 { font-size: 17px; font-weight: 800; margin: 28px 0 8px; padding-top: 18px; border-top: 2px solid var(--border); }
+    .doc p { margin: 8px 0; }
+    .doc ul, .doc ol { margin: 8px 0 8px 1.6em; }
+    .doc li { margin: 4px 0; }
+    .doc hr { display: none; }
+    .doc table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px; display: block; overflow-x: auto; }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--bg); color: var(--subtext); white-space: nowrap; }
+    .doc code { font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+    .fill-in { color: var(--red); }
+    @media (max-width: 600px) {
+      .header { padding: 0 16px; }
+      .header-title { display: none; }
+      .container { padding: 20px 16px 48px; }
+      .doc { padding: 20px 16px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <a href="/landing" class="header-logo">🎓 Feyn</a>
+    <div class="header-title">プライバシーポリシー</div>
+    <a href="/landing" class="back-link">← トップへ戻る</a>
+  </header>
+
+  <main class="container">
+    <div class="todo-banner" role="note">
+      <p>⚠️ 下書き・公開前に要確認。このページはまだ確定していません。<span class="fill-in">赤字の【 】</span>の所を埋め、専門家の確認を受けてから公開してください。</p>
+      <p>2026-10-25 に、アプリのコードを読んで「実際に扱っているデータ」に合わせて作成しました。</p>
+      <p>法律の専門家の確認は受けていません。公開前に、弁護士・個人情報保護委員会の資料などで必ず確認してください。</p>
+      <p><span class="fill-in">【 】</span>の部分は、事業者の情報や方針を決めて埋めてください。</p>
+      <p><strong>公開前に解決が必要な重大な論点（本文の「6. AIサービスへの送信」も参照）</strong></p>
+      <p>Gemini API の利用規約は、18歳未満の人が使う可能性の高いアプリでの利用を禁止しています（2026-10-25 時点の規約）。</p>
+      <p>Feyn は受験生（多くが18歳未満）向けなので、このポリシーを整える前に、AIの提供元をどうするかを決める必要があります。</p>
+      <p>詳しくは <code>OVERNIGHT_REPORT.md</code> を参照してください。</p>
+    </div>
+    <article class="doc">
+<h1>Feyn プライバシーポリシー</h1>
+<hr />
+<p><span class="fill-in">【事業者名】</span>（以下「当方」）は、学習アプリ「Feyn（フェイン）」（以下「本サービス」）における利用者の個人情報を、次のとおり取り扱います。</p>
+<h2>1. 取得する情報</h2>
+<table>
+<thead>
+<tr>
+<th>種類</th>
+<th>内容</th>
+<th>取得する場面</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>アカウント情報</td>
+<td>メールアドレス、ニックネーム、パスワード（復元できない形に変換して保存）、秘密の質問と答え（答えは復元できない形に変換して保存）</td>
+<td>新規登録・設定変更</td>
+</tr>
+<tr>
+<td>学習の記録</td>
+<td>Feynとの会話の内容、選んだ科目・試験区分・単元、会話の完了記録、AIが分析した理解度・苦手（理解の穴）、連続学習日数</td>
+<td>本サービスの利用中</td>
+</tr>
+<tr>
+<td>写真</td>
+<td>「今解いている問題」としてアップロードした写真</td>
+<td>写真モードの利用時（当方のサーバーには保存せず、AIへの送信にのみ使います）</td>
+</tr>
+<tr>
+<td>音声</td>
+<td>音声入力ボタンで話した声</td>
+<td>音声入力の利用時（声はお使いのブラウザの音声認識機能が文字に変換します。当方に届くのは文字になった結果だけです。「6」を参照）</td>
+</tr>
+<tr>
+<td>利用状況</td>
+<td>会話を始めた・終えた・何往復目でやめた・有料プランにした等の「出来事」と日時（会話の中身は含みません）</td>
+<td>本サービスの利用中</td>
+</tr>
+<tr>
+<td>紹介ページの閲覧</td>
+<td>紹介ページ（LP）が表示された回数と、どのボタンが押されたか（誰が見た・押したかは記録しません。IPアドレスも保存しません）</td>
+<td>紹介ページの閲覧時</td>
+</tr>
+<tr>
+<td>課金情報</td>
+<td>有料プランの契約状況、決済サービス（Stripe）上の顧客ID・契約ID</td>
+<td>有料プランの申込み・解約時（クレジットカード番号は当方では取得・保存しません）</td>
+</tr>
+<tr>
+<td>技術情報</td>
+<td>ログイン状態を保つためのCookie、IPアドレス（ログイン試行回数の制限に一時的に使用）、端末内に保存する表示設定（ダークモード等）</td>
+<td>アクセス時</td>
+</tr>
+</tbody>
+</table>
+<h2>2. 利用目的</h2>
+<ol>
+<li>本サービスの提供（AIとの対話、苦手の分析と復習、学習の記録の表示）</li>
+<li>塾・学校等の先生への学習状況の共有（「4」を参照）</li>
+<li>有料プランの料金の請求・契約管理</li>
+<li>不正利用の防止（ログイン試行回数の制限など）</li>
+<li>本サービスの改善（利用状況の集計。個人を特定しない形で行います）</li>
+<li>お問い合わせへの対応</li>
+</ol>
+<h2>3. 未成年の利用者について</h2>
+<p>本サービスは中学生・高校生などの未成年の方の利用を想定しています。</p>
+<ul>
+<li><span class="fill-in">【方針を決めて記入: 例「16歳未満の方は、保護者の同意を得たうえで登録してください」】</span></li>
+<li>有料プランの申込みは、保護者の方の同意を得て、保護者の方の決済手段で行ってください。</li>
+<li>保護者の方は、お子さまのアカウントの削除を、<span class="fill-in">【お問い合わせ窓口】</span>から依頼できます（本人確認を行います）。</li>
+</ul>
+<h2>4. 先生（塾・学校）への共有</h2>
+<p>先生アカウントと同じ組織に所属する生徒の次の情報は、その先生が閲覧できます。</p>
+<ul>
+<li>ニックネーム、メールアドレス、プラン、登録日・最終ログイン日時</li>
+<li>会話の内容、理解度、苦手ノート、課題の提出状況</li>
+<li>上記を集計したもの（CSVでの書き出しを含む。CSVには会話の内容は含みません）</li>
+</ul>
+<p><span class="fill-in">【現状の注意: 2026-10 時点では、すべての利用者が1つの組織に所属しています。塾ごとの組織分けを実装するまでは、先生アカウントの発行先を限定してください】</span></p>
+<h2>5. 第三者への提供・外部サービスの利用</h2>
+<p>当方は、法令に基づく場合を除き、本人の同意なく個人情報を第三者に提供しません。
+本サービスは、次の外部サービスに処理を委託しています。</p>
+<table>
+<thead>
+<tr>
+<th>サービス</th>
+<th>提供元</th>
+<th>用途</th>
+<th>送る情報</th>
+<th>所在国</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gemini API</td>
+<td>Google LLC</td>
+<td>AIとの対話、苦手の分析、ヒント・答え</td>
+<td>会話の内容、写真、ニックネーム（AIへの指示に含まれる）</td>
+<td>米国</td>
+</tr>
+<tr>
+<td>Groq API（予備）</td>
+<td>Groq, Inc.</td>
+<td>Geminiが使えないときの代替AI</td>
+<td>会話の内容、ニックネーム</td>
+<td>米国</td>
+</tr>
+<tr>
+<td>Stripe</td>
+<td>Stripe, Inc.</td>
+<td>有料プランの決済</td>
+<td>メールアドレス、利用者ID</td>
+<td>米国</td>
+</tr>
+<tr>
+<td>Render</td>
+<td>Render Services, Inc.</td>
+<td>アプリのサーバー</td>
+<td>本サービスで扱うすべての情報</td>
+<td><span class="fill-in">【リージョンを確認して記入】</span></td>
+</tr>
+<tr>
+<td>Supabase</td>
+<td>Supabase, Inc.</td>
+<td>データベース</td>
+<td>本サービスで扱うすべての情報</td>
+<td><span class="fill-in">【リージョンを確認して記入】</span></td>
+</tr>
+<tr>
+<td>ブラウザの音声認識</td>
+<td>お使いのブラウザの提供元（Chromeの場合は Google）</td>
+<td>音声入力</td>
+<td>話した声</td>
+<td>提供元による</td>
+</tr>
+<tr>
+<td>jsDelivr / unpkg / Google Fonts</td>
+<td>各提供元</td>
+<td>数式表示・フォントの配信</td>
+<td>IPアドレス等の接続情報</td>
+<td>米国等</td>
+</tr>
+</tbody>
+</table>
+<p>外国にある事業者への提供にあたっては、個人情報保護法に基づき、<span class="fill-in">【同意の取得方法と、提供先の国の個人情報保護制度・提供先の保護措置についての情報提供の方法を記入】</span>。</p>
+<h2>6. AIサービスへの送信について（重要）</h2>
+<p>Feynとの会話の内容と、アップロードした写真は、回答を作るために Google の Gemini API に送信されます。</p>
+<ul>
+<li><strong>Gemini API の無料枠を使う場合</strong>: Google の規約上、送信した内容と回答は Google の製品改善や機械学習技術の開発に使われ、人が読んで確認することがあります。未成年の学習の記録を送ることになるため、<strong>本番では有料枠（送信内容が製品改善に使われない区分）を使うことを強く推奨します。</strong></li>
+<li><strong>Gemini API の有料枠を使う場合</strong>: Google の規約上、送信した内容は製品改善には使われず、不正利用の検知と法令対応のために一定期間だけ記録されます。</li>
+<li><strong>年齢についての規約</strong>: 2026-10-25 時点の Gemini API 利用規約には、18歳未満の人が使う可能性の高いサービスでは利用しない、という条件があります。公開前に、提供元の変更または Google との確認が必要です（<code>OVERNIGHT_REPORT.md</code> 参照）。</li>
+</ul>
+<p><span class="fill-in">【決定後に書き換え: 実際に使う提供元・料金区分・データの扱いを、利用者（と保護者）に分かる言葉で記載する】</span></p>
+<p>会話の中には、名前・学校名・住所などの個人情報を書かないよう、利用者にお願いします。</p>
+<h2>7. 保存期間と削除</h2>
+<ul>
+<li>アカウントと学習の記録は、アカウントを削除するまで保存します。</li>
+<li>マイページの「アカウントの削除」から、本人のデータ（会話・学習の記録・苦手ノート・課題の記録・利用状況の記録・アカウント）をすべて削除できます。削除したデータは元に戻せません。</li>
+<li>有料プランの契約中は、先に解約していただく必要があります。</li>
+<li>決済サービス（Stripe）上の顧客情報・請求の記録は、会計・税務上の必要から、Stripe 上に残ります。<span class="fill-in">【保存期間と削除依頼の方法を記入】</span></li>
+<li>AIサービスの提供元に送信済みのデータは、各提供元の規約に従って扱われ、当方からは削除できません。</li>
+</ul>
+<h2>8. 安全管理</h2>
+<ul>
+<li>パスワードと秘密の質問の答えは、復元できない形（ハッシュ）で保存します。</li>
+<li>通信は暗号化（HTTPS）します。</li>
+<li>ログインの失敗が続いた場合は、一定時間ログインを制限します。</li>
+<li><span class="fill-in">【データベースのアクセス権限の管理・バックアップの方針を記入】</span></li>
+</ul>
+<h2>9. Cookie・端末への保存</h2>
+<ul>
+<li>ログイン状態を保つために Cookie を使います（最長30日間）。</li>
+<li>ダークモードなどの表示設定と、お知らせを表示済みかどうかを、お使いの端末（ブラウザ）に保存します。これらは当方のサーバーには送られません。</li>
+<li>広告・行動追跡目的の Cookie は使用していません。</li>
+</ul>
+<h2>10. 開示・訂正・利用停止の請求</h2>
+<p>本人（未成年の場合は保護者を含む）は、保有個人データの開示・訂正・利用停止・削除を請求できます。<span class="fill-in">【お問い合わせ窓口】</span>までご連絡ください。本人確認のうえ、法令に従って対応します。</p>
+<h2>11. お問い合わせ窓口</h2>
+<ul>
+<li>事業者: <span class="fill-in">【事業者名】</span></li>
+<li>連絡先: <span class="fill-in">【メールアドレス】</span></li>
+</ul>
+<h2>12. 改定</h2>
+<p>本ポリシーを改定する場合は、本サービス上で告知します。重要な変更（取得する情報や外部への提供先の追加など）の場合は、<span class="fill-in">【方法を記入: 例 ログイン時の画面で通知し、必要に応じて同意を得ます】</span>。</p>
+<p>制定日: <span class="fill-in">【公開日】</span></p>
+    </article>
+  </main>
+
+</body>
+</html>

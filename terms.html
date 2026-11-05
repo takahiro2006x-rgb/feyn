@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="google" content="notranslate">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>利用規約 - Feyn</title>
+  <script>
+    document.documentElement.setAttribute('data-theme',
+      localStorage.getItem('feynTheme') ||
+      (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --green:   #58CC02;
+      --text:    #3C3C3C;
+      --subtext: #6E6E6E;
+      --bg:      #F0F4F8;
+      --card:    #FFFFFF;
+      --border:  #E5E5E5;
+      --red:     #D93636;
+    }
+    [data-theme="dark"] {
+      --text:    #E2E8F0;
+      --subtext: #9AA4AF;
+      --bg:      #0D1117;
+      --card:    #161B22;
+      --border:  #30363D;
+      --red:     #FF7B7B;
+    }
+    body { font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif; background: var(--bg); color: var(--text); }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--green); outline-offset: 2px; border-radius: 4px; }
+    .header { background: var(--card); border-bottom: 2px solid var(--border); padding: 0 24px; height: 60px; display: flex; align-items: center; gap: 16px; }
+    .header-logo { font-size: 20px; font-weight: 800; color: var(--green); text-decoration: none; }
+    .header-title { font-size: 14px; font-weight: 800; color: var(--subtext); flex: 1; }
+    .back-link { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--subtext); text-decoration: none; }
+    .back-link:hover { color: var(--text); }
+    .container { max-width: 760px; margin: 0 auto; padding: 32px 24px 64px; }
+    .todo-banner { background: #FFF3CD; border: 2px solid #FFE28A; color: #6B5300; border-radius: 14px; padding: 14px 18px; font-size: 13px; font-weight: 700; line-height: 1.8; margin-bottom: 28px; }
+    .todo-banner p + p { margin-top: 6px; }
+    [data-theme="dark"] .todo-banner { background: #3A2E00; border-color: #6B5300; color: #FFD966; }
+    .doc { background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 28px 28px 32px; font-size: 14px; font-weight: 700; line-height: 1.9; }
+    .doc h1 { font-size: 22px; font-weight: 800; margin-bottom: 16px; }
+    .doc h2 { font-size: 17px; font-weight: 800; margin: 28px 0 8px; padding-top: 18px; border-top: 2px solid var(--border); }
+    .doc p { margin: 8px 0; }
+    .doc ul, .doc ol { margin: 8px 0 8px 1.6em; }
+    .doc li { margin: 4px 0; }
+    .doc hr { display: none; }
+    .doc table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px; display: block; overflow-x: auto; }
+    .doc th, .doc td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+    .doc th { background: var(--bg); color: var(--subtext); white-space: nowrap; }
+    .doc code { font-size: 12px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+    .fill-in { color: var(--red); }
+    @media (max-width: 600px) {
+      .header { padding: 0 16px; }
+      .header-title { display: none; }
+      .container { padding: 20px 16px 48px; }
+      .doc { padding: 20px 16px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <a href="/landing" class="header-logo">🎓 Feyn</a>
+    <div class="header-title">利用規約</div>
+    <a href="/landing" class="back-link">← トップへ戻る</a>
+  </header>
+
+  <main class="container">
+    <div class="todo-banner" role="note">
+      <p>⚠️ 下書き・公開前に要確認。このページはまだ確定していません。<span class="fill-in">赤字の【 】</span>の所を埋め、専門家の確認を受けてから公開してください。</p>
+      <p>2026-10-25 に、アプリの実際の機能に合わせて作成しました。法律の専門家の確認は受けていません。</p>
+      <p>特に、未成年との契約（保護者の同意）、消費者契約法による免責の制限、自動更新の表示は、公開前に専門家に確認してください。</p>
+      <p><span class="fill-in">【 】</span>の部分は、方針を決めて埋めてください。</p>
+    </div>
+    <article class="doc">
+<h1>Feyn 利用規約</h1>
+<hr />
+<p>この利用規約（以下「本規約」）は、<span class="fill-in">【事業者名】</span>（以下「当方」）が提供する学習アプリ「Feyn（フェイン）」（以下「本サービス」）の利用条件を定めるものです。</p>
+<h2>第1条（本サービスの内容）</h2>
+<ol>
+<li>本サービスは、利用者がAIのキャラクター「Feyn」に学習内容を説明することで理解を深める、ファインマン学習法に基づく学習支援サービスです。</li>
+<li>本サービスの回答・分析（理解度、苦手の分析、疑似偏差値などを含みます）はAIが生成するものであり、<strong>誤りを含むことがあります</strong>。学習の参考として利用し、重要な判断は教科書・先生などで確認してください。</li>
+<li>マイページに表示する「疑似偏差値」と大学レベルの目安は、模試などの統計に基づくものではなく、本サービス内の学習の進み具合をゲーム的に数値化したものです。</li>
+</ol>
+<h2>第2条（利用登録）</h2>
+<ol>
+<li>利用を希望する方は、本規約とプライバシーポリシーに同意したうえで登録してください。</li>
+<li><strong>未成年の方は、保護者の同意を得たうえで登録・利用してください。</strong><span class="fill-in">【方針を決めて記入: 例 何歳未満は保護者の同意を確認する方法】</span></li>
+<li>先生アカウントは、当方が発行する先生コードをお持ちの方に限り登録できます。</li>
+</ol>
+<h2>第3条（アカウントの管理）</h2>
+<ol>
+<li>利用者は、自分のメールアドレスとパスワードを適切に管理してください。</li>
+<li>アカウントを第三者に譲渡・貸与することはできません。</li>
+</ol>
+<h2>第4条（料金・有料プラン）</h2>
+<ol>
+<li>無料プランでは、新しい会話を始める回数に制限があります（ライフ制）。</li>
+<li>有料プラン「受験生プラン」は月額980円（税込）で、<span class="fill-in">【自動更新である旨と更新日】</span>に自動で更新されます。</li>
+<li>支払いは決済サービス Stripe を通じて行います。<strong>未成年の方は、保護者の同意を得て、保護者の決済手段でお申し込みください。</strong></li>
+<li>解約はマイページの「プランを管理する」からいつでも行えます。解約後も、支払い済みの期間の終わりまで有料プランを利用できます。</li>
+<li><span class="fill-in">【返金の方針を記入: 例 支払い済みの料金は、法令に定める場合を除き返金しません】</span></li>
+<li>料金の詳細は「特定商取引法に基づく表記」に記載します。</li>
+</ol>
+<h2>第5条（禁止事項）</h2>
+<p>利用者は、次の行為をしてはなりません。</p>
+<ol>
+<li>法令または公序良俗に反する行為</li>
+<li>他人になりすます行為、他人のアカウントを使う行為</li>
+<li>本サービスのサーバーへの過度な負荷、不正アクセス、利用制限を回避する行為</li>
+<li>AIに有害な内容を生成させようとする行為、本サービスを学習目的以外に使う行為</li>
+<li>会話の中に、自分や他人の個人情報（本名・学校名・住所・電話番号など）を書き込む行為</li>
+<li>本サービスの内容を、当方の許可なく複製・販売・再配布する行為</li>
+<li>その他、当方が不適切と判断する行為</li>
+</ol>
+<h2>第6条（利用者が入力した内容）</h2>
+<ol>
+<li>利用者が入力した内容（会話・写真など）の権利は、利用者に帰属します。</li>
+<li>当方は、本サービスの提供・改善と、プライバシーポリシーに定める目的の範囲で、入力内容を利用します。</li>
+<li>入力内容は、回答を作るためにAIサービスの提供元に送信されます（詳細はプライバシーポリシー「6」）。</li>
+<li>先生アカウントと同じ組織に所属する生徒の学習の記録は、その先生が閲覧できます（詳細はプライバシーポリシー「4」）。</li>
+</ol>
+<h2>第7条（サービスの変更・停止）</h2>
+<ol>
+<li>当方は、事前に告知したうえで、本サービスの内容を変更・終了できます。有料プランを終了する場合は、<span class="fill-in">【告知期間と、支払い済み料金の扱いを記入】</span>。</li>
+<li>当方は、次の場合に、事前の告知なく本サービスを一時停止できます。
+   - システムの保守・障害対応を行う場合
+   - AIサービスの提供元の障害・利用上限などにより、提供が難しい場合
+   - その他、やむを得ない場合</li>
+</ol>
+<h2>第8条（利用停止・登録の取消し）</h2>
+<p>当方は、利用者が本規約に違反した場合、事前の通知なく、利用の停止または登録の取消しを行うことがあります。</p>
+<h2>第9条（退会）</h2>
+<p>利用者は、マイページの「アカウントの削除」から、いつでも退会できます。有料プランの契約中は、先に解約してください。退会すると、学習の記録は削除され、元に戻せません。</p>
+<h2>第10条（免責）</h2>
+<ol>
+<li>当方は、AIの回答・分析の正確性、および本サービスの利用による学習成果（成績の向上・合格など）を保証しません。</li>
+<li>当方は、当方の故意または重大な過失による場合を除き、本サービスに関して利用者に生じた損害について、<span class="fill-in">【責任の上限を記入: 例 損害が生じた月に利用者が支払った利用料金の額】</span>を上限として責任を負います。
+   - <span class="fill-in">【専門家に確認: 消費者契約法により、事業者の責任を全部免除する条項や、故意・重過失の場合の責任を制限する条項は無効になります】</span></li>
+</ol>
+<h2>第11条（規約の変更）</h2>
+<p>当方は、民法の定型約款の規定に従い、本規約を変更できます。変更する場合は、変更の内容と効力発生日を、本サービス上で事前に告知します。</p>
+<h2>第12条（準拠法・管轄）</h2>
+<ol>
+<li>本規約は日本法に準拠します。</li>
+<li>本サービスに関する紛争は、<span class="fill-in">【管轄裁判所を記入】</span>を第一審の専属的合意管轄裁判所とします。</li>
+</ol>
+<p>制定日: <span class="fill-in">【公開日】</span></p>
+    </article>
+  </main>
+
+</body>
+</html>

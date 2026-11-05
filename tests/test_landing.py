@@ -35,10 +35,14 @@ def test_buttons_switch_to_back_to_app_when_logged_in():
     assert "fetch('/api/me')" in LANDING
 
 
-def test_legal_link_and_theme_toggle_are_kept():
+def test_legal_link_is_kept_and_theme_follows_app_setting_or_os():
+    # LPには切り替えボタンを置かない。アプリで保存した設定（feynTheme）か、OSの設定に従う
     assert 'href="/tokushoho"' in LANDING
-    assert 'id="themeToggle"' in LANDING
-    assert "localStorage.setItem('feynTheme'" in LANDING   # アプリ本体と同じ保存先
+    assert 'id="themeToggle"' not in LANDING and 'theme-toggle' not in LANDING
+    head = LANDING[:LANDING.index('</head>')]
+    assert "localStorage.getItem('feynTheme')" in head
+    assert 'prefers-color-scheme: dark' in head
+    assert "localStorage.setItem('feynTheme'" not in LANDING
 
 
 @pytest.mark.parametrize('fact', [
@@ -96,14 +100,25 @@ def test_does_not_claim_to_be_completely_free():
     assert '完全無料' not in LANDING
 
 
-def test_price_table_scrolls_sideways_on_phones():
-    # スマホでは無料プランと受験生プランを左右に並べたまま、表を横にスワイプして見比べる
-    assert 'class="ptable-scroll"' in LANDING
-    assert '横にスワイプして見比べてね' in LANDING
-    css = LANDING[LANDING.index('<style>'):LANDING.index('</style>')]
-    assert 'overflow-x: auto' in css
-    assert 'position: sticky; left: 0' in css   # 項目名の列は左に残す
-    assert '.ptable thead { display: none; }' not in css   # 以前の縦積み表示に戻っていない
+def test_pricing_is_shown_as_plan_cards_with_shared_features():
+    # スマホでも横スクロールさせず、プランごとのカードを縦に並べる。両プランで同じものは表の外にまとめる
+    assert '<table class="ptable">' not in LANDING
+    assert 'ptableScroll' not in LANDING and 'swipe-hint' not in LANDING   # 横スクロール用のCSS・JSは残さない
+    assert LANDING.count('<article class="plan') == 2
+    assert '<article class="plan paid"' in LANDING
+    common = LANDING[LANDING.index('class="plan-common"'):]
+    common = common[:common.index('</div>')]
+    assert 'ヒント・答えを見る（回数の制限なし）' in common
+    assert '苦手ノート' in common
+
+
+def test_hints_and_answers_have_no_plan_limit_in_the_app():
+    # 料金の書き方の根拠: ヒント・答えの API はプランで回数を分けていない
+    src = open('blueprints/chat.py', encoding='utf-8').read()
+    for route in ["'/api/hint'", "'/api/reveal'"]:
+        body = src[src.index(route):]
+        body = body[:body.index('@chat_bp.route', 1)] if '@chat_bp.route' in body[1:] else body
+        assert 'check_and_consume_life' not in body and 'subscription' not in body
 
 
 def test_fact_numbers_are_not_shrunk_by_the_caption_style():
@@ -111,3 +126,157 @@ def test_fact_numbers_are_not_shrunk_by_the_caption_style():
     css = LANDING[LANDING.index('<style>'):LANDING.index('</style>')]
     assert '.fact > span {' in css
     assert '.fact span {' not in css
+
+
+def test_teacher_section_is_reachable_from_header_footer_and_faq():
+    assert '<section id="teachers" class="teachers">' in LANDING
+    assert '<a href="#teachers" class="nav-link">先生の方へ</a>' in LANDING
+    assert '<a href="#teachers">塾・学校の先生へ</a>' in LANDING
+    faq = LANDING[LANDING.index('id="faq"'):LANDING.index('id="finalCta"')]
+    assert 'href="#teachers"' in faq
+    assert LANDING.index('id="price"') < LANDING.index('id="teachers"') < LANDING.index('id="faq"')
+
+
+def test_teacher_section_lists_only_real_features():
+    section = LANDING[LANDING.index('id="teachers"'):LANDING.index('id="faq"')]
+    for feature in ['学習状況', '苦手ノート', '会話ログ', '課題を出す', 'パスワードの再発行']:
+        assert feature in section
+
+
+def test_landing_file_has_no_contact_address_in_it():
+    # 送り先は設定（CONTACT_EMAIL）から入れる。ファイルには「準備中」だけを入れておき、ダミーのアドレスを置かない
+    assert 'mailto:' not in LANDING and 'example.com' not in LANDING
+    assert 'CONTACT:START' in LANDING and 'CONTACT:END' in LANDING
+    assert '準備中' in LANDING[LANDING.index('CONTACT:START'):LANDING.index('CONTACT:END')]
+
+
+@pytest.mark.parametrize('value', [None, '', 'contact@example.com', 'info@school.example.org', 'a@b.test', 'not-an-email'])
+def test_contact_button_is_hidden_without_a_real_address(client, monkeypatch, value):
+    if value is None:
+        monkeypatch.delenv('CONTACT_EMAIL', raising=False)
+    else:
+        monkeypatch.setenv('CONTACT_EMAIL', value)
+    page = client.get('/landing').get_data(as_text=True)
+    assert 'mailto:' not in page and 'id="contactBtn"' not in page
+    assert '導入のご相談の窓口は、ただいま準備中です。' in page
+
+
+def test_contact_button_uses_the_configured_address(client, monkeypatch):
+    monkeypatch.setenv('CONTACT_EMAIL', 'hello@feyn-school.jp')
+    resp = client.get('/landing')
+    assert resp.status_code == 200 and resp.mimetype == 'text/html'
+    page = resp.get_data(as_text=True)
+    assert page.count('href="mailto:') == 1
+    assert 'href="mailto:hello@feyn-school.jp?subject=' in page
+    assert 'id="contactBtn" data-track-contact' in page     # 計測もそのまま
+    assert '準備中' not in page
+    assert 'CONTACT:START' not in page
+    # 差し替えるのは相談の欄だけ（ほかはファイルのまま）
+    rest = LANDING[:LANDING.index('<!-- CONTACT:START')]
+    assert page.startswith(rest)
+
+
+def test_real_app_screenshots_exist_and_are_served(client):
+    images = re.findall(r'<img src="(/static/lp/[^"]+\.webp)" width="\d+" height="\d+"[^>]*alt="[^"]+"', LANDING)
+    assert len(images) >= 5
+    for src in images:
+        resp = client.get(src)
+        assert resp.status_code == 200, src
+        assert resp.mimetype == 'image/webp'
+
+
+def test_feyn_is_described_consistently_as_the_student_you_teach():
+    # Feynは「あなたが教える相手の生徒役（鋭く質問してくる）」。ライバル・あなたが先生、の言い方を混ぜない
+    for old in ['ライバル', 'あなたが先生として', '赤ペンで']:
+        assert old not in LANDING, old
+    assert '生徒役' in LANDING
+    assert 'Feynからの質問' in LANDING
+
+
+def test_first_view_says_really_only_once_and_keeps_the_lead_short():
+    body = LANDING[LANDING.index('<body>'):]
+    assert body.count('ほんとに？') == 1
+    lead = re.search(r'<p class="hero-lead">(.*?)</p>', LANDING).group(1)
+    assert lead.count('。') <= 2
+
+
+@pytest.mark.parametrize('svg_class, top, bottom', [('curve-svg pc', 30, 250), ('curve-svg sp', 30, 290)])
+def test_forgetting_curve_does_not_overstate(svg_class, top, bottom):
+    # 復習しない線はゼロに張り付かない。復習で戻る所も100%ちょうどにしない
+    svg = LANDING[LANDING.index(f'<svg class="{svg_class}"'):]
+    svg = svg[:svg.index('</svg>')]
+    gray = re.search(r'class="curve-none" pathLength="1" d="([^"]+)"', svg).group(1)
+    gray_y = [float(y) for y in re.findall(r'[ML][\d.]+ ([\d.]+)', gray)]
+    assert max(gray_y) < bottom - (bottom - top) * 0.15
+    dots_y = [float(y) for y in re.findall(r'class="rv-dot"[^>]*cy="([\d.]+)"', svg)]
+    assert len(dots_y) == 5 and all(y > top + 5 for y in dots_y)
+
+
+def test_forgetting_text_is_not_absolute():
+    assert 'ほとんど忘れ' not in LANDING
+    assert '数日でほとんど' not in LANDING
+    assert 'イメージ図' in LANDING
+
+
+def test_band_tells_what_the_reader_gets():
+    band = LANDING[LANDING.index('<section class="facts"'):]
+    band = band[:band.index('</section>')]
+    for text in ['質問で返してくる', '苦手ノートに残る', '1・3・7・14・30日後', '7</em>科目']:
+        assert text in band, text
+    assert '区分' not in band and '種類' not in band   # 機能の数ではなく、何ができるか
+
+
+def test_voices_section_stays_hidden_until_real_voices_are_added():
+    # 架空の声は書かない。中身が【要確認】のダミーの間は data-placeholder で表示しない
+    section = LANDING[LANDING.index('<section class="voices"'):]
+    section = section[:section.index('</section>')]
+    assert 'data-placeholder' in section.split('>')[0]
+    assert '[data-placeholder] { display: none !important; }' in LANDING
+    quotes = re.findall(r'<blockquote><p>(.*?)</p></blockquote>', section)
+    assert quotes and all('【要確認' in q for q in quotes)
+
+
+def test_parents_block_covers_card_cancel_and_data():
+    parents = LANDING[LANDING.index('class="parents"'):]
+    parents = parents[:parents.index('</aside>')]
+    for text in ['カードの登録がいりません', 'いつでも解約', 'href="/privacy"', 'Gemini', 'Groq']:
+        assert text in parents, text
+
+
+def test_ogp_image_and_card_are_set(client):
+    assert '<meta property="og:image" content="https://feyn-28kg.onrender.com/static/lp/ogp.png">' in LANDING
+    assert '<meta property="og:url" content="https://feyn-28kg.onrender.com/landing">' in LANDING
+    assert '<meta name="twitter:card" content="summary_large_image">' in LANDING
+    resp = client.get('/static/lp/ogp.png')
+    assert resp.status_code == 200 and resp.mimetype == 'image/png'
+    from PIL import Image
+    import io
+    assert Image.open(io.BytesIO(resp.data)).size == (1200, 630)
+
+
+def test_contact_button_looks_like_the_other_main_buttons(client, monkeypatch):
+    monkeypatch.setenv('CONTACT_EMAIL', 'hello@feyn-school.jp')
+    page = client.get('/landing').get_data(as_text=True)
+    assert 'class="btn btn-lg" id="contactBtn"' in page      # 赤の塗りつぶし（白地に赤枠ではない）
+    assert 'btn-ghost' not in page
+
+
+def test_teacher_section_opens_cleanly_from_a_direct_link():
+    assert 'section[id] { scroll-margin-top:' in LANDING
+    # 先生向けのセクションでは、スマホの生徒向け固定ボタンをかぶせない
+    assert "document.getElementById('teachers')]" in LANDING
+
+
+def test_how_it_works_uses_one_physics_conversation_from_the_real_app():
+    how = LANDING[LANDING.index('<section id="how"'):LANDING.index('<!-- ===== 会話のあとの結果')]
+    for n in (1, 2, 3):
+        assert f'src="/static/lp/app-step{n}.webp" width="520" height="887" loading="lazy"' in how
+    assert 'card-screen' not in LANDING          # 作った会話画面（英語・仮定法のイラスト）は使わない
+    assert '仮定法' not in how and '運動量' in how
+
+
+def test_gap_types_fold_on_phones_but_start_open_on_pc():
+    box = LANDING[LANDING.index('<details class="types-box"'):LANDING.index('</details>', LANDING.index('types-box'))]
+    for t in ['誤解している', '曖昧に理解している', '前提知識が抜けている']:
+        assert t in box                       # 折りたたんでも、3種類の説明は残す
+    assert "matchMedia('(min-width: 768px)').matches) box.open = true" in LANDING

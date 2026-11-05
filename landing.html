@@ -329,6 +329,8 @@
 
     /* ===== 塾・学校の先生へ ===== */
     .teachers { padding: 96px 0; border-top: 1px solid var(--rule); }
+    /* /landing#teachers などで直接開いたとき、見出しが画面の上端に貼りつかないよう少し余白を残す */
+    section[id] { scroll-margin-top: 12px; }
     .teachers .wrap { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
     .kicker { color: var(--red); font-size: 18px; }
     .teachers h2 { font-size: clamp(26px, 3.4vw, 36px); font-weight: 900; margin: 4px 0 14px; }
@@ -340,9 +342,6 @@
     .teachers-text .teacher-note { font-size: 14px; }
     .teachers-text .contact-pending { margin-top: 14px; padding: 10px 14px; border: 1px dashed var(--rule); border-radius: 4px; font-weight: 700; }
     .teacher-cta { margin-top: 22px; align-items: flex-start; }
-    .btn-ghost { background: var(--paper); color: var(--red); border: 2px solid var(--red); box-shadow: 0 4px 0 var(--red); }
-    [data-theme="dark"] .btn-ghost { color: var(--red); }
-    .btn-ghost:active { box-shadow: 0 1px 0 var(--red); }
     .teachers-shots { position: relative; }
     .teachers-shots .browser.sub { width: 74%; margin: -48px 0 0 auto; position: relative; }
 
@@ -969,7 +968,8 @@
     // ===== スマホの固定ボタン: ページ内の申し込みボタンが見えている間は隠す（重なって押しにくくならないように） =====
     (() => {
       const bar = document.getElementById('stickyCta');
-      const watched = [...document.querySelectorAll('main .cta'), document.getElementById('finalCta')];
+      // 先生向けのセクションでは、生徒向けの「無料で始める」をかぶせない
+      const watched = [...document.querySelectorAll('main .cta'), document.getElementById('finalCta'), document.getElementById('teachers')];
       if (!('IntersectionObserver' in window)) { bar.classList.remove('is-hidden'); return; }
       const visible = new Set();
       const io = new IntersectionObserver((entries) => {

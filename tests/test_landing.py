@@ -252,3 +252,16 @@ def test_ogp_image_and_card_are_set(client):
     from PIL import Image
     import io
     assert Image.open(io.BytesIO(resp.data)).size == (1200, 630)
+
+
+def test_contact_button_looks_like_the_other_main_buttons(client, monkeypatch):
+    monkeypatch.setenv('CONTACT_EMAIL', 'hello@feyn-school.jp')
+    page = client.get('/landing').get_data(as_text=True)
+    assert 'class="btn btn-lg" id="contactBtn"' in page      # 赤の塗りつぶし（白地に赤枠ではない）
+    assert 'btn-ghost' not in page
+
+
+def test_teacher_section_opens_cleanly_from_a_direct_link():
+    assert 'section[id] { scroll-margin-top:' in LANDING
+    # 先生向けのセクションでは、スマホの生徒向け固定ボタンをかぶせない
+    assert "document.getElementById('teachers')]" in LANDING

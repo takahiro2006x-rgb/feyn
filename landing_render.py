@@ -23,7 +23,7 @@ CONTACT_SUBJECT = quote('Feynの導入について')
 CONTACT_BUTTON = (
     '<p class="teacher-note">導入の方法は、まずはご相談ください。</p>\n'
     '          <div class="cta teacher-cta">\n'
-    '            <a href="mailto:{email}?subject={subject}" class="btn btn-ghost" id="contactBtn" data-track-contact>導入について相談する</a>\n'
+    '            <a href="mailto:{email}?subject={subject}" class="btn btn-lg" id="contactBtn" data-track-contact>導入について相談する</a>\n'
     '            <span class="micro">メールが開きます</span>\n'
     '          </div>'
 )

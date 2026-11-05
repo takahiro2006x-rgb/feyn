@@ -11,493 +11,343 @@
       localStorage.getItem('feynTheme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <style>
+    /* マイページ。ルールは docs/DESIGN.md、色・角・影のトークンは theme.css */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --bg:         #F0F4F8;
-      --card:       #FFFFFF;
-      --border:     #E5E5E5;
-      --text:       #3C3C3C;
-      --subtext:    #AFAFAF;
-      --green:      #58CC02;
-      --green-dark: #46A302;
-      --purple:     #8B5CF6;
-      --purple-dark: #6D28D9;
-      --red:        #FF4B4B;
-      --yellow:     #E6A700;
-      --blue:       #1CB0F6;
-      --bubble:     #F0F4F8;
-    }
-
-    [data-theme="dark"] {
-      --bg:       #0D1117;
-      --card:     #161B22;
-      --border:   #30363D;
-      --text:     #E2E8F0;
-      --subtext:  #6E7681;
-      --yellow:   #FFC200;
-      --bubble:   #0D1117;
-    }
-
     body {
-      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      font-family: var(--sans);
+      font-weight: 500;
+      background: var(--paper-2);
+      color: var(--ink);
       min-height: 100vh;
-      transition: background 0.2s, color 0.2s;
+      line-height: 1.75;
     }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
 
     /* ===== ヘッダー ===== */
     .header {
-      background: var(--card);
-      border-bottom: 2px solid var(--border);
-      padding: 0 32px;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      position: sticky; top: 0; z-index: 10;
+      height: 60px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 24px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
     }
-
-    .header-logo { font-size: 22px; font-weight: 800; color: var(--green); letter-spacing: 2px; }
-    .header-divider { width: 2px; height: 24px; background: var(--border); }
-    .header-title { font-size: 16px; font-weight: 800; color: var(--text); flex: 1; }
-    .header-right { display: flex; align-items: center; gap: 12px; }
+    .header-logo { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 900; text-decoration: none; color: var(--ink); }
+    .logo-mark { width: 28px; height: 28px; border-radius: var(--r-md); background: var(--brand); display: grid; place-items: center; }
+    .logo-mark svg { width: 18px; height: 18px; }
+    .header-divider { width: 1px; height: 20px; background: var(--rule); }
+    .header-title { flex: 1; font-size: 16px; font-weight: 700; white-space: nowrap; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
 
     .btn {
-      padding: 8px 16px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
-      background: transparent;
-      color: var(--subtext);
-      font-size: 13px;
-      font-family: inherit;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.15s;
-      text-decoration: none;
-      display: inline-block;
+      display: inline-flex; align-items: center; justify-content: center;
+      min-height: 40px; padding: 4px 16px;
+      border: 1px solid var(--rule); border-radius: var(--r-md);
+      background: var(--paper); color: var(--ink);
+      font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap;
     }
-    .btn:hover { border-color: var(--green); color: var(--green); }
+    .btn:hover { border-color: var(--ink); }
 
-    /* ===== プランカード ===== */
-    .plan-card-wrap {
-      max-width: 800px;
-      margin: 16px auto 0;
-      padding: 0 24px;
-      width: 100%;
-    }
+    /* ===== プラン ===== */
+    .plan-card-wrap { max-width: 800px; width: 100%; margin: 24px auto 0; padding: 0 24px; }
     .plan-card {
-      border-radius: 22px;
-      padding: 24px 28px;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      flex-wrap: wrap;
       position: relative;
-      overflow: hidden;
-      background: var(--card);
-      border: 2px solid var(--border);
-      box-shadow: 0 4px 0 var(--border);
+      display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+      padding: 24px;
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--r-sm);
     }
-
-    /* ---- 無料プラン（アップグレード訴求バナー） ---- */
-    .plan-card.free {
-      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
-      color: white;
-      box-shadow: 0 6px 0 var(--purple-dark);
-    }
-    .plan-card.free::after {
-      content: '';
-      position: absolute;
-      right: -40px; top: -40px;
-      width: 160px; height: 160px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 50%;
-    }
-    .plan-eyebrow { font-size: 11px; font-weight: 800; opacity: 0.85; letter-spacing: 1px; text-transform: uppercase; }
-    .plan-price-row { display: flex; align-items: baseline; gap: 6px; margin-top: 4px; }
-    .plan-price { font-size: 32px; font-weight: 800; line-height: 1; }
-    .plan-price-unit { font-size: 13px; font-weight: 700; opacity: 0.85; }
-    .plan-features {
-      list-style: none; margin-top: 12px; display: flex; flex-direction: column; gap: 6px;
-    }
-    .plan-features li { font-size: 12px; font-weight: 700; opacity: 0.95; display: flex; align-items: center; gap: 6px; }
-
-    /* ---- 有料プラン（利用中） ---- */
-    .plan-card.active {
-      background: linear-gradient(135deg, #FFC940, #E6A700);
-      color: white;
-      box-shadow: 0 6px 0 #B8860B;
-    }
-    .plan-card.active .plan-card-title { font-size: 18px; font-weight: 800; }
-    .plan-card.active .plan-card-desc { font-size: 13px; font-weight: 700; opacity: 0.9; margin-top: 6px; line-height: 1.6; }
-
-    .plan-card-info { flex: 1; min-width: 200px; position: relative; z-index: 1; }
-    .plan-card-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
-    .plan-card-desc { font-size: 12px; font-weight: 700; opacity: 0.9; margin-top: 4px; line-height: 1.5; }
+    /* 無料プラン: 黒板の帯（LPと同じ） */
+    .plan-card.free { background: var(--board); border-color: var(--board); color: var(--board-ink); }
+    .plan-eyebrow { font-size: 14px; font-weight: 700; opacity: 0.85; }
+    .plan-price-row { display: flex; align-items: baseline; gap: 4px; margin-top: 4px; }
+    .plan-price { font-size: 32px; font-weight: 900; line-height: 1; }
+    .plan-price-unit { font-size: 14px; font-weight: 700; opacity: 0.85; }
+    .plan-features { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+    .plan-features li { font-size: 14px; font-weight: 700; }
+    .plan-features li::before { content: "✓ "; color: var(--meter); font-weight: 900; }
+    /* 有料プラン（利用中）: 紙のカードに、Feynの緑の線 */
+    .plan-card.active { border-left: 4px solid var(--brand); }
+    .plan-card.active .plan-card-title { font-size: 18px; font-weight: 900; }
+    .plan-card.active .plan-card-desc { font-size: 14px; color: var(--ink-soft); margin-top: 4px; line-height: 1.6; }
+    .plan-card-info { flex: 1; min-width: 200px; }
+    .plan-card-title { font-size: 16px; font-weight: 900; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .plan-card-desc { font-size: 14px; margin-top: 4px; line-height: 1.6; opacity: 0.9; }
     .plan-badge {
-      font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 99px; white-space: nowrap;
-      background: rgba(255,255,255,0.25);
+      font-size: 12px; font-weight: 700; padding: 0 8px; line-height: 22px;
+      border-radius: var(--r-pill); background: var(--paper-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule);
     }
     .plan-btn {
-      padding: 14px 24px; border-radius: 14px; border: none; font-size: 14px; font-weight: 800;
-      font-family: inherit; cursor: pointer; white-space: nowrap; transition: all 0.1s;
-      position: relative; z-index: 1;
-      background: white; color: var(--purple-dark); box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+      min-height: 48px; padding: 8px 24px;
+      border: none; border-radius: var(--r-md);
+      background: var(--red); color: var(--on-red);
+      font-size: 16px; font-weight: 900; white-space: nowrap;
+      box-shadow: var(--shadow-press);
     }
-    .plan-btn:hover { filter: brightness(1.05); transform: translateY(-2px); box-shadow: 0 6px 0 rgba(0,0,0,0.15); }
-    .plan-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+    .plan-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--red-dark); }
     .plan-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .plan-btn.manage { background: rgba(255,255,255,0.9); color: #8A6D00; }
+    .plan-btn.manage { background: var(--paper); color: var(--ink); border: 1px solid var(--rule); box-shadow: none; font-size: 14px; font-weight: 700; min-height: 44px; }
+    .plan-btn.manage:hover { border-color: var(--ink); }
+    .plan-legal { text-align: right; margin-top: 4px; }
+    .plan-legal a { font-size: 12px; color: var(--ink-soft); }
 
-    /* ===== タブ ===== */
+    /* ===== タブ（ノートの見出しの線） ===== */
     .tab-bar {
-      position: sticky;
-      top: 64px;
-      z-index: 9;
-      background: var(--bg);
-      display: flex;
-      gap: 8px;
+      position: sticky; top: 60px; z-index: 9;
+      display: flex; gap: 4px;
+      max-width: 800px; width: 100%; margin: 0 auto;
       padding: 16px 24px 0;
-      max-width: 800px;
-      margin: 0 auto;
-      width: 100%;
+      background: var(--paper-2);
+      border-bottom: 2px solid var(--ink);
     }
-
     .tab-btn {
-      padding: 10px 18px;
-      border-radius: 12px 12px 0 0;
-      border: 2px solid var(--border);
-      border-bottom: none;
-      background: var(--bg);
-      color: var(--subtext);
-      font-size: 13px;
-      font-family: inherit;
-      font-weight: 800;
-      cursor: pointer;
-      transition: all 0.15s;
+      min-height: 44px; padding: 8px 16px;
+      border: none; border-radius: var(--r-md) var(--r-md) 0 0;
+      background: transparent; color: var(--ink-soft);
+      font-size: 14px; font-weight: 700;
+      margin-bottom: -2px; border-bottom: 2px solid transparent;
     }
-    .tab-btn.active { background: var(--card); color: var(--green); }
-    .tab-btn:not(.active):hover { color: var(--text); }
+    .tab-btn:not(.active):hover { color: var(--ink); background: var(--paper); }
+    .tab-btn.active { background: var(--paper); color: var(--ink); font-weight: 900; border-bottom-color: var(--paper); box-shadow: inset 0 3px 0 var(--red); }
 
-    /* ===== コンテンツ ===== */
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
+    /* ===== 中身 ===== */
+    .container { max-width: 800px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
     .tab-panel { display: none; flex-direction: column; gap: 16px; }
     .tab-panel.active { display: flex; }
-
-    .page-desc { font-size: 14px; font-weight: 700; color: var(--subtext); }
-
+    .page-desc { font-size: 14px; color: var(--ink-soft); }
     .disclaimer {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--subtext);
-      background: var(--card);
-      border: 2px dashed var(--border);
-      border-radius: 14px;
-      padding: 12px 16px;
-      line-height: 1.6;
+      font-size: 12px; color: var(--ink-soft); line-height: 1.7;
+      background: var(--paper); border: 1px dashed var(--rule); border-radius: var(--r-sm);
+      padding: 8px 16px;
     }
+    .section-title { font-size: 16px; font-weight: 900; margin-top: 8px; }
 
-    .section-title { font-size: 15px; font-weight: 800; color: var(--text); margin-top: 8px; }
-
-    /* ===== 総合偏差値カード ===== */
+    /* ===== 偏差値 ===== */
     .overall-card {
-      background: linear-gradient(135deg, var(--purple), var(--purple-dark));
-      border-radius: 24px;
-      padding: 28px;
-      color: white;
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      box-shadow: 0 6px 0 var(--purple-dark);
+      display: flex; align-items: center; gap: 24px;
+      padding: 24px;
+      background: var(--board); color: var(--board-ink);
+      border-radius: var(--r-sm);
     }
-
-    .overall-label { font-size: 13px; font-weight: 800; opacity: 0.85; }
-    .overall-hensachi { font-size: 56px; font-weight: 800; line-height: 1; }
+    .overall-label { font-size: 14px; font-weight: 700; opacity: 0.85; }
+    .overall-hensachi { font-size: 56px; font-weight: 900; line-height: 1; }
     .overall-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-    .overall-university { font-size: 16px; font-weight: 800; }
-    .overall-note { font-size: 13px; font-weight: 700; opacity: 0.85; }
-
-    .subject-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-      gap: 14px;
-    }
-
+    .overall-university { font-size: 18px; font-weight: 900; }
+    .overall-note { font-size: 14px; opacity: 0.85; }
+    .subject-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
     .subject-card {
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 18px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      box-shadow: 0 4px 0 var(--border);
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 16px;
+      background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-sm);
     }
-
     .subject-card-top { display: flex; align-items: center; gap: 8px; }
-    .subject-card-name { font-size: 14px; font-weight: 800; flex: 1; }
-    .subject-card-hensachi { font-size: 28px; font-weight: 800; color: var(--green); }
+    .subject-card-name { flex: 1; font-size: 14px; font-weight: 700; }
+    .subject-card-hensachi { font-size: 24px; font-weight: 900; }
+    .subject-bar-track { height: 8px; border-radius: var(--r-pill); background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--rule); overflow: hidden; }
+    .subject-bar-fill { height: 100%; border-radius: var(--r-pill); background: var(--brand); }
+    .subject-card-university { font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
 
-    .subject-bar-track {
-      height: 10px;
-      background: var(--bg);
-      border: 2px solid var(--border);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-    .subject-bar-fill { height: 100%; background: var(--green); border-radius: 99px; }
-
-    .subject-card-university { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.5; }
-
-    /* ===== 理解度バー（苦手ノート） ===== */
+    /* ===== 苦手ノート ===== */
     .progress-card {
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      box-shadow: 0 4px 0 var(--border);
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 16px;
+      background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-sm);
     }
-
     .progress-row { display: flex; align-items: center; gap: 12px; }
-    .progress-name { flex: 1; font-size: 13px; font-weight: 800; }
-    .progress-name small { font-weight: 700; color: var(--subtext); }
-    .progress-track {
-      flex: 2;
-      height: 12px;
-      background: var(--bubble);
-      border: 2px solid var(--border);
-      border-radius: 99px;
-      overflow: hidden;
-    }
-    .progress-fill { height: 100%; border-radius: 99px; background: var(--green); }
-    .progress-score { width: 44px; text-align: right; font-size: 13px; font-weight: 800; color: var(--subtext); }
+    .progress-name { flex: 1; font-size: 14px; font-weight: 700; }
+    .progress-name small { font-weight: 500; color: var(--ink-soft); }
+    .progress-track { flex: 2; height: 8px; border-radius: var(--r-pill); background: var(--paper-2); box-shadow: inset 0 0 0 1px var(--rule); overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: var(--r-pill); background: var(--brand); }
+    .progress-score { width: 40px; text-align: right; font-size: 14px; font-weight: 900; font-variant-numeric: tabular-nums; }
 
-    /* ===== ギャップカード ===== */
+    /* 苦手のカード: ノートに貼ったメモ。Feynの見立て（理解の穴の種類）は赤ペン */
     .gap-card {
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      box-shadow: 0 4px 0 var(--border);
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 16px;
+      background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-sm);
     }
-    .gap-card.resolved { opacity: 0.6; }
-
-    .gap-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .gap-topic { font-size: 15px; font-weight: 800; flex: 1; }
-
-    .type-badge {
-      font-size: 11px; font-weight: 800; padding: 4px 10px;
-      border-radius: 99px; border: 2px solid; white-space: nowrap;
-    }
-    .type-misconception        { color: var(--red);    border-color: var(--red); }
-    .type-vague                { color: var(--yellow); border-color: var(--yellow); }
-    .type-missing_prerequisite { color: var(--blue);   border-color: var(--blue); }
-
+    .gap-card.resolved { opacity: 0.65; }
+    .gap-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .gap-topic { flex: 1; font-size: 16px; font-weight: 900; }
+    .type-badge { font-family: var(--hand); font-size: 14px; color: var(--red); white-space: nowrap; }
+    .type-badge::before { content: "✎ "; }
     .status-badge {
-      font-size: 11px; font-weight: 800; padding: 4px 10px;
-      border-radius: 99px; background: var(--green); color: white; white-space: nowrap;
+      font-size: 12px; font-weight: 700; padding: 0 8px; line-height: 22px; white-space: nowrap;
+      border-radius: var(--r-pill); background: var(--answer-bg); color: var(--ink);
     }
-    .due-badge { background: #FF9600; }
-
-    /* 学習のきろく用の「中断中」バッジ（苦手ノートのstatus-badgeと名前が被らないよう別クラスにする） */
+    .due-badge { background: var(--hint-bg); }
     .incomplete-badge {
-      font-size: 11px; font-weight: 800; padding: 4px 10px;
-      border-radius: 99px; white-space: nowrap; background: #FF9600; color: white;
+      font-size: 12px; font-weight: 700; padding: 0 8px; line-height: 22px; white-space: nowrap;
+      border-radius: var(--r-pill); background: var(--hint-bg); color: var(--ink);
     }
-
-    .gap-desc { font-size: 14px; font-weight: 700; line-height: 1.7; }
-
+    .gap-desc { font-size: 16px; line-height: 1.7; }
     .gap-evidence {
-      font-size: 12px; font-weight: 700; color: var(--subtext);
-      background: var(--bubble); border-left: 4px solid var(--border);
-      border-radius: 0 10px 10px 0; padding: 8px 12px; line-height: 1.6;
+      font-size: 14px; color: var(--pencil); line-height: 1.6;
+      background: var(--paper-2); border-left: 3px solid var(--rule);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0; padding: 8px 12px;
     }
-
     .gap-foot { display: flex; align-items: center; gap: 8px; }
-    .gap-date { flex: 1; font-size: 12px; font-weight: 700; color: var(--subtext); }
-
+    .gap-date { flex: 1; font-size: 12px; color: var(--ink-soft); }
     .review-btn, .resume-btn {
-      padding: 8px 18px;
-      background: var(--green);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 800;
-      font-family: inherit;
-      cursor: pointer;
-      box-shadow: 0 4px 0 var(--green-dark);
-      transition: all 0.1s;
+      min-height: 40px; padding: 4px 16px;
+      border: 1px solid var(--ink); border-radius: var(--r-md);
+      background: var(--paper); color: var(--ink);
+      font-size: 14px; font-weight: 900;
     }
-    .review-btn:hover, .resume-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-    .resume-btn { align-self: flex-start; padding: 10px 20px; }
-    .load-more-btn { display: block; margin: 8px auto 0; }
+    .review-btn:hover, .resume-btn:hover { background: var(--paper-2); }
+    .resume-btn { align-self: flex-start; }
+    .load-more-btn { display: flex; margin: 8px auto 0; }
 
-    /* ===== セッションカード（アコーディオン・学習のきろく） ===== */
-    .session-card {
-      background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 4px 0 var(--border);
-    }
-
+    /* ===== 学習のきろく ===== */
+    .session-card { background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-sm); overflow: hidden; }
     .session-head {
       width: 100%; display: flex; align-items: center; gap: 12px;
-      padding: 18px 20px; background: none; border: none;
-      font-family: inherit; color: var(--text); cursor: pointer; text-align: left;
+      padding: 16px; background: none; border: none; color: var(--ink); text-align: left;
     }
-    .session-head:hover { background: var(--bubble); }
-
-    .session-emoji { font-size: 24px; }
-    .session-info  { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-    .session-subject { font-size: 15px; font-weight: 800; }
-    .session-meta  { font-size: 12px; font-weight: 700; color: var(--subtext); }
-
-    .session-count {
-      font-size: 12px; font-weight: 700; color: var(--subtext);
-      background: var(--bubble); border: 2px solid var(--border);
-      border-radius: 99px; padding: 4px 12px; white-space: nowrap;
+    .session-head:hover { background: var(--paper-2); }
+    .session-emoji {          /* 科目の頭文字（ノートの見出しの印） */
+      width: 32px; height: 32px; flex-shrink: 0;
+      display: grid; place-items: center;
+      border: 1px solid var(--rule); border-radius: var(--r-sm);
+      font-size: 14px; font-weight: 900; color: var(--ink);
     }
-
-    .session-arrow { font-size: 13px; color: var(--subtext); transition: transform 0.2s; }
+    .session-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+    .session-subject { font-size: 16px; font-weight: 900; }
+    .session-meta { font-size: 12px; color: var(--ink-soft); }
+    .session-count { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+    .session-arrow { font-size: 12px; color: var(--ink-soft); transition: transform 0.2s; }
     .session-card.open .session-arrow { transform: rotate(90deg); }
-
     .session-body {
-      display: none; flex-direction: column; gap: 14px;
-      padding: 4px 20px 20px; border-top: 2px solid var(--border); padding-top: 18px;
+      display: none; flex-direction: column; gap: 12px;
+      padding: 16px; border-top: 1px solid var(--rule);
+      background-color: var(--note-paper);
+      background-image: repeating-linear-gradient(transparent 0 31px, var(--note-rule) 31px 32px);
     }
     .session-card.open .session-body { display: flex; }
-
+    /* 会話の見返し: チャット画面と同じ「赤ペンのメモ」と「自分のメモ」 */
     .msg { display: flex; max-width: 85%; }
     .msg.feyn { align-self: flex-start; }
     .msg.user { align-self: flex-end; }
+    .msg .bubble { padding: 8px 12px; font-size: 15px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: var(--shadow-note); }
+    .msg.feyn .bubble { background: var(--feyn-bubble); border-left: 3px solid var(--red); border-radius: 0 var(--r-lg) var(--r-lg) 0; }
+    .msg.user .bubble { background: var(--me-bubble); border: 1px solid var(--rule); color: var(--pencil); border-radius: var(--r-lg) var(--r-sm) var(--r-lg) var(--r-lg); }
+    .msg .katex-display { overflow-x: auto; overflow-y: hidden; }
 
-    .msg .bubble {
-      padding: 12px 16px; font-size: 14px; line-height: 1.7; font-weight: 700;
-      white-space: pre-wrap; word-break: break-word;
-    }
-    .msg.feyn .bubble { background: var(--bubble); border: 2px solid var(--border); color: var(--text); border-radius: 4px 16px 16px 16px; }
-    .msg.user .bubble { background: var(--green); color: white; border-radius: 16px 4px 16px 16px; box-shadow: 0 3px 0 var(--green-dark); }
-
-    /* ===== 空状態 ===== */
+    /* ===== 空のとき・読み込み中 ===== */
     .empty-state {
-      padding: 64px 24px; text-align: center; display: flex; flex-direction: column;
-      align-items: center; gap: 12px; background: var(--card);
-      border: 2px solid var(--border); border-radius: 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 48px 24px; text-align: center;
+      background: var(--paper); border: 1px dashed var(--rule); border-radius: var(--r-sm);
     }
-    .empty-emoji { font-size: 48px; }
-    .empty-title { font-size: 18px; font-weight: 800; color: var(--text); }
-    .empty-desc  { font-size: 14px; font-weight: 700; color: var(--subtext); }
+    .empty-emoji { display: none; }
+    .empty-title { font-size: 18px; font-weight: 900; }
+    .empty-desc { font-size: 14px; color: var(--ink-soft); }
+    .loading { padding: 48px; text-align: center; font-size: 14px; color: var(--ink-soft); }
 
-    .loading { padding: 64px; text-align: center; font-size: 14px; font-weight: 700; color: var(--subtext); }
+    /* ===== アカウントの削除 ===== */
+    .danger-wrap { max-width: 800px; width: 100%; margin: 8px auto 48px; padding: 0 24px; }
+    .danger-card {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 16px 24px;
+      background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-sm);
+    }
+    .danger-title { font-size: 16px; font-weight: 900; }
+    .danger-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.7; }
+    .danger-btn {          /* 危ない操作は、赤の枠線（塗りつぶさない） */
+      align-self: flex-start; min-height: 40px; padding: 4px 16px;
+      border: 1px solid var(--red); border-radius: var(--r-md);
+      background: none; color: var(--red); font-size: 14px; font-weight: 700;
+    }
+    .danger-btn:hover { background: var(--paper-2); }
+    .delete-overlay {
+      position: fixed; inset: 0; z-index: 300;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      background: var(--scrim);
+    }
+    .delete-card {
+      width: min(440px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px;
+      padding: 24px;
+      background: var(--paper); color: var(--ink);
+      border: 1px solid var(--rule); border-radius: var(--r-sm); box-shadow: var(--shadow-lift);
+    }
+    .delete-title { font-size: 18px; font-weight: 900; }
+    .delete-list { font-size: 14px; line-height: 1.8; padding-left: 24px; }
+    .delete-field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 700; }
+    .delete-field input[type="password"] {
+      min-height: 44px; padding: 8px 12px;
+      border: 1px solid var(--rule); border-radius: var(--r-sm);
+      background: var(--paper); color: var(--ink); font-size: 16px;
+    }
+    .delete-field input[type="password"]:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px var(--grid-line); }
+    .delete-check { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.6; cursor: pointer; }
+    .delete-check input { margin-top: 4px; }
+    .delete-error { font-size: 14px; font-weight: 700; color: var(--red); line-height: 1.6; min-height: 1em; }
+    .delete-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+    .delete-actions button, .delete-error button { min-height: 44px; padding: 8px 16px; border-radius: var(--r-md); font-size: 14px; font-weight: 700; }
+    .delete-error button { margin-top: 8px; }
+    .delete-cancel { background: var(--paper); border: 1px solid var(--rule); color: var(--ink); }
+    .delete-submit { background: var(--red); border: none; color: var(--on-red); font-weight: 900; }
+    .delete-submit:disabled { opacity: 0.4; cursor: not-allowed; }
 
     @media (max-width: 600px) {
-      .header { padding: 0 16px; }
-      .tab-bar { padding: 12px 16px 0; }
-      .tab-btn { font-size: 12px; padding: 8px 12px; }
-      .container { padding: 16px; }
-      .overall-card { flex-direction: column; text-align: center; gap: 12px; }
+      .header { padding: 0 12px; gap: 8px; }
+      .header-logo .logo-text, .header-divider { display: none; }
+      .header-title { font-size: 16px; }
+      .header-right .btn { padding: 4px 12px; }
+      .plan-card-wrap { padding: 0 12px; margin-top: 16px; }
+      .plan-card { padding: 16px; gap: 16px; }
+      .plan-btn { width: 100%; }
+      .tab-bar { padding: 12px 12px 0; }
+      .tab-btn { flex: 1; padding: 8px 4px; font-size: 14px; }
+      .container { padding: 16px 12px; }
+      .overall-card { flex-direction: column; text-align: center; gap: 8px; }
       .subject-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
       .progress-row { flex-wrap: wrap; }
       .msg { max-width: 100%; }
+      .danger-wrap { padding: 0 12px; }
     }
-    /* ===== アカウントの削除 ===== */
-    .danger-wrap { max-width: 800px; margin: 8px auto 40px; padding: 0 24px; width: 100%; }
-    .danger-card {
-      border: 2px solid var(--border); border-radius: 18px; padding: 18px 20px; background: var(--card);
-      display: flex; flex-direction: column; gap: 10px;
-    }
-    .danger-title { font-size: 14px; font-weight: 800; color: var(--text); }
-    .danger-desc { font-size: 13px; font-weight: 700; color: var(--subtext); line-height: 1.7; }
-    .danger-btn {
-      align-self: flex-start; padding: 10px 18px; border-radius: 12px; border: 2px solid var(--red);
-      background: none; color: var(--red); font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
-    }
-    .danger-btn:hover { background: rgba(255, 75, 75, 0.08); }
-    .delete-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
-      display: flex; align-items: center; justify-content: center; padding: 16px;
-    }
-    .delete-card {
-      background: var(--card); border: 2px solid var(--border); border-radius: 22px; width: min(440px, 100%);
-      max-height: calc(100dvh - 32px); overflow-y: auto;
-      padding: 22px; display: flex; flex-direction: column; gap: 12px; color: var(--text);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-    }
-    .delete-title { font-size: 17px; font-weight: 800; }
-    .delete-list { font-size: 13px; font-weight: 700; line-height: 1.8; padding-left: 20px; color: var(--text); }
-    .delete-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 800; }
-    .delete-field input[type="password"] {
-      padding: 10px 12px; border-radius: 12px; border: 2px solid var(--border); background: var(--bg);
-      color: var(--text); font-family: inherit; font-size: 15px; font-weight: 700;
-    }
-    .delete-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; font-weight: 700; line-height: 1.6; cursor: pointer; }
-    .delete-check input { margin-top: 4px; }
-    .delete-error { font-size: 13px; font-weight: 800; color: var(--red); line-height: 1.6; min-height: 1em; }
-    .delete-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
-    .delete-actions button, .delete-error button {
-      padding: 10px 18px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
-    }
-    .delete-error button { margin-top: 8px; }
-    .delete-cancel { background: none; border: 2px solid var(--border); color: var(--text); }
-    .delete-submit { background: var(--red); border: none; color: white; }
-    .delete-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+    @media (prefers-reduced-motion: reduce) { .session-arrow { transition: none; } }
   </style>
 </head>
 <body>
 
   <header class="header">
-    <div class="header-logo">🎓 Feyn</div>
+    <a class="header-logo" href="/" aria-label="Feyn アプリへ"><span class="logo-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span class="logo-text">Feyn</span></a>
     <div class="header-divider"></div>
-    <div class="header-title">📊 マイページ</div>
+    <h1 class="header-title">マイページ</h1>
     <div class="header-right">
-      <button class="btn" id="themeToggle">🌙 ダークモード</button>
-      <a href="/" class="btn">← アプリへ戻る</a>
+      <button class="btn" id="themeToggle" type="button">ダークモード</button>
+      <a href="/" class="btn">アプリへ戻る</a>
     </div>
   </header>
 
   <div class="plan-card-wrap">
     <div class="plan-card" id="planCard"><div class="loading">読み込み中...</div></div>
-    <div style="text-align:right; margin-top:6px;">
-      <a href="/tokushoho" style="font-size:11px; font-weight:700; color:var(--subtext); text-decoration:none;">特定商取引法に基づく表記</a>
+    <div class="plan-legal">
+      <a href="/tokushoho">特定商取引法に基づく表記</a>
     </div>
   </div>
 
   <div class="tab-bar">
-    <button class="tab-btn" data-tab="hensachi">📊 偏差値</button>
-    <button class="tab-btn" data-tab="gaps">📝 苦手ノート</button>
-    <button class="tab-btn" data-tab="history">📚 学習のきろく</button>
+    <button class="tab-btn" data-tab="hensachi" type="button">偏差値</button>
+    <button class="tab-btn" data-tab="gaps" type="button">苦手ノート</button>
+    <button class="tab-btn" data-tab="history" type="button">学習のきろく</button>
   </div>
 
   <div class="container">
     <div class="tab-panel" id="panel-hensachi">
       <div class="page-desc">Feynに教えてきた成果を、疑似偏差値で見てみよう！</div>
       <div class="disclaimer">
-        ⚠️ ここに表示される偏差値は、模試などの本物の統計データに基づくものではなく、
+        ここに表示される偏差値は、模試などの本物の統計データに基づくものではなく、
         このアプリでの学習の進み具合をゲーム的にスコア化した「目安」です。
       </div>
       <div id="content-hensachi"><div class="loading">読み込み中...</div></div>
@@ -517,11 +367,11 @@
   <!-- ===== アカウントの削除（生徒のみ。先生には表示しない） ===== -->
   <div class="danger-wrap" id="dangerZone" style="display:none;">
     <div class="danger-card">
-      <div class="danger-title">⚠️ アカウントの削除</div>
+      <div class="danger-title">アカウントの削除</div>
       <div class="danger-desc">
         アカウントと、これまでの学習のきろく・苦手ノート・理解度などのデータをすべて削除します。削除すると元に戻せません。
       </div>
-      <button class="danger-btn" id="deleteAccountBtn">アカウントを削除する</button>
+      <button class="danger-btn" id="deleteAccountBtn" type="button">アカウントを削除する</button>
     </div>
   </div>
 
@@ -555,7 +405,7 @@
 
     function updateThemeLabel() {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+      themeToggle.textContent = isDark ? 'ライトモード' : 'ダークモード';
     }
     updateThemeLabel();
 
@@ -590,7 +440,8 @@
       btn.addEventListener('click', () => activateTab(btn.dataset.tab));
     });
 
-    const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
+    // 科目の印は絵文字ではなく、頭文字（学習のきろくの見出し）で見せる（docs/DESIGN.md）
+    const SUBJECT_EMOJIS = {};
 
     function escHtml(str) {
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -621,7 +472,7 @@
         if (!data.overall) {
           contentEl.innerHTML = `
             <div class="empty-state">
-              <div class="empty-emoji">📈</div>
+              <div class="empty-emoji"></div>
               <div class="empty-title">まだ判定できるデータがありません</div>
               <div class="empty-desc">Feynとの学習を進めると、ここに偏差値が表示されます</div>
             </div>
@@ -637,7 +488,7 @@
               <div class="overall-hensachi">${o.hensachi}</div>
             </div>
             <div class="overall-info">
-              <div class="overall-university">🏫 ${escHtml(o.university.name)}</div>
+              <div class="overall-university">${escHtml(o.university.name)}</div>
               <div class="overall-note">${escHtml(o.university.note)}</div>
             </div>
           </div>
@@ -645,15 +496,15 @@
         `;
 
         data.subjects.forEach(s => {
-          const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+          const emoji = '';
           html += `
             <div class="subject-card">
               <div class="subject-card-top">
-                <span class="subject-card-name">${emoji} ${escHtml(s.subject)}</span>
+                <span class="subject-card-name">${escHtml(s.subject)}</span>
                 <span class="subject-card-hensachi">${s.hensachi}</span>
               </div>
               <div class="subject-bar-track"><div class="subject-bar-fill" style="width:${barPercent(s.hensachi)}%"></div></div>
-              <div class="subject-card-university">🏫 ${escHtml(s.university.name)}</div>
+              <div class="subject-card-university">${escHtml(s.university.name)}</div>
             </div>
           `;
         });
@@ -663,7 +514,7 @@
       } catch (e) {
         contentEl.innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">⚠️</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">読み込みに失敗しました</div>
             <div class="empty-desc">ページを再読み込みしてください</div>
           </div>
@@ -673,15 +524,15 @@
 
     // ===== 苦手ノートタブ =====
     function gapCard(g, labels) {
-      const emoji    = SUBJECT_EMOJIS[g.subject] || '📚';
+      const emoji    = '';
       const resolved = g.status === 'resolved';
       const badge = resolved
-        ? (g.due ? `<span class="status-badge due-badge">⏰ 復習どき</span>` : `<span class="status-badge">✅ 解決済み</span>`)
+        ? (g.due ? `<span class="status-badge due-badge">復習どき</span>` : `<span class="status-badge">解決済み</span>`)
         : `<span class="type-badge type-${escHtml(g.gap_type)}">${escHtml(labels[g.gap_type] || g.gap_type)}</span>`;
       const evidence = g.evidence
-        ? `<div class="gap-evidence">💬 きみの発言: 「${escHtml(g.evidence)}」</div>` : '';
+        ? `<div class="gap-evidence">きみの説明：「${escHtml(g.evidence)}」</div>` : '';
       const action = (!resolved || g.due)
-        ? `<button class="review-btn" data-id="${g.id}" data-subject="${escHtml(g.subject)}">🔥 復習する</button>`
+        ? `<button class="review-btn" data-id="${g.id}" data-subject="${escHtml(g.subject)}">復習する</button>`
         : '';
       let dateInfo = `📅 ${escHtml(g.session_date)}`;
       if (resolved && g.review_count > 0) {
@@ -692,7 +543,7 @@
       return `
         <div class="gap-card ${resolved && !g.due ? 'resolved' : ''}">
           <div class="gap-top">
-            <span class="gap-topic">${emoji} ${escHtml(g.subject)}: ${escHtml(g.topic)}</span>
+            <span class="gap-topic">${escHtml(g.subject)}: ${escHtml(g.topic)}</span>
             ${badge}
           </div>
           <div class="gap-desc">${escHtml(g.description)}</div>
@@ -715,7 +566,7 @@
         if (data.gaps.length === 0) {
           contentEl.innerHTML = `
             <div class="empty-state">
-              <div class="empty-emoji">🎉</div>
+              <div class="empty-emoji"></div>
               <div class="empty-title">記録された苦手はまだありません</div>
               <div class="empty-desc">Feynとの会話を最後まで進めると、見つかった弱点がここに残ります</div>
             </div>
@@ -727,17 +578,17 @@
 
         if (data.progress.length > 0) {
           const rows = data.progress.map(p => {
-            const emoji = SUBJECT_EMOJIS[p.subject] || '📚';
-            const color = p.understanding >= 70 ? 'var(--green)' : (p.understanding >= 40 ? 'var(--yellow)' : 'var(--red)');
+            const emoji = '';
+            const color = p.understanding >= 70 ? 'var(--brand)' : (p.understanding >= 40 ? 'var(--meter)' : 'var(--ink-soft)');
             return `
               <div class="progress-row">
-                <span class="progress-name">${emoji} ${escHtml(p.topic)} <small>（${escHtml(p.subject)}・${p.sessions_count}回）</small></span>
+                <span class="progress-name">${escHtml(p.topic)} <small>（${escHtml(p.subject)}・${p.sessions_count}回）</small></span>
                 <div class="progress-track"><div class="progress-fill" style="width:${p.understanding}%;background:${color}"></div></div>
                 <span class="progress-score">${p.understanding}</span>
               </div>
             `;
           }).join('');
-          html += `<div class="section-title">📊 テーマ別の理解度</div><div class="progress-card">${rows}</div>`;
+          html += `<div class="section-title">テーマ別の理解度</div><div class="progress-card">${rows}</div>`;
         }
 
         const open     = data.gaps.filter(g => g.status !== 'resolved');
@@ -745,15 +596,15 @@
         const resolved = data.gaps.filter(g => g.status === 'resolved' && !g.due);
 
         if (due.length > 0) {
-          html += `<div class="section-title">⏰ 復習どき — 忘れかけているかも（${due.length}件）</div>`;
+          html += `<div class="section-title">復習どき — 忘れかけているかも（${due.length}件）</div>`;
           html += due.map(g => gapCard(g, data.labels)).join('');
         }
         if (open.length > 0) {
-          html += `<div class="section-title">🔥 いま残っている苦手（${open.length}件）</div>`;
+          html += `<div class="section-title">いま残っている苦手（${open.length}件）</div>`;
           html += open.map(g => gapCard(g, data.labels)).join('');
         }
         if (resolved.length > 0) {
-          html += `<div class="section-title">✅ 解決済み（${resolved.length}件）</div>`;
+          html += `<div class="section-title">解決済み（${resolved.length}件）</div>`;
           html += resolved.map(g => gapCard(g, data.labels)).join('');
         }
 
@@ -767,7 +618,7 @@
       } catch (e) {
         contentEl.innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">⚠️</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">読み込みに失敗しました</div>
             <div class="empty-desc">ページを再読み込みしてください</div>
           </div>
@@ -788,7 +639,7 @@
     function historyErrorHtml() {
       return `
         <div class="empty-state">
-          <div class="empty-emoji">⚠️</div>
+          <div class="empty-emoji"></div>
           <div class="empty-title">読み込みに失敗しました</div>
           <div class="empty-desc">ページを再読み込みしてください</div>
         </div>
@@ -806,7 +657,7 @@
         if (!data.sessions || data.sessions.length === 0) {
           contentEl.innerHTML = `
             <div class="empty-state">
-              <div class="empty-emoji">📭</div>
+              <div class="empty-emoji"></div>
               <div class="empty-title">まだ学習のきろくがありません</div>
               <div class="empty-desc">Feynと会話すると、ここに残っていきます</div>
             </div>
@@ -828,7 +679,7 @@
       if (data.has_more) {
         const more = document.createElement('button');
         more.className = 'resume-btn load-more-btn';
-        more.textContent = '⬇️ もっと見る';
+        more.textContent = 'もっと見る';
         more.addEventListener('click', async () => {
           more.disabled = true;
           more.textContent = '読み込み中...';
@@ -839,7 +690,7 @@
             appendHistoryPage(contentEl, next);
           } catch (e) {
             more.disabled = false;
-            more.textContent = '⬇️ もっと見る（もう一度）';
+            more.textContent = 'もっと見る（もう一度）';
           }
         });
         contentEl.appendChild(more);
@@ -847,21 +698,21 @@
     }
 
     function historyCard(s) {
-      const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+      const emoji = '';
       const card = document.createElement('div');
       card.className = 'session-card';
 
-      const badge = s.completed ? '' : `<span class="incomplete-badge">⏸ 中断中</span>`;
+      const badge = s.completed ? '' : `<span class="incomplete-badge">中断中</span>`;
       card.innerHTML = `
         <button class="session-head">
-          <span class="session-emoji">${emoji}</span>
+          <span class="session-emoji" aria-hidden="true">${escHtml(String(s.subject || '').slice(0, 1))}</span>
           <span class="session-info">
             <span class="session-subject">${sessionTitle(s)}</span>
             <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
           </span>
           ${badge}
-          <span class="session-count">💬 ${Number(s.message_count) || 0}</span>
-          <span class="session-arrow">▶</span>
+          <span class="session-count">発言 ${Number(s.message_count) || 0}</span>
+          <span class="session-arrow" aria-hidden="true">▶</span>
         </button>
         <div class="session-body"></div>
       `;
@@ -892,7 +743,7 @@
           <div class="bubble">${escHtml(m.message)}</div>
         </div>
       `).join('');
-      const resumeBtn = s.completed ? '' : `<button class="resume-btn">▶️ 続きから再開する</button>`;
+      const resumeBtn = s.completed ? '' : `<button class="resume-btn" type="button">続きから再開する</button>`;
       body.innerHTML = bubbles + resumeBtn;
 
       const resumeButtonEl = body.querySelector('.resume-btn');
@@ -932,31 +783,30 @@
              AI対話・ヒント・答えを見る、すべて無制限で使えます。`;
         card.innerHTML = `
           <div class="plan-card-info">
-            <div class="plan-card-title">👑 有料プラン ${badge}</div>
+            <div class="plan-card-title">受験生プラン ${badge}</div>
             <div class="plan-card-desc">${desc}</div>
           </div>
-          <button class="plan-btn manage" id="planManageBtn">⚙️ プランを管理する</button>
+          <button class="plan-btn manage" id="planManageBtn" type="button">プランを管理する</button>
         `;
         document.getElementById('planManageBtn').addEventListener('click', openBillingPortal);
       } else {
         card.classList.add('free');
         card.innerHTML = `
           <div class="plan-card-info">
-            <div class="plan-eyebrow">⭐ Feyn 受験生プラン</div>
+            <div class="plan-eyebrow">Feyn 受験生プラン</div>
             <div class="plan-price-row">
               <span class="plan-price">¥980</span>
               <span class="plan-price-unit">/ 月</span>
             </div>
             <div class="plan-card-desc" style="margin: -4px 0 10px;">
-              現在は無料プランのため、❤️ライフ制（3個・2時間で1回復）で新しい学習を始められます。
+              今は無料プラン。ライフ（3個まで・2時間で1つ回復）で新しい会話を始められます。
             </div>
             <ul class="plan-features">
-              <li>✅ ❤️ライフ無制限でAI対話</li>
-              <li>✅ ヒント・答えを見るが無制限</li>
-              <li>✅ いつでも解約OK</li>
+              <li>ライフを気にせず、新しい会話を何回でも</li>
+              <li>いつでも解約できる</li>
             </ul>
           </div>
-          <button class="plan-btn" id="planUpgradeBtn">今すぐアップグレード →</button>
+          <button class="plan-btn" id="planUpgradeBtn" type="button">受験生プランにする</button>
         `;
         document.getElementById('planUpgradeBtn').addEventListener('click', startCheckout);
       }

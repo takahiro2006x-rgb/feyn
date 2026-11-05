@@ -6,6 +6,7 @@
                                       （URL に起動中の開発サーバーを指定すると、そこを撮る）
   py scripts/lp_shots.py ogp          OGP画像（1200×630）を static/lp/ogp.png に書き出す
   py scripts/lp_shots.py chat OUTDIR [prefix]   チャット画面をスマホ・PC×ライト・ダーク×3場面で撮る
+  py scripts/lp_shots.py pages OUTDIR [prefix]  マイページ・ログイン・先生の画面・特商法などを撮る
 
 安全のために:
 - Render 上（RENDER）や DATABASE_URL が設定された環境では、何もせずに止まる
@@ -447,6 +448,69 @@ def shoot_chat(out_dir, prefix=''):
         browser.close()
 
 
+def shoot_pages(out_dir, prefix=''):
+    """チャット以外の画面を、スマホ・PC × ライト・ダークで撮る（デザインをそろえる作業の確認用）。
+    マイページ（偏差値・苦手ノート・学習のきろく）・ログイン・先生のダッシュボード・生徒の詳細・特商法・プライバシーポリシー"""
+    from playwright.sync_api import sync_playwright
+    install_mocks()
+    start_server()
+    seed()
+    os.makedirs(out_dir, exist_ok=True)
+    with core.get_db() as conn:
+        sid = conn.execute("SELECT id FROM users WHERE email = 'demo-b@example.com'").fetchone()['id']
+    sizes = [('sp', dict(viewport={'width': 375, 'height': 812}, is_mobile=True, has_touch=True)),
+             ('pc', dict(viewport={'width': 1280, 'height': 800}))]
+
+    with sync_playwright() as p:
+        browser = _browser(p)
+        for size, opts in sizes:
+            for theme in ['light', 'dark']:
+                def shot(page, name):
+                    page.wait_for_timeout(600)
+                    path = os.path.join(out_dir, f'{prefix}{name}-{size}-{theme}.png')
+                    page.screenshot(path=path)
+                    print('saved', os.path.relpath(path, ROOT))
+
+                base = dict(color_scheme=theme, reduced_motion='reduce', locale='ja-JP', device_scale_factor=1, **opts)
+                # 生徒: マイページ
+                ctx = browser.new_context(**base)
+                _login(ctx, 'demo-b@example.com')
+                page = ctx.new_page()
+                for tab in ['hensachi', 'gaps', 'history']:
+                    page.goto(f'{BASE}/mypage?tab={tab}')
+                    page.wait_for_load_state('networkidle')
+                    if tab == 'history':
+                        head = page.locator('.session-head').first
+                        if head.count():
+                            head.click()
+                            page.wait_for_load_state('networkidle')
+                    shot(page, f'mypage-{tab}')
+                ctx.close()
+                # ログイン（未ログイン）・特商法・プライバシーポリシー
+                ctx = browser.new_context(**base)
+                page = ctx.new_page()
+                for path, name in [('/login', 'login'), ('/tokushoho', 'tokushoho'), ('/privacy', 'privacy')]:
+                    page.goto(BASE + path)
+                    page.wait_for_load_state('networkidle')
+                    shot(page, name)
+                ctx.close()
+                # 先生: ダッシュボード・生徒の詳細
+                ctx = browser.new_context(**base)
+                _login(ctx, 'demo-teacher@example.com')
+                page = ctx.new_page()
+                page.goto(BASE + '/dashboard')
+                page.wait_for_load_state('networkidle')
+                shot(page, 'dashboard')
+                page.goto(f'{BASE}/dashboard/student/{sid}')
+                page.wait_for_load_state('networkidle')
+                tab = page.locator('.tab-btn[data-tab="gaps"]')
+                if tab.count():
+                    tab.click()
+                shot(page, 'student')
+                ctx.close()
+        browser.close()
+
+
 def shoot_lp(out_dir, prefix='', base=None):
     """LPのページ全体。動きを減らす設定で開き、演出の途中で写らないようにする"""
     from playwright.sync_api import sync_playwright
@@ -499,6 +563,8 @@ if __name__ == '__main__':
         shoot_app()
     elif cmd == 'lp' and len(sys.argv) > 2:
         shoot_lp(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '', sys.argv[4] if len(sys.argv) > 4 else None)
+    elif cmd == 'pages' and len(sys.argv) > 2:
+        shoot_pages(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
     elif cmd == 'chat' and len(sys.argv) > 2:
         shoot_chat(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
     elif cmd == 'ogp':

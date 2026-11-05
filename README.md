@@ -19,6 +19,17 @@ cp .env.example .env
 `.env` を開いて、最低限 `GEMINI_API_KEY` と `FLASK_SECRET_KEY` を埋めてください。
 各項目の説明・取得先は `.env.example` のコメントを参照してください。
 
+主な設定項目（本番では Render の Environment に設定）:
+
+| 項目 | 内容 |
+|---|---|
+| `GEMINI_API_KEY` | 必須。Gemini のAPIキー |
+| `FLASK_SECRET_KEY` | 必須。ログイン情報の署名用（本番で未設定だと起動しない） |
+| `TEACHER_CODE` | 先生アカウントの登録に使う合言葉（本番では必ず独自の値に） |
+| `CONTACT_EMAIL` | LPの「導入について相談する」の送り先。未設定・ダミーのときはボタンを出さず「準備中」と表示 |
+| `DATABASE_URL` | 本番のPostgres。未設定ならSQLite |
+| `STRIPE_*` | 決済（Stripe）を使う場合 |
+
 ## 起動
 
 ```bash

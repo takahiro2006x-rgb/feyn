@@ -338,6 +338,7 @@
     .teacher-list li::before { content: "✓"; position: absolute; left: 0.1em; top: 10px; color: var(--red); font-weight: 900; }
     .teacher-list b { display: block; color: var(--ink); font-weight: 900; }
     .teachers-text .teacher-note { font-size: 14px; }
+    .teachers-text .contact-pending { margin-top: 14px; padding: 10px 14px; border: 1px dashed var(--rule); border-radius: 4px; font-weight: 700; }
     .teacher-cta { margin-top: 22px; align-items: flex-start; }
     .btn-ghost { background: var(--paper); color: var(--red); border: 2px solid var(--red); box-shadow: 0 4px 0 var(--red); }
     [data-theme="dark"] .btn-ghost { color: var(--red); }
@@ -857,12 +858,12 @@
             <li><b>課題を出す</b>科目と単元を決めて、生徒に（まとめて複数人にも）説明の課題を出せる</li>
             <li><b>パスワードの再発行</b>生徒がパスワードを忘れたときに、先生の画面から発行できる</li>
           </ul>
-          <p class="teacher-note">先生用のアカウントは、運営が発行する先生コードで登録します。導入の方法は、まずはご相談ください。</p>
-          <div class="cta teacher-cta">
-            <!-- 【要確認】相談を受け付けるメールアドレス。ここ1か所（href の mailto: の後ろ）を書き換える -->
-            <a href="mailto:contact@example.com?subject=Feyn%E3%81%AE%E5%B0%8E%E5%85%A5%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6" class="btn btn-ghost" id="contactBtn" data-track-contact>導入について相談する</a>
-            <span class="micro">メールが開きます</span>
-          </div>
+          <p class="teacher-note">先生用のアカウントは、運営が発行する先生コードで登録します。</p>
+          <!-- CONTACT:START  相談の送り先は環境変数 CONTACT_EMAIL で設定する。
+               設定されているとサーバー（blueprints/pages.py の render_landing）がここを相談ボタンに差し替える。
+               未設定・ダミーのアドレスのときは、この「準備中」のまま -->
+          <p class="teacher-note contact-pending">導入のご相談の窓口は、ただいま準備中です。</p>
+          <!-- CONTACT:END -->
         </div>
         <div class="teachers-shots">
           <figure class="browser">

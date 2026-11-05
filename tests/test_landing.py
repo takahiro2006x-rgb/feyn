@@ -143,12 +143,37 @@ def test_teacher_section_lists_only_real_features():
         assert feature in section
 
 
-def test_contact_button_uses_a_single_mailto_address():
-    # 相談先のアドレスは1か所だけ。差し替え忘れに気づけるよう【要確認】の印を付けておく
-    assert len(re.findall(r'href="mailto:', LANDING)) == 1
-    assert 'id="contactBtn"' in LANDING
-    contact = LANDING[LANDING.index('id="contactBtn"') - 400:LANDING.index('id="contactBtn"')]
-    assert '【要確認】' in contact
+def test_landing_file_has_no_contact_address_in_it():
+    # 送り先は設定（CONTACT_EMAIL）から入れる。ファイルには「準備中」だけを入れておき、ダミーのアドレスを置かない
+    assert 'mailto:' not in LANDING and 'example.com' not in LANDING
+    assert 'CONTACT:START' in LANDING and 'CONTACT:END' in LANDING
+    assert '準備中' in LANDING[LANDING.index('CONTACT:START'):LANDING.index('CONTACT:END')]
+
+
+@pytest.mark.parametrize('value', [None, '', 'contact@example.com', 'info@school.example.org', 'a@b.test', 'not-an-email'])
+def test_contact_button_is_hidden_without_a_real_address(client, monkeypatch, value):
+    if value is None:
+        monkeypatch.delenv('CONTACT_EMAIL', raising=False)
+    else:
+        monkeypatch.setenv('CONTACT_EMAIL', value)
+    page = client.get('/landing').get_data(as_text=True)
+    assert 'mailto:' not in page and 'id="contactBtn"' not in page
+    assert '導入のご相談の窓口は、ただいま準備中です。' in page
+
+
+def test_contact_button_uses_the_configured_address(client, monkeypatch):
+    monkeypatch.setenv('CONTACT_EMAIL', 'hello@feyn-school.jp')
+    resp = client.get('/landing')
+    assert resp.status_code == 200 and resp.mimetype == 'text/html'
+    page = resp.get_data(as_text=True)
+    assert page.count('href="mailto:') == 1
+    assert 'href="mailto:hello@feyn-school.jp?subject=' in page
+    assert 'id="contactBtn" data-track-contact' in page     # 計測もそのまま
+    assert '準備中' not in page
+    assert 'CONTACT:START' not in page
+    # 差し替えるのは相談の欄だけ（ほかはファイルのまま）
+    rest = LANDING[:LANDING.index('<!-- CONTACT:START')]
+    assert page.startswith(rest)
 
 
 def test_real_app_screenshots_exist_and_are_served(client):

@@ -63,7 +63,7 @@
 | 事業者名・連絡先 | `docs/drafts/privacy_policy.md`・`terms_of_service.md`（→ `py scripts/build_legal_pages.py` で反映）、`tokushoho.html` | 特商法の表記もまだ雛形のまま |
 | プライバシーポリシーの方針 | 同上の【 】（未成年の同意の方針、外国への提供の同意方法、Render/Supabaseのリージョン、Stripe上のデータの保存期間、安全管理、改定の通知方法など） | 専門家の確認を受けてから公開 |
 | 利用規約の方針 | 同上の【 】（自動更新の表示、返金方針、責任の上限、管轄裁判所など） | 同上 |
-| AIの提供元 | プライバシーポリシー「6」 | Gemini APIの規約（18歳未満が使うサービスでの利用）の問題は未解決（`OVERNIGHT_REPORT.md`） |
+| AIの提供元 | プライバシーポリシー「6」 | Gemini APIの規約（18歳未満が使うサービスでの利用）の問題は未解決（`docs/overnight/2026-10-25.md`・`docs/ai-provider-research.md`） |
 | 本番のURL | `landing.html` の og:url・og:image・canonical | 今は `https://feyn-28kg.onrender.com`（特商法の表記から）。独自ドメインにしたら書き換え |
 
 ---

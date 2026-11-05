@@ -3,7 +3,7 @@
 //       （チャットは動的なやりとりなので、古い応答を返してしまうと事故になる）
 //       静的アセット（CSS/JS）は「ネットワース優先・失敗時のみキャッシュ」にする
 //       （開発中に頻繁に更新されるため、キャッシュファーストだと古い版が残り続けてしまう）
-const CACHE_NAME = 'feyn-static-v2';
+const CACHE_NAME = 'feyn-static-v3';   // チャット画面のデザインを作り直したので、古いCSS・JSを捨てる
 const STATIC_ASSETS = ['/style.css', '/script.js'];
 
 self.addEventListener('install', (event) => {

@@ -25,21 +25,6 @@ DEFAULT_TEACHER_CODE = 'FEYN_TEACHER_2024'
 TEACHER_CODE = os.environ.get('TEACHER_CODE') or DEFAULT_TEACHER_CODE
 
 
-# LPの「導入について相談する」の送り先。未設定・ダミー（example.com など）のときは None を返し、
-# LPには相談ボタンの代わりに「準備中」と出す（無効なアドレスが本番に出ないようにするため）
-_CONTACT_EMAIL_RE = re.compile(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+')
-_DUMMY_DOMAIN_RE = re.compile(r'(?:^|\.)(?:example\.(?:com|net|org)|[^.]+\.(?:example|test|invalid|localhost))$|^(?:example|test|invalid|localhost)$')
-
-
-def contact_email():
-    value = (os.environ.get('CONTACT_EMAIL') or '').strip()
-    if not _CONTACT_EMAIL_RE.fullmatch(value):
-        return None
-    if _DUMMY_DOMAIN_RE.search(value.rsplit('@', 1)[1].lower()):
-        return None
-    return value
-
-
 def is_production():
     """Renderで動いているか（RenderはRENDER=trueを自動で設定する）"""
     return bool(os.environ.get('RENDER'))

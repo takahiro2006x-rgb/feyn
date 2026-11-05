@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 """HTML/静的ファイルの配信ルート"""
-import html
-from urllib.parse import quote
-
 from flask import Blueprint, Response, abort, redirect, request, send_from_directory, session
 
 import core
+import landing_render
 import ratelimit
 
 pages_bp = Blueprint('pages', __name__)
@@ -21,36 +19,11 @@ def index():
     return send_from_directory('.', 'index.html')
 
 
-# LPの「導入について相談する」の欄。landing.html には「準備中」の文が入っていて、
-# CONTACT_EMAIL が正しく設定されているときだけ、ここでボタンに差し替える
-CONTACT_START = '<!-- CONTACT:START'
-CONTACT_END = '<!-- CONTACT:END -->'
-CONTACT_SUBJECT = quote('Feynの導入について')
-CONTACT_BUTTON = (
-    '<p class="teacher-note">導入の方法は、まずはご相談ください。</p>\n'
-    '          <div class="cta teacher-cta">\n'
-    '            <a href="mailto:{email}?subject={subject}" class="btn btn-ghost" id="contactBtn" data-track-contact>導入について相談する</a>\n'
-    '            <span class="micro">メールが開きます</span>\n'
-    '          </div>'
-)
-
-
-def render_landing():
-    """LPのHTML。相談の欄だけ、設定に合わせて差し替える（それ以外は landing.html のまま）"""
-    with open('landing.html', encoding='utf-8') as f:
-        page = f.read()
-    email = core.contact_email()
-    start, end = page.find(CONTACT_START), page.find(CONTACT_END)
-    if email and start != -1 and end != -1:
-        button = CONTACT_BUTTON.format(email=html.escape(email, quote=True), subject=CONTACT_SUBJECT)
-        page = page[:start] + button + page[end + len(CONTACT_END):]
-    return page
-
-
 @pages_bp.route('/landing')
 def landing_page():
     # ログイン中でもLPを見られるようにする（LP側でログイン状態に応じてCTAを出し分ける）
-    return Response(render_landing(), mimetype='text/html')
+    # 相談ボタンの欄だけ、CONTACT_EMAIL に合わせて差し替える（landing_render.py）
+    return Response(landing_render.render_landing(), mimetype='text/html')
 
 
 @pages_bp.route('/tokushoho')

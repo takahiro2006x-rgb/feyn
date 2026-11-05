@@ -265,3 +265,11 @@ def test_teacher_section_opens_cleanly_from_a_direct_link():
     assert 'section[id] { scroll-margin-top:' in LANDING
     # 先生向けのセクションでは、スマホの生徒向け固定ボタンをかぶせない
     assert "document.getElementById('teachers')]" in LANDING
+
+
+def test_how_it_works_uses_one_physics_conversation_from_the_real_app():
+    how = LANDING[LANDING.index('<section id="how"'):LANDING.index('<!-- ===== 会話のあとの結果')]
+    for n in (1, 2, 3):
+        assert f'src="/static/lp/app-step{n}.webp" width="520" height="887" loading="lazy"' in how
+    assert 'card-screen' not in LANDING          # 作った会話画面（英語・仮定法のイラスト）は使わない
+    assert '仮定法' not in how and '運動量' in how

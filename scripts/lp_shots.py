@@ -53,7 +53,7 @@ SCRIPTS = {
     '物理': [
         'ボールが壁にぶつかって、同じ速さ 5 m/s ではね返ったとする。速さが変わってないなら、ボールの運動量も保存されてるってこと？',
         'じゃあ聞くけど、運動量が変わったのは何のせい？ 壁はボールに何をしてるの？',
-        'なるほど…！ 壁から力を受けたなら、ボールだけを見ると保存されないんだね。ボールと壁をまとめて見ればいいのか。ありがとう、納得した！【会話終了】',
+        'なるほど…！ ボールだけを見るか、壁までまとめて1つと見るかで答えが変わるんだね。やっとわかった、ありがとう！【会話終了】',
     ],
     '数学': [
         '放物線 y = x² と直線 y = x + 2 で囲まれた面積、公式で一発って聞いたけど、なんでその公式が使えるの？',
@@ -75,7 +75,7 @@ SCRIPTS = {
 STUDENT_LINES = {
     '物理': [
         '向きが逆になるから、運動量は保存されないと思う。なんとなく、壁が力を加えるから。',
-        '壁がボールに力積を加えるから、その分だけ運動量が変わる。外から力がはたらかなければ保存される。',
+        '壁がボールに力積を加えるから、ボールだけを見ると運動量は変わる。ボールと壁をまとめて1つと見れば、外から力ははたらかないから保存される。',
     ],
     '数学': [
         'なんとなく公式に当てはめた。1/6 公式は交点が2つあるときに使える。',
@@ -248,8 +248,9 @@ def shoot_app():
     with sync_playwright() as p:
         browser = _browser(p)
 
-        # --- 生徒: 会話 → 結果 → 苦手ノート ---
-        ctx = browser.new_context(**phone)
+        # --- 生徒: 会話（しくみの01〜03）→ 結果 → 苦手ノート ---
+        # しくみの3枚は、同じ物理・運動量の会話の流れで撮る。LPで縦に場所を取りすぎないよう、少し低い画面で撮る
+        ctx = browser.new_context(**{**phone, 'viewport': {'width': 375, 'height': 640}})
         _login(ctx, 'demo-a@example.com')
         page = ctx.new_page()
         page.goto(BASE + '/')
@@ -258,23 +259,40 @@ def shoot_app():
         page.locator('.subject[data-subject="物理"]').click()
         page.get_by_text('Feynにおまかせ').click()
         page.wait_for_selector('#messages .message.feyn .bubble >> text=5 m/s')
-        page.locator('#hintBtn').click()
-        page.wait_for_timeout(600)
-        # 会話画面: 1回目の説明に、Feynが次の問いを返したところで撮る
+        page.wait_for_timeout(500)
+
+        def shot_messages(name, index, block='start'):
+            """会話の index 番目の発言が画面の上（block='end' なら下）に来るようにして撮る"""
+            page.evaluate("([i, b]) => { const m = document.querySelectorAll('#messages .message')[i];"
+                          " if (m) m.scrollIntoView({block: b}); }", [index, block])
+            page.wait_for_timeout(400)
+            page.screenshot(path=tmp_png)
+            _save_webp(tmp_png, name)
+
+        # 01: Feynが最初の質問をしてくる
+        shot_messages('app-step1.webp', 0)
+        # 02: ヒントでキーワードをもらい、自分の言葉で説明する（次の説明を入力しているところ）
         first, second = STUDENT_LINES['物理']
+        page.locator('#hintBtn').click()
+        page.wait_for_selector('#messages .bubble >> text=力積', timeout=15000)
         page.fill('.input-area textarea', first)
         page.locator('.input-area .send-btn').click()
         page.wait_for_selector('#messages .bubble >> text=壁はボールに何をしてるの', timeout=15000)
-        page.wait_for_timeout(500)
-        page.screenshot(path=tmp_png)
-        _save_webp(tmp_png, 'app-chat.webp')
-        # 結果画面（会話が終わると自動で開く）
         page.fill('.input-area textarea', second)
+        page.evaluate("document.querySelector('.input-area textarea').scrollTop = 0")   # 入力中の文の頭を見せる
+        shot_messages('app-step2.webp', 1)
+        # 03: Feynの質問に答え直し、Feynが納得する（結果画面を閉じた後の会話を撮る）
         page.locator('.input-area .send-btn').click()
         page.wait_for_selector('#resultOverlay', state='visible', timeout=15000)
         page.wait_for_timeout(600)
+        # 結果のカードは画面より縦に長いので、見出し（〇〇 クリア！）が見える一番上を撮る
+        page.evaluate("""() => { for (const el of [document.getElementById('resultOverlay'), document.getElementById('resultCard')])
+                                 if (el) el.scrollTop = 0; }""")
+        page.wait_for_timeout(300)
         page.screenshot(path=tmp_png)
         _save_webp(tmp_png, 'app-result.webp')
+        page.evaluate('closeResult()')
+        shot_messages('app-step3.webp', 5, block='end')   # Feynが納得した最後の発言まで入れる
 
         page.goto(BASE + '/mypage?tab=gaps')
         page.wait_for_timeout(1200)

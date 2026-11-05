@@ -18,16 +18,16 @@
 
     body {
       font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
+      background: var(--paper-2);
+      color: var(--ink);
       min-height: 100vh;
       transition: background 0.2s, color 0.2s;
     }
 
     /* ===== ヘッダー ===== */
     .header {
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
+      background: var(--paper);
+      border-bottom: 1px solid var(--rule);
       padding: 0 32px;
       height: 64px;
       display: flex;
@@ -48,13 +48,13 @@
     .header-divider {
       width: 2px;
       height: 24px;
-      background: var(--border);
+      background: var(--rule);
     }
 
     .header-title {
       font-size: 16px;
       font-weight: 800;
-      color: var(--text);
+      color: var(--ink);
       flex: 1;
     }
 
@@ -67,15 +67,15 @@
     .header-user {
       font-size: 14px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
     }
 
     .btn {
       padding: 8px 16px;
       border-radius: var(--r-md);
-      border: 1px solid var(--border);
+      border: 1px solid var(--rule);
       background: transparent;
-      color: var(--subtext);
+      color: var(--ink-soft);
       font-size: 14px;
       font-family: inherit;
       font-weight: 700;
@@ -106,8 +106,8 @@
     }
 
     .summary-card {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: var(--paper);
+      border: 1px solid var(--rule);
       border-radius: var(--r-sm);
       padding: 24px;
       display: flex;
@@ -118,7 +118,7 @@
     .summary-label {
       font-size: 12px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
       text-transform: uppercase;
       letter-spacing: 1px;
     }
@@ -126,7 +126,7 @@
     .summary-value {
       font-size: 36px;
       font-weight: 800;
-      color: var(--text);
+      color: var(--ink);
       line-height: 1;
     }
 
@@ -137,7 +137,7 @@
     .summary-sub {
       font-size: 14px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
     }
 
     /* ===== テーブルセクション ===== */
@@ -151,22 +151,22 @@
     .section-title {
       font-size: 16px;
       font-weight: 800;
-      color: var(--text);
+      color: var(--ink);
     }
 
     .student-count {
       font-size: 14px;
       font-weight: 700;
-      color: var(--subtext);
-      background: var(--bg);
-      border: 1px solid var(--border);
+      color: var(--ink-soft);
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
       border-radius: var(--r-pill);
       padding: 4px 12px;
     }
 
     .table-wrap {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: var(--paper);
+      border: 1px solid var(--rule);
       border-radius: var(--r-sm);
       overflow: hidden;
       overflow-x: auto;   /* スマホでは表を横スクロールできるようにする */
@@ -178,15 +178,15 @@
     }
 
     thead {
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
+      background: var(--paper-2);
+      border-bottom: 1px solid var(--rule);
     }
 
     th {
       padding: 14px 16px;
       font-size: 12px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
       text-align: center;
       white-space: nowrap;
     }
@@ -194,19 +194,19 @@
     th:first-child { text-align: left; }
 
     tbody tr {
-      border-bottom: 2px solid var(--bg);
+      border-bottom: 2px solid var(--paper-2);
       transition: background 0.1s;
     }
 
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--bg); }
+    tbody tr:hover { background: var(--paper-2); }
 
     td {
       padding: 16px;
       font-size: 14px;
       font-weight: 700;
       text-align: center;
-      color: var(--text);
+      color: var(--ink);
     }
 
     td:first-child { text-align: left; }
@@ -220,13 +220,13 @@
     .td-name-main {
       font-size: 16px;
       font-weight: 800;
-      color: var(--text);
+      color: var(--ink);
     }
 
     .td-name-email {
       font-size: 12px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
     }
 
     .count-badge {
@@ -236,9 +236,9 @@
       border-radius: var(--r-pill);
       font-size: 14px;
       font-weight: 800;
-      background: var(--bg);
-      color: var(--subtext);
-      border: 1px solid var(--border);
+      background: var(--paper-2);
+      color: var(--ink-soft);
+      border: 1px solid var(--rule);
     }
 
     .count-badge.lv1 { background: color-mix(in srgb, var(--brand) 14%, var(--paper)); color: var(--ink); border-color: transparent; }
@@ -260,7 +260,7 @@
       font-weight: 800;
       white-space: nowrap;
     }
-    .plan-tag.free { background: var(--bg); color: var(--subtext); border: 1px solid var(--border); }
+    .plan-tag.free { background: var(--paper-2); color: var(--ink-soft); border: 1px solid var(--rule); }
     .plan-tag.active { background: var(--hint-bg); color: var(--ink); }
 
     th.sortable {
@@ -275,7 +275,7 @@
     .td-date {
       font-size: 12px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
     }
 
     /* ===== 空状態 ===== */
@@ -293,13 +293,13 @@
     .empty-title {
       font-size: 18px;
       font-weight: 800;
-      color: var(--text);
+      color: var(--ink);
     }
 
     .empty-desc {
       font-size: 14px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
     }
 
     /* ===== ローディング ===== */
@@ -308,16 +308,16 @@
       text-align: center;
       font-size: 14px;
       font-weight: 700;
-      color: var(--subtext);
+      color: var(--ink-soft);
     }
 
     /* ===== リセットボタン ===== */
     .reset-pass-btn {
       padding: 5px 10px;
       border-radius: var(--r-md);
-      border: 1px solid var(--border);
+      border: 1px solid var(--rule);
       background: transparent;
-      color: var(--subtext);
+      color: var(--ink-soft);
       font-size: 12px;
       font-family: inherit;
       font-weight: 700;
@@ -331,9 +331,9 @@
     .detail-btn {
       padding: 5px 10px;
       border-radius: var(--r-md);
-      border: 1px solid var(--border);
+      border: 1px solid var(--rule);
       background: transparent;
-      color: var(--subtext);
+      color: var(--ink-soft);
       font-size: 12px;
       font-family: inherit;
       font-weight: 700;
@@ -346,9 +346,9 @@
     .assign-btn {
       padding: 5px 10px;
       border-radius: var(--r-md);
-      border: 1px solid var(--border);
+      border: 1px solid var(--rule);
       background: transparent;
-      color: var(--subtext);
+      color: var(--ink-soft);
       font-size: 12px;
       font-family: inherit;
       font-weight: 700;
@@ -361,29 +361,22 @@
 
     .modal select {
       width: 100%; padding: 10px 12px;
-      border-radius: var(--r-md); border: 1px solid var(--border);
-      background: var(--bg); color: var(--text);
+      border-radius: var(--r-md); border: 1px solid var(--rule);
+      background: var(--paper-2); color: var(--ink);
       font-size: 14px; font-family: inherit; font-weight: 700;
       outline: none;
     }
-    .modal label { font-size: 12px; font-weight: 700; color: var(--subtext); }
+    .modal label { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
 
-    .assignment-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md);
-      font-size: 14px; font-weight: 700;
-    }
-    .assignment-row .assignment-info { flex: 1; }
-    .assignment-row.completed { opacity: 0.55; }
 
     .submission-list { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
     .submission-row {
       display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md);
+      padding: 10px 12px; border: 1px solid var(--rule); border-radius: var(--r-md);
       font-size: 14px; font-weight: 700;
     }
     .submission-row .submission-info { flex: 1; }
-    .submission-row .submission-time { color: var(--subtext); font-size: 12px; white-space: nowrap; }
+    .submission-row .submission-time { color: var(--ink-soft); font-size: 12px; white-space: nowrap; }
 
     /* ===== モーダル ===== */
     .modal-overlay {
@@ -394,8 +387,8 @@
     }
 
     .modal {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: var(--paper);
+      border: 1px solid var(--rule);
       border-radius: var(--r-sm);
       padding: 32px;
       width: 360px;
@@ -405,12 +398,12 @@
       box-shadow: var(--shadow-lift);
     }
 
-    .modal-title { font-size: 18px; font-weight: 800; color: var(--text); }
-    .modal-desc  { font-size: 14px; font-weight: 700; color: var(--subtext); line-height: 1.6; }
+    .modal-title { font-size: 18px; font-weight: 800; color: var(--ink); }
+    .modal-desc  { font-size: 14px; font-weight: 700; color: var(--ink-soft); line-height: 1.6; }
 
     .temp-pass {
-      background: var(--bg);
-      border: 1px solid var(--border);
+      background: var(--paper-2);
+      border: 1px solid var(--rule);
       border-radius: var(--r-md);
       padding: 16px;
       font-size: 28px;
@@ -438,8 +431,8 @@
 
     /* ===== 利用状況（直近30日） ===== */
     .metrics-box {
-      background: var(--card);
-      border: 1px solid var(--border);
+      background: var(--paper);
+      border: 1px solid var(--rule);
       border-radius: var(--r-sm);
       padding: 18px;
       display: flex;
@@ -447,21 +440,21 @@
       gap: 16px;
     }
     .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .metric { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
-    .metric-label { font-size: 12px; font-weight: 700; color: var(--subtext); }
-    .metric-value { font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.1; }
-    .metric-sub { font-size: 12px; font-weight: 700; color: var(--subtext); }
-    .metrics-subtitle { font-size: 14px; font-weight: 800; color: var(--text); }
-    .metrics-note { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.6; }
-    .dropout-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--text); }
-    .dropout-bar { height: 12px; border-radius: var(--r-pill); background: var(--border); overflow: hidden; }
+    .metric { border: 1px solid var(--rule); border-radius: var(--r-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+    .metric-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+    .metric-value { font-size: 24px; font-weight: 800; color: var(--ink); line-height: 1.1; }
+    .metric-sub { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+    .metrics-subtitle { font-size: 14px; font-weight: 800; color: var(--ink); }
+    .metrics-note { font-size: 12px; font-weight: 700; color: var(--ink-soft); line-height: 1.6; }
+    .dropout-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--ink); }
+    .dropout-bar { height: 12px; border-radius: var(--r-pill); background: var(--rule); overflow: hidden; }
     .dropout-fill { height: 100%; border-radius: var(--r-pill); background: var(--meter); }
-    .dropout-count { text-align: right; color: var(--subtext); }
-    .stumble-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 2fr 110px; align-items: center; gap: 12px; font-size: 14px; font-weight: 700; color: var(--text); }
+    .dropout-count { text-align: right; color: var(--ink-soft); }
+    .stumble-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 2fr 110px; align-items: center; gap: 12px; font-size: 14px; font-weight: 700; color: var(--ink); }
     .stumble-topic { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .stumble-topic small { color: var(--subtext); font-weight: 700; }
+    .stumble-topic small { color: var(--ink-soft); font-weight: 700; }
     .stumble-fill { height: 100%; border-radius: var(--r-pill); }
-    .stumble-count { text-align: right; color: var(--subtext); font-size: 12px; }
+    .stumble-count { text-align: right; color: var(--ink-soft); font-size: 12px; }
 
     /* ===== レスポンシブ ===== */
     @media (max-width: 768px) {
@@ -477,7 +470,7 @@
       .container { padding: 16px; }
       th, td { padding: 10px 8px; font-size: 12px; }
     }
-    .modal-cancel { background: var(--paper) !important; color: var(--ink) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
+    .modal-cancel { background: var(--paper) !important; color: var(--ink) !important; border: 1px solid var(--rule) !important; box-shadow: none !important; }
     .header-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); }
     .logo-mark { width: 28px; height: 28px; border-radius: var(--r-md); background: var(--brand); display: grid; place-items: center; }
     .logo-mark svg { width: 18px; height: 18px; }
@@ -488,7 +481,6 @@
       .header-divider, .logo-text, .header-user { display: none; }
       .header-title, .header-titles { flex: 1; min-width: 0; }
       .header-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; }
-      .header-email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .header-right { width: 100%; display: flex; gap: 4px; }
       .header-right .btn { flex: 1; min-height: 40px; padding: 4px 8px; white-space: nowrap; font-size: 14px; }
       /* 生徒一覧の上のボタンの列（CSV・課題を出す）は折り返す（画面の横にはみ出さないように） */

@@ -273,3 +273,10 @@ def test_how_it_works_uses_one_physics_conversation_from_the_real_app():
         assert f'src="/static/lp/app-step{n}.webp" width="520" height="887" loading="lazy"' in how
     assert 'card-screen' not in LANDING          # 作った会話画面（英語・仮定法のイラスト）は使わない
     assert '仮定法' not in how and '運動量' in how
+
+
+def test_gap_types_fold_on_phones_but_start_open_on_pc():
+    box = LANDING[LANDING.index('<details class="types-box"'):LANDING.index('</details>', LANDING.index('types-box'))]
+    for t in ['誤解している', '曖昧に理解している', '前提知識が抜けている']:
+        assert t in box                       # 折りたたんでも、3種類の説明は残す
+    assert "matchMedia('(min-width: 768px)').matches) box.open = true" in LANDING

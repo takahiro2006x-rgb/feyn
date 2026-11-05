@@ -217,6 +217,10 @@
     .graded h2 .u { background: linear-gradient(transparent 62%, rgba(212, 53, 42, 0.22) 62%); }
     .graded-text { display: flex; flex-direction: column; gap: 18px; }
     .graded-text p { font-size: 16px; color: var(--ink-soft); }
+    .types-box summary { cursor: pointer; list-style: none; font-size: 15px; font-weight: 900; padding: 10px 0; border-top: 1px solid var(--rule); }
+    .types-box summary::-webkit-details-marker { display: none; }
+    .types-box summary::after { content: "＋"; float: right; color: var(--ink-soft); }
+    .types-box[open] summary::after { content: "−"; }
     .types { border-top: 1px solid var(--rule); }
     .types div { display: grid; grid-template-columns: 11em 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 15px; }
     .types dt { font-weight: 900; }
@@ -486,6 +490,53 @@
       .sticky-cta.is-hidden { transform: translateY(110%); }
       .sticky-cta .btn { flex: 1; min-height: 50px; font-size: 16px; padding: 10px 16px; }
       .sticky-cta .micro { font-size: 12px; line-height: 1.4; width: 7.5em; }
+
+      /* ---- スマホのページを短くする（余白・文字・画面の大きさを詰める。情報は削らない） ---- */
+      .how, .graded, .review, .price, .teachers, .faq, .final { padding-top: 52px; padding-bottom: 52px; }
+      .worries { padding-top: 52px; padding-bottom: 20px; }
+      .worries h2 { margin-bottom: 26px; }
+      .bubbles { gap: 12px; }
+      .bubble { padding: 10px 18px; font-size: 15px; }
+      .bridge { padding-top: 30px; }
+      .bridge::before { margin-bottom: 14px; }
+      .fact { padding: 18px 10px 16px; }
+      .fact b { font-size: 18px; }
+      .fact > span { font-size: 13px; margin-top: 4px; }
+      /* しくみ: 番号と見出しを横に並べ、画面を少し小さく */
+      .how-sub { margin-bottom: 20px; }
+      .step { gap: 14px; padding: 22px 0; }
+      .step-text { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center; }
+      .step-num { font-size: 52px; -webkit-text-stroke-width: 1.5px; }
+      .step h3 { margin: 0; font-size: 20px; }
+      .step p { grid-column: 1 / -1; margin-top: 8px; font-size: 15px; }
+      .step .phone { width: 196px; padding: 7px; border-radius: 28px; }
+      .step .phone img { border-radius: 22px; }
+      .shot-visual { gap: 4px; }
+      .shot-note { font-size: 14px; }
+      .graded .wrap { gap: 24px; }
+      .graded-text { gap: 12px; }
+      .phones .sample { margin-top: 24px; }
+      .review > .wrap > p { font-size: 15px; }
+      .curve { margin-top: 22px; }
+      .board-band .wrap { padding-top: 36px; padding-bottom: 36px; gap: 16px; }
+      /* 料金 */
+      .price .lead-line { margin-bottom: 24px; }
+      .plans { gap: 26px; }
+      .plan dl > div { padding: 8px 0; }
+      .plan-common ul { gap: 0; font-size: 14px; line-height: 1.7; }
+      .price .cta { margin-top: 24px; }
+      .parents { margin-top: 32px; }
+      .parents dl > div { display: block; padding: 8px 0; font-size: 14px; }
+      .parents dt { display: inline; }
+      .parents dt::after { content: "："; }
+      .parents dd { display: inline; }
+      /* 先生向け: 一覧を詰め、画面はダッシュボード1枚に（生徒詳細の画面はPCだけ） */
+      .teacher-list { margin: 14px 0; }
+      .teacher-list li { padding: 7px 0 7px 1.5em; font-size: 14px; line-height: 1.65; }
+      .teacher-list li::before { top: 7px; }
+      .teachers-shots .browser.sub { display: none; }
+      .faq summary { padding: 14px 0; font-size: 16px; }
+      .final .hand { margin: 6px 0 20px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .sticky-cta, .btn { transition: none; }
@@ -636,11 +687,14 @@
         <div class="graded-text">
           <h2>会話のあとに、<br><span class="u">どこが穴だったか</span>が返ってくる</h2>
           <p>会話が終わると、理解度と、説明から見つかった「理解の穴」が返ってきます。根拠になったあなたの発言つきで、苦手ノートに残ります。</p>
-          <dl class="types">
-            <div><dt>誤解している</dt><dd>まちがった理解のまま覚えている</dd></div>
-            <div><dt>曖昧に理解している</dt><dd>なんとなくは分かるが、説明しきれない</dd></div>
-            <div><dt>前提知識が抜けている</dt><dd>その前に必要な知識が足りない</dd></div>
-          </dl>
+          <details class="types-box" id="typesBox">
+            <summary>見つかる「理解の穴」は3種類</summary>
+            <dl class="types">
+              <div><dt>誤解している</dt><dd>まちがった理解のまま覚えている</dd></div>
+              <div><dt>曖昧に理解している</dt><dd>なんとなくは分かるが、説明しきれない</dd></div>
+              <div><dt>前提知識が抜けている</dt><dd>その前に必要な知識が足りない</dd></div>
+            </dl>
+          </details>
         </div>
         <div class="phones">
           <figure class="phone">
@@ -899,6 +953,12 @@
   </div>
 
   <script>
+    // ===== 「理解の穴」の3種類: PCでは開いておき、スマホでは折りたたんでページを短くする =====
+    (() => {
+      const box = document.getElementById('typesBox');
+      if (box && window.matchMedia && window.matchMedia('(min-width: 768px)').matches) box.open = true;
+    })();
+
     // ===== 演出: 画面に入った所から、順番に動かす =====
     // html.js が無い（動きを減らす設定）ときは何もしない＝最初から全部見えたまま
     (() => {

@@ -23,9 +23,10 @@ PAGES = [
 ]
 
 TEMPLATE = '''<!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" translate="no">
 <head>
   <meta charset="UTF-8">
+  <meta name="google" content="notranslate">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex">
   <title>{title} - Feyn</title>

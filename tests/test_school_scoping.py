@@ -438,3 +438,15 @@ def test_screens_have_the_school_controls():
     dashboard = _read('dashboard.html')
     for needle in ('id="scopeBar"', 'id="accessLogSection"', '/api/operator/access-logs', 'id="teacherJoinForm"'):
         assert needle in dashboard
+
+
+def test_documents_match_how_schools_work():
+    privacy = _read('privacy.html')
+    assert '自分の塾・学校に所属している利用者の学習の記録だけを見られます' in privacy
+    assert '不具合の調査、問い合わせへの対応、サービスの改善のために' in privacy
+    assert '見たか」を記録として残しています' in privacy
+    assert 'すべての利用者が1つの組織に所属' not in privacy
+    terms = _read('terms.html')
+    assert '自分の塾・学校に所属している利用者の学習の記録だけを見られます' in terms
+    lp = _read('landing.html')
+    assert '参加コードで自分の塾・学校に入った生徒の記録だけ' in lp

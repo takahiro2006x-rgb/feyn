@@ -534,7 +534,7 @@
       const action = (!resolved || g.due)
         ? `<button class="review-btn" data-id="${g.id}" data-subject="${escHtml(g.subject)}">復習する</button>`
         : '';
-      let dateInfo = `📅 ${escHtml(g.session_date)}`;
+      let dateInfo = `${escHtml(g.session_date)}`;
       if (resolved && g.review_count > 0) {
         dateInfo += ` ・ 復習${g.review_count}回`;
         if (!g.due && g.next_review) dateInfo += ` ・ 次回 ${escHtml(g.next_review)}`;
@@ -836,12 +836,12 @@
           window.location.href = data.url;
         } else {
           btn.disabled = false;
-          btn.textContent = '⭐ 有料プランにする（¥980/月）';
+          btn.textContent = '有料プランにする（¥980/月）';
           alert(data.error || '決済ページの作成に失敗しました');
         }
       } catch (e) {
         btn.disabled = false;
-        btn.textContent = '⭐ 有料プランにする（¥980/月）';
+        btn.textContent = '有料プランにする（¥980/月）';
         alert('接続エラーが発生しました');
       }
     }
@@ -916,7 +916,7 @@
     function addPortalButton() {
       const btn = document.createElement('button');
       btn.className = 'delete-cancel';
-      btn.textContent = '👑 プランを管理する（解約）';
+      btn.textContent = 'プランを管理する（解約）';
       btn.addEventListener('click', async () => {
         btn.disabled = true;
         try {

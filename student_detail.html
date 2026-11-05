@@ -11,39 +11,16 @@
       localStorage.getItem('feynTheme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    :root {
-      --bg:         #F0F4F8;
-      --card:       #FFFFFF;
-      --border:     #E5E5E5;
-      --text:       #3C3C3C;
-      --subtext:    #AFAFAF;
-      --green:      #58CC02;
-      --green-dark: #46A302;
-      --red:        #FF4B4B;
-      --yellow:     #E6A700;
-      --blue:       #1CB0F6;
-      --bubble:     #F0F4F8;
-    }
-
-    [data-theme="dark"] {
-      --bg:       #0D1117;
-      --card:     #161B22;
-      --border:   #30363D;
-      --text:     #E2E8F0;
-      --subtext:  #6E7681;
-      --yellow:   #FFC200;
-      --bubble:   #0D1117;
-    }
-
     body {
-      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      font-family: var(--sans);
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -53,7 +30,7 @@
     /* ===== ヘッダー ===== */
     .header {
       background: var(--card);
-      border-bottom: 2px solid var(--border);
+      border-bottom: 1px solid var(--border);
       padding: 0 32px;
       height: 64px;
       display: flex;
@@ -64,26 +41,26 @@
       z-index: 10;
     }
 
-    .header-logo { font-size: 22px; font-weight: 800; color: var(--green); letter-spacing: 2px; }
+    .header-logo { font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: 2px; }
     .header-divider { width: 2px; height: 24px; background: var(--border); }
     .header-title { font-size: 16px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; }
     .header-email { font-size: 12px; font-weight: 700; color: var(--subtext); }
     .plan-tag {
-      display: inline-block; padding: 4px 10px; border-radius: 99px;
-      font-size: 11px; font-weight: 800; white-space: nowrap;
+      display: inline-block; padding: 4px 10px; border-radius: var(--r-pill);
+      font-size: 12px; font-weight: 800; white-space: nowrap;
     }
-    .plan-tag.free { background: var(--bg); color: var(--subtext); border: 2px solid var(--border); }
-    .plan-tag.active { background: linear-gradient(135deg, #FFC940, #E6A700); color: white; }
+    .plan-tag.free { background: var(--bg); color: var(--subtext); border: 1px solid var(--border); }
+    .plan-tag.active { background: var(--hint-bg); color: var(--ink); }
     .header-titles { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .header-right { display: flex; align-items: center; gap: 12px; }
 
     .btn {
       padding: 8px 16px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
       background: transparent;
       color: var(--subtext);
-      font-size: 13px;
+      font-size: 14px;
       font-family: inherit;
       font-weight: 700;
       cursor: pointer;
@@ -92,7 +69,7 @@
       display: inline-block;
       white-space: nowrap;
     }
-    .btn:hover { border-color: var(--green); color: var(--green); }
+    .btn:hover { border-color: var(--ink); color: var(--ink); }
 
     /* ===== タブ ===== */
     .tab-bar {
@@ -110,18 +87,18 @@
 
     .tab-btn {
       padding: 10px 18px;
-      border-radius: 12px 12px 0 0;
-      border: 2px solid var(--border);
+      border-radius: var(--r-md) var(--r-md) 0 0;
+      border: 1px solid var(--border);
       border-bottom: none;
       background: var(--bg);
       color: var(--subtext);
-      font-size: 13px;
+      font-size: 14px;
       font-family: inherit;
       font-weight: 800;
       cursor: pointer;
       transition: all 0.15s;
     }
-    .tab-btn.active { background: var(--card); color: var(--green); }
+    .tab-btn.active { background: var(--card); color: var(--ink); }
     .tab-btn:not(.active):hover { color: var(--text); }
 
     /* ===== コンテンツ ===== */
@@ -138,61 +115,59 @@
     .tab-panel.active { display: flex; }
 
     .page-desc { font-size: 14px; font-weight: 700; color: var(--subtext); }
-    .section-title { font-size: 15px; font-weight: 800; color: var(--text); margin-top: 8px; }
+    .section-title { font-size: 16px; font-weight: 800; color: var(--text); margin-top: 8px; }
 
     /* ===== 理解度バー ===== */
     .progress-card {
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 12px;
-      box-shadow: 0 4px 0 var(--border);
     }
 
     .progress-row { display: flex; align-items: center; gap: 12px; }
-    .progress-name { flex: 1; font-size: 13px; font-weight: 800; }
+    .progress-name { flex: 1; font-size: 14px; font-weight: 800; }
     .progress-name small { font-weight: 700; color: var(--subtext); }
     .progress-track {
       flex: 2;
       height: 12px;
       background: var(--bubble);
-      border: 2px solid var(--border);
-      border-radius: 99px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-pill);
       overflow: hidden;
     }
-    .progress-fill { height: 100%; border-radius: 99px; background: var(--green); }
-    .progress-score { width: 44px; text-align: right; font-size: 13px; font-weight: 800; color: var(--subtext); }
+    .progress-fill { height: 100%; border-radius: var(--r-pill); background: var(--red); color: var(--on-red); }
+    .progress-score { width: 44px; text-align: right; font-size: 14px; font-weight: 800; color: var(--subtext); }
 
     /* ===== ギャップカード ===== */
     .gap-card {
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       padding: 20px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      box-shadow: 0 4px 0 var(--border);
     }
     .gap-card.resolved { opacity: 0.6; }
 
     .gap-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .gap-topic { font-size: 15px; font-weight: 800; flex: 1; }
+    .gap-topic { font-size: 16px; font-weight: 800; flex: 1; }
 
     .type-badge {
-      font-size: 11px; font-weight: 800; padding: 4px 10px;
-      border-radius: 99px; border: 2px solid; white-space: nowrap;
+      font-size: 12px; font-weight: 800; padding: 4px 10px;
+      border-radius: var(--r-pill); border: 2px solid; white-space: nowrap;
     }
     .type-misconception        { color: var(--red);    border-color: var(--red); }
-    .type-vague                { color: var(--yellow); border-color: var(--yellow); }
-    .type-missing_prerequisite { color: var(--blue);   border-color: var(--blue); }
+    .type-vague                { color: var(--meter); border-color: var(--meter); }
+    .type-missing_prerequisite { color: var(--ink);   border-color: var(--ink); }
 
     .status-badge {
-      font-size: 11px; font-weight: 800; padding: 4px 10px;
-      border-radius: 99px; background: var(--green); color: white; white-space: nowrap;
+      font-size: 12px; font-weight: 800; padding: 4px 10px;
+      border-radius: var(--r-pill); background: var(--red); color: var(--on-red); color: white; white-space: nowrap;
     }
 
     .gap-desc { font-size: 14px; font-weight: 700; line-height: 1.7; }
@@ -200,7 +175,7 @@
     .gap-evidence {
       font-size: 12px; font-weight: 700; color: var(--subtext);
       background: var(--bubble); border-left: 4px solid var(--border);
-      border-radius: 0 10px 10px 0; padding: 8px 12px; line-height: 1.6;
+      border-radius: 0 var(--r-md) var(--r-md) 0; padding: 8px 12px; line-height: 1.6;
     }
 
     .gap-date { font-size: 12px; font-weight: 700; color: var(--subtext); }
@@ -209,11 +184,10 @@
     .assignment-row {
       display: flex; align-items: center; gap: 10px;
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       padding: 14px 18px;
-      font-size: 13px; font-weight: 700;
-      box-shadow: 0 4px 0 var(--border);
+      font-size: 14px; font-weight: 700;
     }
     .assignment-row .assignment-info { flex: 1; }
     .assignment-row.completed { opacity: 0.6; }
@@ -221,10 +195,9 @@
     /* ===== セッションカード（アコーディオン・会話ログ） ===== */
     .session-card {
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       overflow: hidden;
-      box-shadow: 0 4px 0 var(--border);
     }
 
     .session-head {
@@ -236,21 +209,21 @@
 
     .session-emoji { font-size: 24px; }
     .session-info  { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-    .session-subject { font-size: 15px; font-weight: 800; }
+    .session-subject { font-size: 16px; font-weight: 800; }
     .session-meta  { font-size: 12px; font-weight: 700; color: var(--subtext); }
 
     .session-count {
       font-size: 12px; font-weight: 700; color: var(--subtext);
-      background: var(--bubble); border: 2px solid var(--border);
-      border-radius: 99px; padding: 4px 12px; white-space: nowrap;
+      background: var(--bubble); border: 1px solid var(--border);
+      border-radius: var(--r-pill); padding: 4px 12px; white-space: nowrap;
     }
 
-    .session-arrow { font-size: 13px; color: var(--subtext); transition: transform 0.2s; }
+    .session-arrow { font-size: 14px; color: var(--subtext); transition: transform 0.2s; }
     .session-card.open .session-arrow { transform: rotate(90deg); }
 
     .session-body {
       display: none; flex-direction: column; gap: 14px;
-      padding: 4px 20px 20px; border-top: 2px solid var(--border); padding-top: 18px;
+      padding: 4px 20px 20px; border-top: 1px solid var(--border); padding-top: 18px;
     }
     .session-card.open .session-body { display: flex; }
 
@@ -262,14 +235,14 @@
       padding: 12px 16px; font-size: 14px; line-height: 1.7; font-weight: 700;
       white-space: pre-wrap; word-break: break-word;
     }
-    .msg.feyn .bubble { background: var(--bubble); border: 2px solid var(--border); color: var(--text); border-radius: 4px 16px 16px 16px; }
-    .msg.user .bubble { background: var(--green); color: white; border-radius: 16px 4px 16px 16px; box-shadow: 0 3px 0 var(--green-dark); }
+    .msg.feyn .bubble { background: var(--bubble); border: 1px solid var(--border); color: var(--text); border-radius: var(--r-md) var(--r-sm) var(--r-sm) var(--r-sm); }
+    .msg.user .bubble { background: var(--red); color: var(--on-red); color: white; border-radius: var(--r-sm) var(--r-md) var(--r-sm) var(--r-sm); box-shadow: var(--shadow-press); }
 
     /* ===== 空状態 ===== */
     .empty-state {
       padding: 64px 24px; text-align: center; display: flex; flex-direction: column;
       align-items: center; gap: 12px; background: var(--card);
-      border: 2px solid var(--border); border-radius: 20px;
+      border: 1px solid var(--border); border-radius: var(--r-sm);
     }
     .empty-emoji { font-size: 48px; }
     .empty-title { font-size: 18px; font-weight: 800; color: var(--text); }
@@ -285,28 +258,42 @@
       .progress-row { flex-wrap: wrap; }
       .msg { max-width: 100%; }
     }
+    .header-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); }
+    .logo-mark { width: 28px; height: 28px; border-radius: var(--r-md); background: var(--brand); display: grid; place-items: center; }
+    .logo-mark svg { width: 18px; height: 18px; }
+    .logo-text { font-size: 18px; font-weight: 900; }
+    /* スマホ: ヘッダーを折り返して、名前が縦1文字ずつにならないように */
+    @media (max-width: 600px) {
+      .header { height: auto; min-height: 56px; flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+      .header-divider, .logo-text, .header-user { display: none; }
+      .header-title, .header-titles { flex: 1; min-width: 0; }
+      .header-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; }
+      .header-email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .header-right { width: 100%; display: flex; gap: 4px; }
+      .header-right .btn { flex: 1; min-height: 40px; padding: 4px 8px; white-space: nowrap; font-size: 14px; }
+    }
   </style>
 </head>
 <body>
 
   <header class="header">
-    <div class="header-logo">🎓 Feyn</div>
+    <a class="header-logo" href="/" aria-label="Feyn アプリへ"><span class="logo-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span class="logo-text">Feyn</span></a>
     <div class="header-divider"></div>
     <div class="header-titles">
-      <div class="header-title" id="headerName">👤 読み込み中...</div>
+      <div class="header-title" id="headerName">読み込み中...</div>
       <div class="header-email" id="headerEmail"></div>
     </div>
     <div class="header-right">
-      <button class="btn" id="themeToggle">🌙 ダークモード</button>
+      <button class="btn" id="themeToggle">ダークモード</button>
       <a href="/dashboard" class="btn">← ダッシュボードへ戻る</a>
     </div>
   </header>
 
   <div class="tab-bar">
-    <button class="tab-btn" data-tab="progress">📊 理解度</button>
-    <button class="tab-btn" data-tab="gaps">📝 苦手ノート</button>
-    <button class="tab-btn" data-tab="assignments">📋 課題</button>
-    <button class="tab-btn" data-tab="sessions">💬 会話ログ</button>
+    <button class="tab-btn" data-tab="progress">理解度</button>
+    <button class="tab-btn" data-tab="gaps">苦手ノート</button>
+    <button class="tab-btn" data-tab="assignments">課題</button>
+    <button class="tab-btn" data-tab="sessions">会話ログ</button>
   </div>
 
   <div class="container">
@@ -337,7 +324,7 @@
 
     function updateThemeLabel() {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+      themeToggle.textContent = isDark ? 'ライトモード' : 'ダークモード';
     }
     updateThemeLabel();
 
@@ -366,7 +353,7 @@
       btn.addEventListener('click', () => activateTab(btn.dataset.tab));
     });
 
-    const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
+    const SUBJECT_EMOJIS = { '物理':'', '数学':'', '英語':'', '化学':'', '生物':'', '国語':'', '歴史':'' };
 
     function escHtml(str) {
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -397,7 +384,7 @@
       if (progress.length === 0) {
         contentEl.innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">📈</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">まだ分析データがありません</div>
             <div class="empty-desc">生徒がFeynとの学習を進めると、ここに理解度が表示されます</div>
           </div>
@@ -405,7 +392,7 @@
         return;
       }
       const rows = progress.map(p => {
-        const emoji = SUBJECT_EMOJIS[p.subject] || '📚';
+        const emoji = SUBJECT_EMOJIS[p.subject] || '';
         const color = p.understanding >= 70 ? 'var(--green)' : (p.understanding >= 40 ? 'var(--yellow)' : 'var(--red)');
         return `
           <div class="progress-row">
@@ -423,7 +410,7 @@
       if (gaps.length === 0) {
         contentEl.innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">🎉</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">記録された苦手はまだありません</div>
             <div class="empty-desc">会話を最後まで進めると、見つかった弱点がここに残ります</div>
           </div>
@@ -432,13 +419,13 @@
       }
 
       function gapCard(g) {
-        const emoji    = SUBJECT_EMOJIS[g.subject] || '📚';
+        const emoji    = SUBJECT_EMOJIS[g.subject] || '';
         const resolved = g.status === 'resolved';
         const badge = resolved
-          ? `<span class="status-badge">✅ 解決済み</span>`
+          ? `<span class="status-badge">解決済み</span>`
           : `<span class="type-badge type-${escHtml(g.gap_type)}">${escHtml(labels[g.gap_type] || g.gap_type)}</span>`;
         const evidence = g.evidence
-          ? `<div class="gap-evidence">💬 生徒の発言: 「${escHtml(g.evidence)}」</div>` : '';
+          ? `<div class="gap-evidence">生徒の発言: 「${escHtml(g.evidence)}」</div>` : '';
         return `
           <div class="gap-card ${resolved ? 'resolved' : ''}">
             <div class="gap-top">
@@ -447,7 +434,7 @@
             </div>
             <div class="gap-desc">${escHtml(g.description)}</div>
             ${evidence}
-            <span class="gap-date">📅 ${escHtml(g.session_date)}</span>
+            <span class="gap-date">${escHtml(g.session_date)}</span>
           </div>
         `;
       }
@@ -455,8 +442,8 @@
       const open     = gaps.filter(g => g.status !== 'resolved');
       const resolved = gaps.filter(g => g.status === 'resolved');
       let html = '';
-      if (open.length > 0)     html += `<div class="section-title">🔥 いま残っている苦手（${open.length}件）</div>` + open.map(gapCard).join('');
-      if (resolved.length > 0) html += `<div class="section-title">✅ 解決済み（${resolved.length}件）</div>` + resolved.map(gapCard).join('');
+      if (open.length > 0)     html += `<div class="section-title">いま残っている苦手（${open.length}件）</div>` + open.map(gapCard).join('');
+      if (resolved.length > 0) html += `<div class="section-title">解決済み（${resolved.length}件）</div>` + resolved.map(gapCard).join('');
       contentEl.innerHTML = html;
     }
 
@@ -465,7 +452,7 @@
       if (assignments.length === 0) {
         contentEl.innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">📭</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">まだ課題を出していません</div>
             <div class="empty-desc">ダッシュボードから課題を出すと、ここに表示されます</div>
           </div>
@@ -478,8 +465,8 @@
       }
       contentEl.innerHTML = assignments.map(a => `
         <div class="assignment-row ${a.status === 'completed' ? 'completed' : ''}">
-          <span class="assignment-info">${SUBJECT_EMOJIS[a.subject] || '📚'} ${escHtml(a.subject)}${a.unit ? '・' + escHtml(a.unit) : '（おまかせ）'}</span>
-          <span>${a.status === 'completed' ? `✅ ${formatDateTime(a.completed_at)} 提出` : '⏳ 未完了'}</span>
+          <span class="assignment-info">${SUBJECT_EMOJIS[a.subject] || ''} ${escHtml(a.subject)}${a.unit ? '・' + escHtml(a.unit) : '（おまかせ）'}</span>
+          <span>${a.status === 'completed' ? `${formatDateTime(a.completed_at)} 提出` : '未完了'}</span>
         </div>
       `).join('');
     }
@@ -493,7 +480,7 @@
       if (sessions.length === 0) {
         contentEl.innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">📭</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">まだ会話がありません</div>
             <div class="empty-desc">生徒がFeynと会話すると、ここに残っていきます</div>
           </div>
@@ -532,10 +519,10 @@
     }
 
     function sessionCard(s) {
-      const emoji = SUBJECT_EMOJIS[s.subject] || '📚';
+      const emoji = SUBJECT_EMOJIS[s.subject] || '';
       const card = document.createElement('div');
       card.className = 'session-card';
-      const badge = s.completed ? '' : `<span class="status-badge" style="background:#FF9600;">⏸ 中断中</span>`;
+      const badge = s.completed ? '' : `<span class="status-badge" style="background:var(--hint-bg);color:var(--ink);">中断中</span>`;
 
       card.innerHTML = `
         <button class="session-head">
@@ -545,7 +532,7 @@
             <span class="session-meta">${escHtml(s.date)} ・ ${escHtml(s.difficulty)}</span>
           </span>
           ${badge}
-          <span class="session-count">💬 ${Number(s.message_count) || 0}</span>
+          <span class="session-count">${Number(s.message_count) || 0}</span>
           <span class="session-arrow">▶</span>
         </button>
         <div class="session-body"></div>
@@ -586,9 +573,9 @@
         const data = await res.json();
 
         const planTag = data.student.subscription_status === 'active'
-          ? '<span class="plan-tag active">👑 有料</span>'
-          : '<span class="plan-tag free">🆓 無料</span>';
-        document.getElementById('headerName').innerHTML = `👤 ${escHtml(data.student.name)} ${planTag}`;
+          ? '<span class="plan-tag active">有料</span>'
+          : '<span class="plan-tag free">無料</span>';
+        document.getElementById('headerName').innerHTML = `${escHtml(data.student.name)} ${planTag}`;
         document.getElementById('headerEmail').textContent = data.student.email;
         document.title = `Feyn - ${data.student.name}さんの記録`;
 
@@ -600,11 +587,11 @@
         const initialTab = new URLSearchParams(location.search).get('tab') || 'progress';
         activateTab(initialTab);
       } catch (e) {
-        document.getElementById('headerName').textContent = '⚠️ 読み込みエラー';
+        document.getElementById('headerName').textContent = '読み込みエラー';
         document.querySelectorAll('.tab-panel > div[id^="content-"]').forEach(el => {
           el.innerHTML = `
             <div class="empty-state">
-              <div class="empty-emoji">⚠️</div>
+              <div class="empty-emoji"></div>
               <div class="empty-title">読み込みに失敗しました</div>
               <div class="empty-desc">ページを再読み込みしてください</div>
             </div>

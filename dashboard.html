@@ -11,34 +11,13 @@
       localStorage.getItem('feynTheme') ||
       (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Klee+One:wght@600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    :root {
-      --bg:          #F0F4F8;
-      --card:        #FFFFFF;
-      --border:      #E5E5E5;
-      --text:        #3C3C3C;
-      --subtext:     #AFAFAF;
-      --green:       #58CC02;
-      --green-dark:  #46A302;
-      --blue:        #1CB0F6;
-      --blue-dark:   #0891CC;
-      --yellow:      #FFC200;
-      --yellow-dark: #D4A200;
-    }
-
-    [data-theme="dark"] {
-      --bg:          #0D1117;
-      --card:        #161B22;
-      --border:      #30363D;
-      --text:        #E2E8F0;
-      --subtext:     #6E7681;
-    }
-
     body {
-      font-family: "M PLUS Rounded 1c", "Hiragino Sans", sans-serif;
+      font-family: var(--sans);
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
@@ -48,7 +27,7 @@
     /* ===== ヘッダー ===== */
     .header {
       background: var(--card);
-      border-bottom: 2px solid var(--border);
+      border-bottom: 1px solid var(--border);
       padding: 0 32px;
       height: 64px;
       display: flex;
@@ -62,7 +41,7 @@
     .header-logo {
       font-size: 22px;
       font-weight: 800;
-      color: var(--green);
+      color: var(--ink);
       letter-spacing: 2px;
     }
 
@@ -86,18 +65,18 @@
     }
 
     .header-user {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--subtext);
     }
 
     .btn {
       padding: 8px 16px;
-      border-radius: 10px;
-      border: 2px solid var(--border);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
       background: transparent;
       color: var(--subtext);
-      font-size: 13px;
+      font-size: 14px;
       font-family: inherit;
       font-weight: 700;
       cursor: pointer;
@@ -106,8 +85,8 @@
       display: inline-block;
     }
 
-    .btn:hover { border-color: var(--green); color: var(--green); }
-    .btn-danger:hover { border-color: #FF4B4B; color: #FF4B4B; background: rgba(255,75,75,0.06); }
+    .btn:hover { border-color: var(--ink); color: var(--ink); }
+    .btn-danger:hover { border-color: var(--red); color: var(--red); background: var(--paper-2); }
 
     /* ===== コンテンツ ===== */
     .container {
@@ -128,13 +107,12 @@
 
     .summary-card {
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       padding: 24px;
       display: flex;
       flex-direction: column;
       gap: 8px;
-      box-shadow: 0 4px 0 var(--border);
     }
 
     .summary-label {
@@ -152,12 +130,12 @@
       line-height: 1;
     }
 
-    .summary-value.green  { color: var(--green); }
-    .summary-value.blue   { color: var(--blue); }
-    .summary-value.yellow { color: var(--yellow); }
+    .summary-value.green  { color: var(--ink); }
+    .summary-value.blue   { color: var(--ink); }
+    .summary-value.yellow { color: var(--meter); }
 
     .summary-sub {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--subtext);
     }
@@ -177,22 +155,21 @@
     }
 
     .student-count {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--subtext);
       background: var(--bg);
-      border: 2px solid var(--border);
-      border-radius: 99px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-pill);
       padding: 4px 12px;
     }
 
     .table-wrap {
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       overflow: hidden;
       overflow-x: auto;   /* スマホでは表を横スクロールできるようにする */
-      box-shadow: 0 4px 0 var(--border);
     }
 
     table {
@@ -202,7 +179,7 @@
 
     thead {
       background: var(--bg);
-      border-bottom: 2px solid var(--border);
+      border-bottom: 1px solid var(--border);
     }
 
     th {
@@ -241,7 +218,7 @@
     }
 
     .td-name-main {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 800;
       color: var(--text);
     }
@@ -256,47 +233,44 @@
       display: inline-block;
       min-width: 32px;
       padding: 4px 8px;
-      border-radius: 99px;
-      font-size: 13px;
+      border-radius: var(--r-pill);
+      font-size: 14px;
       font-weight: 800;
       background: var(--bg);
       color: var(--subtext);
-      border: 2px solid var(--border);
+      border: 1px solid var(--border);
     }
 
-    .count-badge.lv1 { background: #f0fce8; color: #46A302; border-color: #b7eea0; }
-    .count-badge.lv2 { background: #d4f5b0; color: #3a8c00; border-color: #7dd950; }
-    .count-badge.lv3 { background: #58CC02; color: white;   border-color: #46A302; box-shadow: 0 2px 0 #46A302; }
-
-    [data-theme="dark"] .count-badge.lv1 { background: #14260b; color: #7dd950; border-color: #2f5a1a; }
-    [data-theme="dark"] .count-badge.lv2 { background: #1e3a0e; color: #a5e77d; border-color: #46A302; }
+    .count-badge.lv1 { background: color-mix(in srgb, var(--brand) 14%, var(--paper)); color: var(--ink); border-color: transparent; }
+    .count-badge.lv2 { background: color-mix(in srgb, var(--brand) 32%, var(--paper)); color: var(--ink); border-color: transparent; }
+    .count-badge.lv3 { background: var(--brand); color: var(--on-brand); border-color: transparent; }
 
     .count-badge.total {
-      background: var(--green);
+      background: var(--red); color: var(--on-red);
       color: white;
-      border-color: var(--green-dark);
-      box-shadow: 0 3px 0 var(--green-dark);
+      border-color: var(--red-dark);
+      box-shadow: var(--shadow-press);
     }
 
     .plan-tag {
       display: inline-block;
       padding: 4px 10px;
-      border-radius: 99px;
-      font-size: 11px;
+      border-radius: var(--r-pill);
+      font-size: 12px;
       font-weight: 800;
       white-space: nowrap;
     }
-    .plan-tag.free { background: var(--bg); color: var(--subtext); border: 2px solid var(--border); }
-    .plan-tag.active { background: linear-gradient(135deg, #FFC940, #E6A700); color: white; }
+    .plan-tag.free { background: var(--bg); color: var(--subtext); border: 1px solid var(--border); }
+    .plan-tag.active { background: var(--hint-bg); color: var(--ink); }
 
     th.sortable {
       cursor: pointer;
       user-select: none;
     }
 
-    th.sortable:hover { color: var(--green); }
-    th.sort-asc::after  { content: ' ▲'; color: var(--green); }
-    th.sort-desc::after { content: ' ▼'; color: var(--green); }
+    th.sortable:hover { color: var(--ink); }
+    th.sort-asc::after  { content: ' ▲'; color: var(--ink); }
+    th.sort-desc::after { content: ' ▼'; color: var(--ink); }
 
     .td-date {
       font-size: 12px;
@@ -340,8 +314,8 @@
     /* ===== リセットボタン ===== */
     .reset-pass-btn {
       padding: 5px 10px;
-      border-radius: 8px;
-      border: 2px solid var(--border);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
       background: transparent;
       color: var(--subtext);
       font-size: 12px;
@@ -352,12 +326,12 @@
       white-space: nowrap;
     }
 
-    .reset-pass-btn:hover { border-color: #FF4B4B; color: #FF4B4B; background: rgba(255,75,75,0.06); }
+    .reset-pass-btn:hover { border-color: var(--red); color: var(--red); background: var(--paper-2); }
 
     .detail-btn {
       padding: 5px 10px;
-      border-radius: 8px;
-      border: 2px solid var(--border);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
       background: transparent;
       color: var(--subtext);
       font-size: 12px;
@@ -367,12 +341,12 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .detail-btn:hover { border-color: var(--green); color: var(--green); }
+    .detail-btn:hover { border-color: var(--ink); color: var(--ink); }
 
     .assign-btn {
       padding: 5px 10px;
-      border-radius: 8px;
-      border: 2px solid var(--border);
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
       background: transparent;
       color: var(--subtext);
       font-size: 12px;
@@ -382,12 +356,12 @@
       transition: all 0.15s;
       white-space: nowrap;
     }
-    .assign-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .assign-btn:hover { border-color: var(--ink); color: var(--ink); }
     .csv-btn { text-decoration: none; display: inline-block; }
 
     .modal select {
       width: 100%; padding: 10px 12px;
-      border-radius: 10px; border: 2px solid var(--border);
+      border-radius: var(--r-md); border: 1px solid var(--border);
       background: var(--bg); color: var(--text);
       font-size: 14px; font-family: inherit; font-weight: 700;
       outline: none;
@@ -396,8 +370,8 @@
 
     .assignment-row {
       display: flex; align-items: center; gap: 8px;
-      padding: 10px 12px; border: 2px solid var(--border); border-radius: 12px;
-      font-size: 13px; font-weight: 700;
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md);
+      font-size: 14px; font-weight: 700;
     }
     .assignment-row .assignment-info { flex: 1; }
     .assignment-row.completed { opacity: 0.55; }
@@ -405,30 +379,30 @@
     .submission-list { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
     .submission-row {
       display: flex; align-items: center; gap: 10px;
-      padding: 10px 12px; border: 2px solid var(--border); border-radius: 12px;
-      font-size: 13px; font-weight: 700;
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md);
+      font-size: 14px; font-weight: 700;
     }
     .submission-row .submission-info { flex: 1; }
-    .submission-row .submission-time { color: var(--subtext); font-size: 11px; white-space: nowrap; }
+    .submission-row .submission-time { color: var(--subtext); font-size: 12px; white-space: nowrap; }
 
     /* ===== モーダル ===== */
     .modal-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.45);
+      background: var(--scrim);
       display: flex; align-items: center; justify-content: center;
       z-index: 200;
     }
 
     .modal {
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       padding: 32px;
       width: 360px;
       display: flex;
       flex-direction: column;
       gap: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      box-shadow: var(--shadow-lift);
     }
 
     .modal-title { font-size: 18px; font-weight: 800; color: var(--text); }
@@ -436,27 +410,27 @@
 
     .temp-pass {
       background: var(--bg);
-      border: 2px solid var(--border);
-      border-radius: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
       padding: 16px;
       font-size: 28px;
       font-weight: 800;
-      color: var(--green);
+      color: var(--ink);
       text-align: center;
       letter-spacing: 3px;
     }
 
     .modal-close {
       padding: 12px;
-      background: var(--green);
+      background: var(--red); color: var(--on-red);
       color: white;
       border: none;
-      border-radius: 12px;
-      font-size: 15px;
+      border-radius: var(--r-md);
+      font-size: 16px;
       font-weight: 800;
       font-family: inherit;
       cursor: pointer;
-      box-shadow: 0 4px 0 var(--green-dark);
+      box-shadow: var(--shadow-press);
       transition: all 0.1s;
     }
 
@@ -465,29 +439,28 @@
     /* ===== 利用状況（直近30日） ===== */
     .metrics-box {
       background: var(--card);
-      border: 2px solid var(--border);
-      border-radius: 20px;
-      box-shadow: 0 4px 0 var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
       padding: 18px;
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
     .metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-    .metric { border: 2px solid var(--border); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+    .metric { border: 1px solid var(--border); border-radius: var(--r-sm); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
     .metric-label { font-size: 12px; font-weight: 700; color: var(--subtext); }
     .metric-value { font-size: 24px; font-weight: 800; color: var(--text); line-height: 1.1; }
     .metric-sub { font-size: 12px; font-weight: 700; color: var(--subtext); }
-    .metrics-subtitle { font-size: 13px; font-weight: 800; color: var(--text); }
+    .metrics-subtitle { font-size: 14px; font-weight: 800; color: var(--text); }
     .metrics-note { font-size: 12px; font-weight: 700; color: var(--subtext); line-height: 1.6; }
-    .dropout-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--text); }
-    .dropout-bar { height: 12px; border-radius: 99px; background: var(--border); overflow: hidden; }
-    .dropout-fill { height: 100%; border-radius: 99px; background: var(--yellow); }
+    .dropout-row { display: grid; grid-template-columns: 120px 1fr 48px; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--text); }
+    .dropout-bar { height: 12px; border-radius: var(--r-pill); background: var(--border); overflow: hidden; }
+    .dropout-fill { height: 100%; border-radius: var(--r-pill); background: var(--meter); }
     .dropout-count { text-align: right; color: var(--subtext); }
-    .stumble-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 2fr 110px; align-items: center; gap: 12px; font-size: 13px; font-weight: 700; color: var(--text); }
+    .stumble-row { display: grid; grid-template-columns: minmax(0, 1.4fr) 2fr 110px; align-items: center; gap: 12px; font-size: 14px; font-weight: 700; color: var(--text); }
     .stumble-topic { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .stumble-topic small { color: var(--subtext); font-weight: 700; }
-    .stumble-fill { height: 100%; border-radius: 99px; }
+    .stumble-fill { height: 100%; border-radius: var(--r-pill); }
     .stumble-count { text-align: right; color: var(--subtext); font-size: 12px; }
 
     /* ===== レスポンシブ ===== */
@@ -504,19 +477,37 @@
       .container { padding: 16px; }
       th, td { padding: 10px 8px; font-size: 12px; }
     }
+    .modal-cancel { background: var(--paper) !important; color: var(--ink) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
+    .header-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); }
+    .logo-mark { width: 28px; height: 28px; border-radius: var(--r-md); background: var(--brand); display: grid; place-items: center; }
+    .logo-mark svg { width: 18px; height: 18px; }
+    .logo-text { font-size: 18px; font-weight: 900; }
+    /* スマホ: ヘッダーを折り返して、名前が縦1文字ずつにならないように */
+    @media (max-width: 600px) {
+      .header { height: auto; min-height: 56px; flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+      .header-divider, .logo-text, .header-user { display: none; }
+      .header-title, .header-titles { flex: 1; min-width: 0; }
+      .header-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 16px; }
+      .header-email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .header-right { width: 100%; display: flex; gap: 4px; }
+      .header-right .btn { flex: 1; min-height: 40px; padding: 4px 8px; white-space: nowrap; font-size: 14px; }
+      /* 生徒一覧の上のボタンの列（CSV・課題を出す）は折り返す（画面の横にはみ出さないように） */
+      .section-header { flex-wrap: wrap; gap: 8px; }
+      .section-header > div { flex-wrap: wrap; }
+    }
   </style>
 </head>
 <body>
 
   <header class="header">
-    <div class="header-logo">🎓 Feyn</div>
+    <a class="header-logo" href="/" aria-label="Feyn アプリへ"><span class="logo-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5L12 14z" fill="#FFFFFF"/><path d="M6.5 11.6V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.4L12 14z" fill="#FFFFFF"/></svg></span><span class="logo-text">Feyn</span></a>
     <div class="header-divider"></div>
-    <div class="header-title">📊 講師ダッシュボード</div>
+    <div class="header-title">講師ダッシュボード</div>
     <div class="header-right">
       <span class="header-user" id="headerUser"></span>
-      <button class="btn" id="themeToggle">🌙 ダークモード</button>
+      <button class="btn" id="themeToggle">ダークモード</button>
       <a href="/" class="btn">← アプリへ戻る</a>
-      <button class="btn btn-danger" id="logoutBtn">🚪 ログアウト</button>
+      <button class="btn btn-danger" id="logoutBtn">ログアウト</button>
     </div>
   </header>
 
@@ -529,7 +520,7 @@
 
     <!-- 利用状況（会話の開始・完了・離脱・有料化） -->
     <div class="section-header">
-      <div class="section-title">📈 利用状況（直近30日）</div>
+      <div class="section-title">利用状況（直近30日）</div>
     </div>
     <div class="metrics-box" id="metricsWrap">
       <div class="loading">読み込み中...</div>
@@ -537,7 +528,7 @@
 
     <!-- つまずきマップ -->
     <div class="section-header">
-      <div class="section-title">🗺️ つまずきマップ（苦手ノートに残っている生徒の割合）</div>
+      <div class="section-title">つまずきマップ（苦手ノートに残っている生徒の割合）</div>
     </div>
     <div class="metrics-box" id="stumbleWrap">
       <div class="loading">読み込み中...</div>
@@ -545,7 +536,7 @@
 
     <!-- API使用量 -->
     <div class="section-header">
-      <div class="section-title">🔋 今日のGemini使用量</div>
+      <div class="section-title">今日のGemini使用量</div>
     </div>
     <div class="table-wrap" id="usageWrap">
       <div class="loading">読み込み中...</div>
@@ -553,7 +544,7 @@
 
     <!-- 課題の提出状況 -->
     <div class="section-header">
-      <div class="section-title">📋 最近提出された課題</div>
+      <div class="section-title">最近提出された課題</div>
     </div>
     <div class="table-wrap" id="submissionsWrap">
       <div class="loading">読み込み中...</div>
@@ -563,8 +554,8 @@
     <div class="section-header">
       <div class="section-title">生徒一覧</div>
       <div style="display:flex; align-items:center; gap:8px;">
-        <a class="assign-btn csv-btn" href="/api/dashboard/students.csv" download title="生徒ごとの進捗・クリア数（会話の中身は含みません）">📥 CSVで書き出す</a>
-        <button class="assign-btn" id="bulkAssignBtn" disabled>📋 選択した生徒に課題を出す（<span id="bulkAssignCount">0</span>人）</button>
+        <a class="assign-btn csv-btn" href="/api/dashboard/students.csv" download title="生徒ごとの進捗・クリア数（会話の中身は含みません）">CSVで書き出す</a>
+        <button class="assign-btn" id="bulkAssignBtn" disabled>選択した生徒に課題を出す（<span id="bulkAssignCount">0</span>人）</button>
         <div class="student-count" id="studentCount">—</div>
       </div>
     </div>
@@ -580,7 +571,7 @@
 
     function updateThemeLabel() {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      themeToggle.textContent = isDark ? '☀️ ライトモード' : '🌙 ダークモード';
+      themeToggle.textContent = isDark ? 'ライトモード' : 'ダークモード';
     }
     updateThemeLabel();
 
@@ -593,7 +584,7 @@
     });
 
     const SUBJECTS = ['物理', '数学', '英語', '化学', '生物', '国語', '歴史'];
-    const SUBJECT_EMOJIS = { '物理':'⚡', '数学':'📐', '英語':'🌍', '化学':'⚗️', '生物':'🌿', '国語':'📖', '歴史':'🏛️' };
+    const SUBJECT_EMOJIS = { '物理':'', '数学':'', '英語':'', '化学':'', '生物':'', '国語':'', '歴史':'' };
 
     // アプリ側（script.js）の単元選択と同じ内容。課題アサインの単元プルダウンに使う
     const UNIT_CURRICULUM = {
@@ -658,7 +649,7 @@
       if (!list || list.length === 0) {
         wrap.innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">📭</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">まだ提出された課題はありません</div>
             <div class="empty-desc">生徒が課題を終えると、ここに表示されます</div>
           </div>
@@ -670,7 +661,7 @@
           ${list.map(sub => `
             <div class="submission-row">
               <span class="submission-info">
-                ${SUBJECT_EMOJIS[sub.subject] || '📚'} <strong>${escHtml(sub.student_name)}</strong>さんが
+                ${SUBJECT_EMOJIS[sub.subject] || ''} <strong>${escHtml(sub.student_name)}</strong>さんが
                 「${escHtml(sub.subject)}${sub.unit ? '・' + escHtml(sub.unit) : ''}」の課題を提出しました
               </span>
               <span class="submission-time">${formatDateTime(sub.completed_at)}</span>
@@ -690,17 +681,17 @@
     function renderSummary(summary) {
       document.getElementById('summary').innerHTML = `
         <div class="summary-card">
-          <div class="summary-label">👥 登録生徒数</div>
+          <div class="summary-label">登録生徒数</div>
           <div class="summary-value green">${summary.total_students}</div>
           <div class="summary-sub">人</div>
         </div>
         <div class="summary-card">
-          <div class="summary-label">🏆 総クリア数</div>
+          <div class="summary-label">総クリア数</div>
           <div class="summary-value blue">${summary.total_clears}</div>
           <div class="summary-sub">回</div>
         </div>
         <div class="summary-card">
-          <div class="summary-label">📚 最多クリア科目</div>
+          <div class="summary-label">最多クリア科目</div>
           <div class="summary-value yellow">${summary.total_clears > 0 ? SUBJECT_EMOJIS[summary.top_subject] : '—'}</div>
           <div class="summary-sub">${summary.total_clears > 0 ? summary.top_subject : 'まだデータなし'}</div>
         </div>
@@ -738,7 +729,7 @@
       if (students.length === 0) {
         document.getElementById('tableWrap').innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">🎓</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">まだ生徒が登録されていません</div>
             <div class="empty-desc">生徒がアカウントを作ると、ここに表示されます</div>
           </div>
@@ -773,14 +764,14 @@
                 <div class="td-name-email">${escHtml(s.email)}</div>
               </a>
             </td>
-            <td>${s.subscription_status === 'active' ? '<span class="plan-tag active">👑 有料</span>' : '<span class="plan-tag free">🆓 無料</span>'}</td>
+            <td>${s.subscription_status === 'active' ? '<span class="plan-tag active">有料</span>' : '<span class="plan-tag free">無料</span>'}</td>
             ${subjectCells}
             <td><span class="count-badge ${s.total > 0 ? 'total' : ''}">${s.total > 0 ? s.total + '回' : '0'}</span></td>
-            <td class="td-date">${s.last_active ? '🟢 ' + formatDate(s.last_active) : '未学習'}</td>
+            <td class="td-date">${s.last_active ? '' + formatDate(s.last_active) : '未学習'}</td>
             <td class="td-date">${formatDateTime(s.last_login)}</td>
             <td class="td-date">${formatDate(s.created_at)}</td>
             <td style="white-space:nowrap;">
-              <button class="detail-btn" data-id="${s.id}" style="margin-right:4px;">👀 詳細</button><button class="assign-btn" data-id="${s.id}" data-name="${escHtml(s.name)}" style="margin-right:4px;">📋 課題</button><button class="reset-pass-btn" data-id="${s.id}" data-name="${escHtml(s.name)}">🔑 リセット</button>
+              <button class="detail-btn" data-id="${s.id}" style="margin-right:4px;">詳細</button><button class="assign-btn" data-id="${s.id}" data-name="${escHtml(s.name)}" style="margin-right:4px;">課題</button><button class="reset-pass-btn" data-id="${s.id}" data-name="${escHtml(s.name)}">リセット</button>
             </td>
           </tr>
         `;
@@ -901,16 +892,16 @@
 
         wrap.innerHTML = `
           <div class="metrics-grid">
-            ${metricTile('🙋 使った生徒', `${Number(m.active_students)}人`, '')}
-            ${metricTile('💬 会話の開始', `${Number(m.started)}回`, modes)}
-            ${metricTile('✅ 完了率', rate, `${Number(m.completed)}回完了・平均${avgTurns}往復`)}
-            ${metricTile('💔 ライフ切れ', `${Number(m.life_blocked)}回`, `${Number(m.life_blocked_students)}人`)}
-            ${metricTile('🆕 新規登録', `${Number(m.signups)}人`, '')}
-            ${metricTile('⭐ 有料化', `${Number(m.subscriptions_started)}件`, `解約 ${Number(m.subscriptions_ended)}件`)}
-            ${metricTile('👑 いまの有料会員', `${Number(m.plans.active)}人`, `無料 ${Number(m.plans.free)}人`)}
-            ${metricTile('⏳ 進行中', `${Number(m.in_progress)}回`, '始めて1時間以内')}
+            ${metricTile('使った生徒', `${Number(m.active_students)}人`, '')}
+            ${metricTile('会話の開始', `${Number(m.started)}回`, modes)}
+            ${metricTile('完了率', rate, `${Number(m.completed)}回完了・平均${avgTurns}往復`)}
+            ${metricTile('ライフ切れ', `${Number(m.life_blocked)}回`, `${Number(m.life_blocked_students)}人`)}
+            ${metricTile('新規登録', `${Number(m.signups)}人`, '')}
+            ${metricTile('有料化', `${Number(m.subscriptions_started)}件`, `解約 ${Number(m.subscriptions_ended)}件`)}
+            ${metricTile('いまの有料会員', `${Number(m.plans.active)}人`, `無料 ${Number(m.plans.free)}人`)}
+            ${metricTile('進行中', `${Number(m.in_progress)}回`, '始めて1時間以内')}
           </div>
-          <div class="metrics-subtitle">🚪 途中でやめた会話（${dropoutTotal}回）は何往復目で止まったか</div>
+          <div class="metrics-subtitle">途中でやめた会話（${dropoutTotal}回）は何往復目で止まったか</div>
           ${rows}
           <div class="metrics-note">${escHtml(m.since)}以降の集計です。記録しているのは回数・往復数・日時だけで、会話の中身は含みません。</div>
         `;
@@ -922,9 +913,9 @@
     // ===== つまずきマップ =====
     // 割合が高いほど濃い色にする（多くの生徒がつまずいているテーマが一目で分かるように）
     function stumbleColor(rate) {
-      if (rate >= 50) return '#FF4B4B';
-      if (rate >= 25) return '#FF9600';
-      return '#FFC200';
+      if (rate >= 50) return 'var(--red)';
+      if (rate >= 25) return 'var(--meter)';
+      return 'var(--ink-soft)';
     }
 
     async function loadStumbleMap() {
@@ -939,7 +930,7 @@
         }
         const rows = data.topics.map(t => `
           <div class="stumble-row">
-            <span class="stumble-topic" title="${escHtml(t.subject)}：${escHtml(t.topic)}">${SUBJECT_EMOJIS[t.subject] || '📚'} ${escHtml(t.topic)} <small>${escHtml(t.subject)}</small></span>
+            <span class="stumble-topic" title="${escHtml(t.subject)}：${escHtml(t.topic)}">${SUBJECT_EMOJIS[t.subject] || ''} ${escHtml(t.topic)} <small>${escHtml(t.subject)}</small></span>
             <div class="dropout-bar"><div class="stumble-fill" style="width:${Number(t.rate)}%; background:${stumbleColor(Number(t.rate))}"></div></div>
             <span class="stumble-count">${Number(t.rate)}%（${Number(t.students)}人 / ${Number(data.total_students)}人）</span>
           </div>`).join('');
@@ -969,7 +960,7 @@
           .map(m => {
             const s = data.by_model[m];
             const failCell = s.fail > 0
-              ? `<span class="count-badge" style="background:#FFF0F0;color:#FF4B4B;border-color:#FFB3B3;">${s.fail}</span>`
+              ? `<span class="count-badge" style="background:var(--paper-2);color:var(--red);border-color:var(--red);">${s.fail}</span>`
               : '—';
             return `<tr><td>${escHtml(m)}</td><td><span class="count-badge total">${s.success}</span></td><td>${failCell}</td></tr>`;
           }).join('');
@@ -1007,7 +998,7 @@
       } catch (e) {
         document.getElementById('tableWrap').innerHTML = `
           <div class="empty-state">
-            <div class="empty-emoji">⚠️</div>
+            <div class="empty-emoji"></div>
             <div class="empty-title">読み込みに失敗しました</div>
             <div class="empty-desc">ページを再読み込みしてください</div>
           </div>
@@ -1028,7 +1019,7 @@
 
       overlay.innerHTML = `
         <div class="modal">
-          <div class="modal-title">📋 課題を出す</div>
+          <div class="modal-title">課題を出す</div>
           <div class="modal-desc">${whoLabel}に課題を出します</div>
           <div>
             <label>科目</label>
@@ -1036,11 +1027,11 @@
           </div>
           <div>
             <label>単元（任意）</label>
-            <select id="assignUnit"><option value="">🎲 おまかせ（単元指定なし）</option></select>
+            <select id="assignUnit"><option value="">おまかせ（単元指定なし）</option></select>
           </div>
-          <div id="assignError" style="font-size:12px; font-weight:700; color:#FF4B4B; min-height:16px;"></div>
+          <div id="assignError" style="font-size:14px; font-weight:700; color:var(--red); min-height:20px;"></div>
           <div style="display:flex; gap:8px;">
-            <button class="modal-close" style="background:#AFAFAF; box-shadow:0 4px 0 #888;" id="assignCancel">キャンセル</button>
+            <button class="modal-close modal-cancel" id="assignCancel">キャンセル</button>
             <button class="modal-close" id="assignConfirm">課題を出す</button>
           </div>
         </div>
@@ -1052,7 +1043,7 @@
 
       function refreshUnitOptions() {
         const categories = Object.keys(UNIT_CURRICULUM[subjectSelect.value] || {});
-        let options = '<option value="">🎲 おまかせ（単元指定なし）</option>';
+        let options = '<option value="">おまかせ（単元指定なし）</option>';
         categories.forEach(cat => {
           const units = UNIT_CURRICULUM[subjectSelect.value][cat];
           options += `<optgroup label="${escHtml(cat)}">` +
@@ -1090,7 +1081,7 @@
 
         const unitLabel = unitSelect.value ? '・' + escHtml(unitSelect.value) : '';
         overlay.querySelector('.modal').innerHTML = `
-          <div class="modal-title">✅ 課題を出しました</div>
+          <div class="modal-title">課題を出しました</div>
           <div class="modal-desc">${whoLabel}に「${escHtml(subjectSelect.value)}${unitLabel}」を課題として出しました。</div>
           <button class="modal-close" id="assignDone">閉じる</button>
         `;
@@ -1103,10 +1094,10 @@
       overlay.className = 'modal-overlay';
       overlay.innerHTML = `
         <div class="modal">
-          <div class="modal-title">🔑 パスワードリセット</div>
+          <div class="modal-title">パスワードリセット</div>
           <div class="modal-desc" id="modalDesc">${escHtml(studentName)} さんのパスワードをリセットしますか？</div>
           <div style="display:flex;gap:8px;">
-            <button class="modal-close" style="background:#AFAFAF;box-shadow:0 4px 0 #888;" id="modalCancel">キャンセル</button>
+            <button class="modal-close modal-cancel" id="modalCancel">キャンセル</button>
             <button class="modal-close" id="modalConfirm">リセットする</button>
           </div>
         </div>
@@ -1132,7 +1123,7 @@
         }
 
         overlay.querySelector('.modal').innerHTML = `
-          <div class="modal-title">✅ リセット完了</div>
+          <div class="modal-title">リセット完了</div>
           <div class="modal-desc">${escHtml(studentName)} さんの仮パスワードです。本人に伝えてください。</div>
           <div class="temp-pass">${data.temp_password}</div>
           <div class="modal-desc" style="font-size:12px;">次回ログイン後にパスワードを変更するよう伝えてください</div>

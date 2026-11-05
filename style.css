@@ -246,7 +246,7 @@ a { color: inherit; }
 .field:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px var(--grid-line); }
 
 .side-actions { display: flex; gap: 4px; }
-.side-actions .side-btn { flex: 1 1 0; justify-content: center; padding: 4px 8px; border: 1px solid var(--rule); font-size: 14px; }
+.side-actions .side-btn { flex: 1 1 0; justify-content: center; padding: 4px; border: 1px solid var(--rule); font-size: 14px; white-space: nowrap; }
 
 /* サイドバーの控えめなボタン */
 .side-btn {

@@ -57,3 +57,13 @@ def test_teacher_pages_use_only_defined_colors(path):
     for name in set(re.findall(r'var\((--[\w-]+)\)', html)):
         assert re.search(re.escape(name) + r'\s*:', theme) or re.search(re.escape(name) + r'\s*:', html), (path, name)
     assert 'color: white' not in html
+
+
+def test_manifest_colors_match_the_app():
+    """ホーム画面に追加したときの色を、アプリ（index.html）の theme-color（ライト）とそろえる"""
+    import json
+    manifest = json.load(open('manifest.json', encoding='utf-8'))
+    light = re.search(r'<meta name="theme-color" content="(#[0-9A-Fa-f]{6})" media="\(prefers-color-scheme: light\)">',
+                      open('index.html', encoding='utf-8').read()).group(1)
+    assert manifest['theme_color'].upper() == light.upper()
+    assert manifest['background_color'].upper() == light.upper()

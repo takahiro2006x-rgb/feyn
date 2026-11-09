@@ -158,10 +158,16 @@
       </div>
     </div>
 
+    <!-- 参加コード（新規登録のみ。塾・学校から受け取った生徒だけ） -->
+    <div class="field" id="joinCodeField" style="display:none">
+      <label for="joinCodeInput">参加コード（任意）</label>
+      <input type="text" id="joinCodeInput" placeholder="塾・学校から受け取った人だけ" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </div>
+
     <!-- 先生コード（新規登録のみ） -->
     <div class="field" id="teacherCodeField" style="display:none">
-      <label>先生コード（任意）</label>
-      <input type="text" id="teacherCodeInput" placeholder="先生の場合のみ入力" autocomplete="off">
+      <label for="teacherCodeInput">先生コード（先生だけ）</label>
+      <input type="text" id="teacherCodeInput" placeholder="先生の場合のみ入力" autocomplete="off" autocapitalize="characters" spellcheck="false">
     </div>
 
     <!-- 秘密の質問（新規登録のみ） -->
@@ -254,6 +260,8 @@
       passwordField:        document.getElementById('passwordField'),
       passwordInput:        document.getElementById('passwordInput'),
       eyeBtn:               document.getElementById('eyeBtn'),
+      joinCodeField:        document.getElementById('joinCodeField'),
+      joinCodeInput:        document.getElementById('joinCodeInput'),
       teacherCodeField:     document.getElementById('teacherCodeField'),
       teacherCodeInput:     document.getElementById('teacherCodeInput'),
       securityQuestionField: document.getElementById('securityQuestionField'),
@@ -296,6 +304,7 @@
       els.passwordField.style.display = (isLogin || isSignup) ? 'flex' : 'none';
       // signup-only
       els.nameField.style.display            = isSignup ? 'flex' : 'none';
+      els.joinCodeField.style.display        = isSignup ? 'flex' : 'none';
       els.teacherCodeField.style.display     = isSignup ? 'flex' : 'none';
       els.securityQuestionField.style.display = isSignup ? 'flex' : 'none';
       els.securityAnswerField.style.display  = isSignup ? 'flex' : 'none';
@@ -375,14 +384,16 @@
       const name            = els.nameInput.value.trim();
       const password        = els.passwordInput.value;
       const teacher_code    = els.teacherCodeInput.value.trim();
+      const join_code       = els.joinCodeInput.value.trim();
       const security_question = els.securityQuestionSelect.value;
       const security_answer   = els.securityAnswerInput.value.trim();
 
       if (!email || !name || !password)        { els.errorMsg.textContent = 'すべての項目を入力してください'; return; }
       if (!security_question)                   { els.errorMsg.textContent = '秘密の質問を選んでください'; return; }
       if (!security_answer)                     { els.errorMsg.textContent = '秘密の質問の答えを入力してください'; return; }
+      if (join_code && teacher_code)            { els.errorMsg.textContent = '参加コードと先生コードは、どちらか一方だけ入力してください'; return; }
 
-      const res  = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name, password, teacher_code, security_question, security_answer }) });
+      const res  = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name, password, teacher_code, join_code, security_question, security_answer }) });
       const data = await res.json();
       if (!res.ok) { els.errorMsg.textContent = data.error || 'エラーが発生しました'; return; }
       window.location.href = '/';

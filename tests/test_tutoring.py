@@ -53,3 +53,18 @@ def test_gap_type_labels_cover_all_known_types():
     # gap_analyzer側のGAP_TYPESと1対1で対応している必要がある
     import gap_analyzer
     assert set(tutoring.GAP_TYPE_LABELS.keys()) == set(gap_analyzer.GAP_TYPES)
+
+
+def test_feyn_is_the_student_role_not_a_rival():
+    """Feynの設定はLP・アプリと同じ「あなたに教わる生徒役」。少し生意気なキャラクターは残す"""
+    instructions = [
+        tutoring.build_instruction('物理', '大学受験', 'たろう'),
+        tutoring.build_photo_instruction('物理', '大学受験', 'たろう'),
+        tutoring.build_review_instruction('物理', '大学受験', 'たろう', {
+            'topic': '慣性', 'gap_type': 'misconception', 'description': 'x', 'suggested_question': 'y'}),
+    ]
+    for instruction in instructions:
+        assert 'たろうに物理を教わる生徒役' in instruction
+        assert '生意気' in instruction
+        assert 'ライバル' not in instruction
+        assert '担当' not in instruction

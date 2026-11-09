@@ -123,3 +123,13 @@ def test_chat_is_a_ruled_notebook_with_red_pen():
     assert 'border-left: 3px solid var(--red)' in feyn
     ask = re.search(r'\.bubble \.ask \{([^}]*)\}', CSS).group(1)
     assert 'color: var(--red)' in ask
+
+
+def test_messages_in_script_have_no_emoji():
+    """画面に出す文（お知らせ・エラー・音声入力の案内）に絵文字を使わない。見出しの文字で区別する（addNotice）"""
+    emoji = re.compile('[\U0001F000-\U0001FAFF☀-➿⬀-⯿️]')
+    for name in ('script.js', 'index.html', 'student_detail.html'):
+        text = open(name, encoding='utf-8').read()
+        assert not emoji.search(text), (name, emoji.search(text).group(0))
+    assert 'function addNotice(' in JS and "addNotice(data.error, { error: true })" in JS
+    assert '.bubble.notice' in open('style.css', encoding='utf-8').read()

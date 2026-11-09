@@ -54,6 +54,16 @@ def test_retired_gemini_2_0_models_are_not_used():
     (lambda: _GroqLikeError(429, 'Rate limit reached'), llm.ERROR_QUOTA),
     (lambda: Exception('model is no longer available'), llm.ERROR_NOT_FOUND),
     (lambda: Exception('connection reset'), llm.ERROR_OTHER),
+    # 提供終了を 400 で返す提供元（Groq の model_decommissioned）・410 Gone
+    (lambda: _GroqLikeError(400, "Error code: 400 - {'error': {'message': 'The model `llama3-70b-8192` has been "
+                                 "decommissioned and is no longer supported.', 'type': 'invalid_request_error', "
+                                 "'code': 'model_decommissioned'}}"), llm.ERROR_NOT_FOUND),
+    (lambda: _GroqLikeError(410, 'Gone'), llm.ERROR_NOT_FOUND),
+    (lambda: _gemini_error(400, 'INVALID_ARGUMENT', 'The model gemini-x has been deprecated'), llm.ERROR_NOT_FOUND),
+    (lambda: _GroqLikeError(404, "{'code': 'model_not_found'}"), llm.ERROR_NOT_FOUND),
+    # モデルの話でない 400 は、これまでどおり打ち切る
+    (lambda: _gemini_error(400, 'INVALID_ARGUMENT', 'Request contains an invalid argument.'), llm.ERROR_OTHER),
+    (lambda: _GroqLikeError(400, "'messages' parameter is deprecated"), llm.ERROR_OTHER),
 ])
 def test_classify_error(make_error, expected):
     assert llm.classify_error(make_error()) == expected
@@ -128,6 +138,24 @@ def test_start_stops_on_input_errors_and_refunds_the_life(student_client, script
     assert resp.status_code == 503
     assert scripted.calls == ['m1']                     # 入力の誤りでは他のモデルを試さない
     assert student_client.get('/api/me').get_json()['lives_status']['lives'] == 3
+
+
+DECOMMISSIONED = lambda: _GroqLikeError(400, 'The model `llama-old` has been decommissioned (model_decommissioned)')
+
+
+def test_start_skips_a_decommissioned_model_reported_as_400(student_client, scripted):
+    scripted.behavior.update({'m1': QUOTA, 'm2': DECOMMISSIONED})
+    resp = _start(student_client)
+    assert resp.status_code == 200
+    assert resp.get_json()['reply'] == 'm3の返答'
+    assert scripted.calls == ['m1', 'm2', 'm3']
+
+
+def test_hint_skips_a_decommissioned_model(student_client, scripted):
+    key = _start(student_client).get_json()['session_key']
+    scripted.behavior['m1'] = DECOMMISSIONED
+    assert core.generate_once('指示', 'ヒントを', 'hint') == 'm2の返答'
+    assert key
 
 
 def test_start_when_every_model_is_missing_is_a_503_not_a_quota_message(student_client, scripted):

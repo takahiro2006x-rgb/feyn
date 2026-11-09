@@ -236,7 +236,7 @@
     .msg { display: flex; max-width: 85%; }
     .msg.feyn { align-self: flex-start; }
     .msg.user { align-self: flex-end; }
-    .msg .bubble { padding: 8px 12px; font-size: 15px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: var(--shadow-note); }
+    .msg .bubble { padding: 8px 12px; font-size: 16px; line-height: 1.75; white-space: pre-wrap; overflow-wrap: anywhere; box-shadow: var(--shadow-note); }
     .msg.feyn .bubble { background: var(--feyn-bubble); border-left: 3px solid var(--red); border-radius: 0 var(--r-lg) var(--r-lg) 0; }
     .msg.user .bubble { background: var(--me-bubble); border: 1px solid var(--rule); color: var(--pencil); border-radius: var(--r-lg) var(--r-sm) var(--r-lg) var(--r-lg); }
     .msg .katex-display { overflow-x: auto; overflow-y: hidden; }
@@ -251,6 +251,35 @@
     .empty-title { font-size: 18px; font-weight: 900; }
     .empty-desc { font-size: 14px; color: var(--ink-soft); }
     .loading { padding: 48px; text-align: center; font-size: 14px; color: var(--ink-soft); }
+
+    /* ===== 塾・学校（参加コード） ===== */
+    .school-wrap { max-width: 800px; width: 100%; margin: 8px auto 0; padding: 0 24px; }
+    .school-card {
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 16px 24px;
+      background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-sm);
+    }
+    .school-title { font-size: 16px; font-weight: 900; }
+    .school-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.7; }
+    .school-name { font-size: 18px; font-weight: 900; color: var(--ink); }
+    .school-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: stretch; }
+    .school-form input {
+      flex: 1 1 200px; min-width: 0; min-height: 44px; padding: 8px 12px;
+      border: 1px solid var(--rule); border-radius: var(--r-sm);
+      background: var(--paper); color: var(--ink); font-size: 16px; letter-spacing: 0.05em;
+    }
+    .school-form input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px var(--grid-line); }
+    .school-btn {
+      min-height: 44px; padding: 8px 16px;
+      border: 1px solid var(--rule); border-radius: var(--r-md);
+      background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 700;
+    }
+    .school-btn:hover { background: var(--paper-2); }
+    .school-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .school-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .school-error { font-size: 14px; font-weight: 700; color: var(--red); line-height: 1.6; }
+    .school-error:empty { display: none; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
     /* ===== アカウントの削除 ===== */
     .danger-wrap { max-width: 800px; width: 100%; margin: 8px auto 48px; padding: 0 24px; }
@@ -313,7 +342,7 @@
       .subject-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
       .progress-row { flex-wrap: wrap; }
       .msg { max-width: 100%; }
-      .danger-wrap { padding: 0 12px; }
+      .danger-wrap, .school-wrap { padding: 0 12px; }
     }
     @media (prefers-reduced-motion: reduce) { .session-arrow { transition: none; } }
   </style>
@@ -362,6 +391,14 @@
       <div class="page-desc">Feynに説明した内容を見返して、理解を深めよう！</div>
       <div id="content-history"><div class="loading">読み込み中...</div></div>
     </div>
+  </div>
+
+  <!-- ===== 塾・学校（生徒のみ）: 今どこに入っているか・参加コード・抜ける ===== -->
+  <div class="school-wrap" id="schoolZone" style="display:none;">
+    <section class="school-card" aria-labelledby="schoolTitle">
+      <h2 class="school-title" id="schoolTitle">塾・学校</h2>
+      <div id="schoolBody"><div class="loading">読み込み中...</div></div>
+    </section>
   </div>
 
   <!-- ===== アカウントの削除（生徒のみ。先生には表示しない） ===== -->
@@ -820,8 +857,96 @@
         renderPlanCard(data.subscription_status || 'free', data.subscription_cancel_at || null);
         // アカウントの削除は生徒だけ（先生アカウントは今回は対象外）
         document.getElementById('dangerZone').style.display = data.role === 'student' ? 'block' : 'none';
+        if (data.role === 'student') {
+          document.getElementById('schoolZone').style.display = 'block';
+          loadSchool();
+        }
       } catch (e) {
         document.getElementById('planCard').innerHTML = '<div class="plan-card-desc">プラン情報の読み込みに失敗しました</div>';
+      }
+    }
+
+    // ===== 塾・学校（参加コードで入る・抜ける） =====
+    function escText(str) {
+      return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function renderSchool(school) {
+      const body = document.getElementById('schoolBody');
+      if (school) {
+        body.innerHTML = `
+          <div class="school-name">${escText(school.name)}</div>
+          <div class="school-desc">${escText(school.name)}の先生は、あなたの学習のきろく（Feynとの会話）・苦手ノート・理解度を見られます。ほかの塾・学校の先生からは見えません。</div>
+          <div class="school-actions" id="schoolActions">
+            <button class="school-btn" id="schoolLeaveBtn" type="button">${escText(school.name)}から抜ける</button>
+          </div>
+          <div class="school-error" id="schoolError" role="alert"></div>`;
+        document.getElementById('schoolLeaveBtn').addEventListener('click', () => confirmLeave(school));
+      } else {
+        body.innerHTML = `
+          <div class="school-desc">今は、どの塾・学校にも入っていません。あなたの学習のきろくは、どの先生からも見えません。塾・学校から参加コードを受け取ったら、ここに入力してください。</div>
+          <form class="school-form" id="schoolJoinForm">
+            <label class="visually-hidden" for="schoolCodeInput">参加コード</label>
+            <input id="schoolCodeInput" type="text" placeholder="例: ABCD-EFGH-JKMN" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <button class="school-btn" id="schoolJoinBtn" type="submit">参加する</button>
+          </form>
+          <div class="school-error" id="schoolError" role="alert"></div>`;
+        document.getElementById('schoolJoinForm').addEventListener('submit', joinSchool);
+      }
+    }
+
+    function confirmLeave(school) {
+      const actions = document.getElementById('schoolActions');
+      actions.innerHTML = `
+        <span class="school-desc">抜けると、${escText(school.name)}の先生はあなたの記録を見られなくなります。学習のきろくは消えません。</span>
+        <button class="school-btn" id="schoolLeaveYes" type="button">抜ける</button>
+        <button class="school-btn" id="schoolLeaveNo" type="button">やめる</button>`;
+      document.getElementById('schoolLeaveYes').addEventListener('click', leaveSchool);
+      document.getElementById('schoolLeaveNo').addEventListener('click', () => renderSchool(school));
+      document.getElementById('schoolLeaveNo').focus();
+    }
+
+    async function loadSchool() {
+      try {
+        const res = await fetch('/api/school');
+        if (!res.ok) throw new Error();
+        renderSchool((await res.json()).school);
+      } catch (e) {
+        document.getElementById('schoolBody').innerHTML = '<div class="school-desc">塾・学校の情報を読み込めませんでした。</div>';
+      }
+    }
+
+    async function joinSchool(event) {
+      event.preventDefault();
+      const input = document.getElementById('schoolCodeInput');
+      const btn = document.getElementById('schoolJoinBtn');
+      const error = document.getElementById('schoolError');
+      const code = input.value.trim();
+      if (!code) { error.textContent = '参加コードを入力してください'; input.focus(); return; }
+      btn.disabled = true;
+      error.textContent = '';
+      try {
+        const res = await fetch('/api/school/join', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
+        });
+        const data = await res.json();
+        if (!res.ok) { error.textContent = data.error || '参加できませんでした'; btn.disabled = false; return; }
+        renderSchool(data.school);
+      } catch (e) {
+        error.textContent = '通信に失敗しました。もう一度お試しください';
+        btn.disabled = false;
+      }
+    }
+
+    async function leaveSchool() {
+      const error = document.getElementById('schoolError');
+      try {
+        const res = await fetch('/api/school/leave', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) { error.textContent = data.error || '抜けられませんでした'; return; }
+        renderSchool(null);
+      } catch (e) {
+        error.textContent = '通信に失敗しました。もう一度お試しください';
       }
     }
 

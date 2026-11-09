@@ -12,6 +12,7 @@ from blueprints.chat import chat_bp
 from blueprints.dashboard import dashboard_bp
 from blueprints.pages import pages_bp
 from blueprints.progress import progress_bp
+from blueprints.school import school_bp
 
 DEV_SECRET_KEY = 'feyn-dev-secret-2024'
 
@@ -99,6 +100,7 @@ app.register_blueprint(billing_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(chat_bp)
 app.register_blueprint(progress_bp)
+app.register_blueprint(school_bp)
 
 
 if __name__ == '__main__':

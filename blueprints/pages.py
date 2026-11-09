@@ -5,6 +5,7 @@ from flask import Blueprint, Response, abort, redirect, request, send_from_direc
 import core
 import landing_render
 import ratelimit
+from blueprints.school import can_open_dashboard, load_viewer
 
 pages_bp = Blueprint('pages', __name__)
 
@@ -105,7 +106,8 @@ def mypage_page():
 def dashboard_page():
     if not session.get('user_id'):
         return redirect('/login')
-    if session.get('user_role') != 'teacher':
+    # 先生と運営アカウントだけ（権限はクッキーではなくDBで確かめる）
+    if not can_open_dashboard(load_viewer()):
         return redirect('/')
     return send_from_directory('.', 'dashboard.html')
 
@@ -114,7 +116,7 @@ def dashboard_page():
 def dashboard_student_page(student_id):
     if not session.get('user_id'):
         return redirect('/login')
-    if session.get('user_role') != 'teacher':
+    if not can_open_dashboard(load_viewer()):
         return redirect('/')
     return send_from_directory('.', 'student_detail.html')
 

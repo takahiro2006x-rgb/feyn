@@ -193,6 +193,5 @@ Feynの画面（LP・アプリ・先生の画面）を作る・直すときは�
 
 | ずれ | 場所 |
 |---|---|
-| PWAの色が以前の緑（`#58CC02`）のまま | `manifest.json` の `theme_color`・`background_color`、`icons/` |
-| 置き換えで直したため、使っていない古い指定が少し残っている | `dashboard.html`・`student_detail.html` の `<style>` |
-| `theme.css` の「古いページの変数名」（`--bg`・`--card` など）を、まだ先生の画面が使っている | `dashboard.html`・`student_detail.html` |
+| ホーム画面のアイコンが以前のまま（色は 2026-11-06 に `index.html` の theme-color〈ライト `#FFFFFF`〉にそろえた） | `icons/` |
+| 生徒数などの数字の印（`.count-badge.total`）・課題の「未完了」の印（`.status-badge`）を赤で塗っている。赤は Feyn の質問と決定ボタンだけ、の決まりに合わない（直すと見た目が変わるので、2026-11-06 は残した） | `dashboard.html`・`student_detail.html` |

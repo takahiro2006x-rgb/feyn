@@ -39,7 +39,6 @@ let isBusy         = false;
 let startAbortCtrl = null;
 let startInFlight  = false;  // /api/start が完了するまで次の開始を防ぐ（無料枠の無駄遣い対策）
 let currentSubject = '物理';
-let currentEmoji   = '⚡';
 let reviewGapId    = null;  // 苦手ノートからの復習セッション中はギャップIDが入る
 let assignmentId   = null;  // 先生からの課題セッション中は課題IDが入る
 
@@ -117,7 +116,7 @@ function applySubjectColor(subject) {
 
 
 // ===== キャラパネル更新 =====
-function updateCharPanel(subject, emoji) {
+function updateCharPanel(subject) {
   subjectBadge.textContent = subject;   // 科目の色は、名前の横の小さな点で見せる（style.css）
   charRole.textContent     = `${subject}を教わる生徒役`;
   applySubjectColor(subject);
@@ -204,6 +203,15 @@ function addHelpMessage(kind, label, text) {
   messagesEl.appendChild(el);
   renderMath(el.querySelector('.bubble'));
   scrollToMessage(el);
+  return el;
+}
+
+
+// ===== お知らせ・エラー（Feynのセリフではない案内。絵文字の代わりに、見出しの文字で区別する） =====
+function addNotice(text, { error = false, label = null } = {}) {
+  const heading = label || (error ? 'うまくいきませんでした' : 'お知らせ');
+  const el = addHelpMessage(error ? 'notice error' : 'notice', heading, text);
+  el.setAttribute('role', error ? 'alert' : 'status');
   return el;
 }
 
@@ -422,8 +430,7 @@ function showAssignmentPicker(assignments) {
         document.querySelectorAll('.subject').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentSubject = btn.dataset.subject;
-        currentEmoji   = btn.dataset.emoji;
-        updateCharPanel(currentSubject, currentEmoji);
+        updateCharPanel(currentSubject);
       }
       assignmentId = a.id;
       startSession(a.unit || undefined);
@@ -494,7 +501,7 @@ async function startSession(unit) {
     refreshLives();
     if (data.error) {
       if (data.upgrade_required) showUpgradePrompt(data.error);
-      else addMessage('feyn', `⚠️ ${data.error}`);
+      else addNotice(data.error, { error: true });
       return;
     }
     sessionKey = data.session_key;
@@ -504,7 +511,7 @@ async function startSession(unit) {
   } catch (e) {
     if (e.name !== 'AbortError') {
       thinkingEl.remove();
-      addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+      addNotice('接続エラーが発生しました。通信の状態を確かめて、もう一度送ってください。', { error: true });
     } else {
       thinkingEl.remove();
     }
@@ -594,7 +601,7 @@ async function startSessionWithPhoto(base64, mimeType, dataUrl) {
     refreshLives();
     if (data.error) {
       if (data.upgrade_required) showUpgradePrompt(data.error);
-      else addMessage('feyn', `⚠️ ${data.error}`);
+      else addNotice(data.error, { error: true });
       return;
     }
     sessionKey = data.session_key;
@@ -604,7 +611,7 @@ async function startSessionWithPhoto(base64, mimeType, dataUrl) {
   } catch (e) {
     if (e.name !== 'AbortError') {
       thinkingEl.remove();
-      addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+      addNotice('接続エラーが発生しました。通信の状態を確かめて、もう一度送ってください。', { error: true });
     } else {
       thinkingEl.remove();
     }
@@ -634,7 +641,7 @@ async function resumeSession(subject, dateStr, sessionId) {
     });
     const data = await response.json();
     thinkingEl.remove();
-    if (data.error) { addMessage('feyn', `⚠️ ${data.error}`); return; }
+    if (data.error) { addNotice(data.error, { error: true }); return; }
 
     sessionKey = data.session_key;
     hintBtn.disabled   = false;
@@ -645,7 +652,7 @@ async function resumeSession(subject, dateStr, sessionId) {
     history.replaceState(null, '', '/');
   } catch (e) {
     thinkingEl.remove();
-    addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+    addNotice('接続エラーが発生しました。通信の状態を確かめて、もう一度送ってください。', { error: true });
   } finally {
     startInFlight = false;
   }
@@ -802,10 +809,10 @@ async function sendMessage() {
   } else if (data.error) {
     setExpression('normal');
     if (data.error.includes('セッションが見つかりません')) {
-      addMessage('feyn', '⚠️ セッションが切れていたので再開します...');
+      addNotice('しばらく時間がたっていたので、会話を読み込み直しています…');
       startSession();
     } else {
-      addMessage('feyn', `⚠️ ${data.error}`);
+      addNotice(data.error, { error: true });
     }
   } else {
     setXP(data.progress ?? 0);
@@ -892,11 +899,10 @@ document.querySelectorAll('.subject').forEach(btn => {
     document.querySelectorAll('.subject').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentSubject = btn.dataset.subject;
-    currentEmoji   = btn.dataset.emoji;
     reviewGapId    = null;
     assignmentId   = null;
     history.replaceState(null, '', '/');
-    updateCharPanel(currentSubject, currentEmoji);
+    updateCharPanel(currentSubject);
     showUnitPicker(currentSubject);
   });
 });
@@ -952,7 +958,7 @@ function showVoiceNoticeOnce() {
   let shown = false;
   try { shown = localStorage.getItem('feynVoiceNotice') === '1'; } catch (e) { /* 保存できない環境でも動かす */ }
   if (shown) return;
-  addMessage('feyn', '🎤 話した声は、ブラウザの音声認識サービス（Chromeの場合はGoogle）で文字に変換されてから入力欄に入るよ。送信する前に、内容を確認してね。');
+  addNotice('話した声は、ブラウザの音声認識サービス（Chromeの場合はGoogle）で文字に変換されてから入力欄に入るよ。送信する前に、内容を確認してね。', { label: '音声入力' });
   try { localStorage.setItem('feynVoiceNotice', '1'); } catch (e) { /* 次回もう一度出るだけ */ }
 }
 
@@ -979,11 +985,11 @@ function startVoiceInput() {
   };
   recognition.onerror = (event) => {
     if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-      addMessage('feyn', '🎤 マイクが使えないみたい。ブラウザの設定で、このサイトのマイクを許可してね。');
+      addNotice('マイクが使えないみたい。ブラウザの設定で、このサイトのマイクを許可してね。', { label: '音声入力' });
     } else if (event.error === 'no-speech') {
-      addMessage('feyn', '🎤 声が聞こえなかったよ。もう一度マイクを押して話してみて。');
+      addNotice('声が聞こえなかったよ。もう一度マイクを押して話してみて。', { label: '音声入力' });
     } else if (event.error !== 'aborted') {
-      addMessage('feyn', '🎤 音声入力がうまく動かなかった。文字で入力してみてね。');
+      addNotice('音声入力がうまく動かなかった。文字で入力してみてね。', { label: '音声入力' });
     }
   };
   recognition.onend = () => setMicState(false);
@@ -1095,13 +1101,13 @@ hintBtn.addEventListener('click', async () => {
     const data = await res.json();
     thinkingEl.remove();
     if (data.error) {
-      addMessage('feyn', `⚠️ ${data.error}`);
+      addNotice(data.error, { error: true });
     } else {
       addHelpMessage('hint', 'ヒント', data.hint);
     }
   } catch (e) {
     thinkingEl.remove();
-    addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+    addNotice('接続エラーが発生しました。通信の状態を確かめて、もう一度送ってください。', { error: true });
   } finally {
     hintBtn.disabled   = false;
     revealBtn.disabled = false;
@@ -1126,7 +1132,7 @@ revealBtn.addEventListener('click', async () => {
     const data = await res.json();
     thinkingEl.remove();
     if (data.error) {
-      addMessage('feyn', `⚠️ ${data.error}`);
+      addNotice(data.error, { error: true });
       hintBtn.disabled   = false;
       revealBtn.disabled = false;
       return;
@@ -1138,7 +1144,7 @@ revealBtn.addEventListener('click', async () => {
     ], { clear: false });
   } catch (e) {
     thinkingEl.remove();
-    addMessage('feyn', '⚠️ 接続エラーが発生しました。');
+    addNotice('接続エラーが発生しました。通信の状態を確かめて、もう一度送ってください。', { error: true });
   } finally {
     hintBtn.disabled   = false;
     revealBtn.disabled = false;
@@ -1442,8 +1448,7 @@ async function init() {
         document.querySelectorAll('.subject').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentSubject = btn.dataset.subject;
-        currentEmoji   = btn.dataset.emoji;
-        updateCharPanel(currentSubject, currentEmoji);
+        updateCharPanel(currentSubject);
       }
     }
 

@@ -30,3 +30,40 @@ def test_buttons_and_headings_have_no_emoji(path):
 def test_theme_css_is_served(client):
     resp = client.get('/theme.css')
     assert resp.status_code == 200 and resp.mimetype == 'text/css'
+
+
+@pytest.mark.parametrize('path', ['mypage.html', 'student_detail.html'])
+def test_conversation_logs_use_the_chat_bubbles(path):
+    """会話ログの吹き出しは、チャット画面と同じ形。生徒の発言を赤で塗らない（赤は Feyn の質問と決定ボタンだけ）"""
+    style = ''.join(re.findall(r'<style>(.*?)</style>', open(path, encoding='utf-8').read(), flags=re.S))
+    user_rule = re.search(r'\.msg\.user \.bubble \{([^}]*)\}', style).group(1)
+    feyn_rule = re.search(r'\.msg\.feyn \.bubble \{([^}]*)\}', style).group(1)
+    assert 'var(--me-bubble)' in user_rule and 'var(--red)' not in user_rule
+    assert 'var(--feyn-bubble)' in feyn_rule and 'border-left: 3px solid var(--red)' in feyn_rule
+
+
+def test_student_detail_header_keeps_long_names_visible():
+    """スマホで、長い名前が「…」で切れたり、プランの印が画面の外に出たりしない"""
+    html = open('student_detail.html', encoding='utf-8').read()
+    assert 'class="header-name"' in html
+    assert '.header-title .plan-tag { flex-shrink: 0; }' in html
+
+
+@pytest.mark.parametrize('path', ['dashboard.html', 'student_detail.html'])
+def test_teacher_pages_use_only_defined_colors(path):
+    """theme.css に無い色の変数（--green・--yellow・--blue）を使わない。赤の上の文字は --on-red（ダークでも読める）"""
+    html = open(path, encoding='utf-8').read()
+    theme = open('theme.css', encoding='utf-8').read()
+    for name in set(re.findall(r'var\((--[\w-]+)\)', html)):
+        assert re.search(re.escape(name) + r'\s*:', theme) or re.search(re.escape(name) + r'\s*:', html), (path, name)
+    assert 'color: white' not in html
+
+
+def test_manifest_colors_match_the_app():
+    """ホーム画面に追加したときの色を、アプリ（index.html）の theme-color（ライト）とそろえる"""
+    import json
+    manifest = json.load(open('manifest.json', encoding='utf-8'))
+    light = re.search(r'<meta name="theme-color" content="(#[0-9A-Fa-f]{6})" media="\(prefers-color-scheme: light\)">',
+                      open('index.html', encoding='utf-8').read()).group(1)
+    assert manifest['theme_color'].upper() == light.upper()
+    assert manifest['background_color'].upper() == light.upper()

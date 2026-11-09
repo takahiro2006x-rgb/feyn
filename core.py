@@ -228,6 +228,20 @@ def init_db():
             )
         ''')
 
+        # 運営アカウントが生徒のデータを見た記録（いつ・誰が・どの生徒の・何を）。会話の本文は入れない。
+        # 生徒がアカウントを削除しても、監査のための記録として残す（番号だけで、名前・メールは持たない）
+        conn.execute(f'''
+            CREATE TABLE IF NOT EXISTS operator_access_logs (
+                id {pk},
+                operator_id INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                student_id INTEGER,
+                school_id INTEGER,
+                target TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         # 2. 全テーブルが存在する状態で、あとから追加したカラムをマイグレーションする
         db.add_column_if_missing(conn, 'users', "role TEXT NOT NULL DEFAULT 'student'")
         db.add_column_if_missing(conn, 'users', 'security_question TEXT')
@@ -255,6 +269,10 @@ def init_db():
         db.add_column_if_missing(conn, 'users', 'onboarded INTEGER NOT NULL DEFAULT 1')
         # 解約を予約済みの有料会員が「いつまで有料か」を表示するための日付（YYYY-MM-DD。予約なしはNULL）
         db.add_column_if_missing(conn, 'users', 'subscription_cancel_at TEXT')
+        # 塾・学校ごとの先生コード（生徒の参加コードは join_code）。DEFAULT 組織はNULLのまま
+        db.add_column_if_missing(conn, 'schools', 'teacher_code TEXT')
+        # 運営アカウントの印（先生の role とは別）。普通の登録では付かず、scripts/orgs.py で付ける
+        db.add_column_if_missing(conn, 'users', 'is_operator INTEGER NOT NULL DEFAULT 0')
 
         # 3. よく使う検索のためのインデックス（追加のみ。IF NOT EXISTS なので何度実行しても安全）
         for index_sql in INDEXES:
@@ -281,6 +299,8 @@ INDEXES = [
     # 利用状況の計測: 期間での集計・本人のデータ削除
     'CREATE INDEX IF NOT EXISTS idx_events_created ON events (created_at)',
     'CREATE INDEX IF NOT EXISTS idx_events_user ON events (user_id)',
+    # 先生コードは組織ごとに1つ（NULL は何個あってもよい）
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_schools_teacher_code ON schools (teacher_code)',
 ]
 
 init_db()
@@ -423,6 +443,23 @@ def log_event(event_type, user_id=None, conv_id=None, subject=None, mode=None, t
         pass
 
 
+# ========================================
+# 先生・運営アカウントが見られる生徒の範囲
+# ========================================
+# 集計・CSVの関数は school_id で範囲を受け取る:
+#   - 整数: その組織の生徒だけ
+#   - None: 全組織の生徒（運営アカウントだけが使う）
+#   - NOBODY_SCHOOL_ID: だれも対象にしない（DEFAULT にいる先生。どの生徒も見えない）
+NOBODY_SCHOOL_ID = -1
+
+
+def school_condition(column, school_id):
+    """範囲の条件を (' AND 列 = ?', [値]) の形で返す。全組織（None）なら条件なし"""
+    if school_id is None:
+        return '', []
+    return f' AND {column} = ?', [school_id]
+
+
 # 始めてからこの時間が経っていない会話は「まだ続いているかもしれない」ので、離脱の集計に入れない
 IN_PROGRESS_HOURS = 1
 
@@ -434,17 +471,19 @@ def compute_usage_metrics(school_id, days=30, now=None):
     since = (now - timedelta(days=days)).strftime('%Y-%m-%d %H:%M:%S')   # DBの時刻はUTC
     in_progress_after = now - timedelta(hours=IN_PROGRESS_HOURS)
 
+    cond_u, params = school_condition('u.school_id', school_id)
+    cond, _ = school_condition('school_id', school_id)
     with get_db() as conn:
         rows = conn.execute(
             'SELECT e.event_type, e.user_id, e.conv_id, e.mode, e.turn, e.created_at FROM events e '
             'JOIN users u ON u.id = e.user_id '
-            "WHERE u.school_id = ? AND u.role = 'student' AND e.created_at >= ?",
-            (school_id, since)
+            "WHERE u.role = 'student' AND e.created_at >= ?" + cond_u,
+            [since] + params
         ).fetchall()
         plan_rows = conn.execute(
-            "SELECT subscription_status, COUNT(*) AS cnt FROM users WHERE school_id = ? AND role = 'student' "
-            'GROUP BY subscription_status',
-            (school_id,)
+            "SELECT subscription_status, COUNT(*) AS cnt FROM users WHERE role = 'student'" + cond
+            + ' GROUP BY subscription_status',
+            params
         ).fetchall()
 
     started = {}          # conv_id -> 始めた時刻
@@ -512,20 +551,22 @@ STUMBLE_MAP_LIMIT = 20
 def compute_stumble_map(school_id, limit=STUMBLE_MAP_LIMIT):
     """組織の生徒について、苦手ノートに「未解決」で残っているテーマを、生徒の割合が高い順に返す。
     テーマ名は会話の分析時に既存の名前へそろえているので、それを単元のまとまりとして扱う"""
-    joined = "JOIN users u ON u.id = {col} WHERE u.school_id = ? AND u.role = 'student'"
+    cond_u, params = school_condition('u.school_id', school_id)
+    cond, _ = school_condition('school_id', school_id)
+    joined = "JOIN users u ON u.id = {col} WHERE u.role = 'student'" + cond_u
     with get_db() as conn:
         total = conn.execute(
-            "SELECT COUNT(*) AS cnt FROM users WHERE school_id = ? AND role = 'student'", (school_id,)
+            "SELECT COUNT(*) AS cnt FROM users WHERE role = 'student'" + cond, params
         ).fetchone()['cnt']
         gap_rows = conn.execute(
             'SELECT g.subject, g.topic, COUNT(DISTINCT g.user_id) AS students FROM knowledge_gaps g '
             + joined.format(col='g.user_id') + " AND g.status != 'resolved' GROUP BY g.subject, g.topic",
-            (school_id,)
+            params
         ).fetchall()
         studied_rows = conn.execute(
             'SELECT t.subject, t.topic, COUNT(DISTINCT t.user_id) AS students FROM topic_progress t '
             + joined.format(col='t.user_id') + ' GROUP BY t.subject, t.topic',
-            (school_id,)
+            params
         ).fetchall()
 
     studied = {(r['subject'], r['topic']): r['students'] for r in studied_rows}
@@ -558,34 +599,38 @@ def csv_safe(value):
     return text
 
 
-def build_students_csv_rows(school_id):
-    """組織の生徒ごとに1行の、CSV用の行（見出し行を含む）を返す"""
-    student_filter = "JOIN users u ON u.id = {col} WHERE u.school_id = ? AND u.role = 'student'"
+def build_students_csv_rows(school_id, with_school_name=False):
+    """組織の生徒ごとに1行の、CSV用の行（見出し行を含む）を返す。
+    with_school_name=True（運営アカウント用）なら、先頭に「組織」の列を付ける"""
+    cond_u, params = school_condition('u.school_id', school_id)
+    student_filter = "JOIN users u ON u.id = {col} WHERE u.role = 'student'" + cond_u
     with get_db() as conn:
         students = conn.execute(
-            'SELECT id, name, email, created_at, last_login, subscription_status FROM users '
-            "WHERE school_id = ? AND role = 'student' ORDER BY id",
-            (school_id,)
+            'SELECT u.id, u.name, u.email, u.created_at, u.last_login, u.subscription_status, '
+            'sc.name AS school_name, sc.join_code AS school_join_code FROM users u '
+            'LEFT JOIN schools sc ON sc.id = u.school_id '
+            "WHERE u.role = 'student'" + cond_u + ' ORDER BY u.id',
+            params
         ).fetchall()
         clears = conn.execute(
             'SELECT s.user_id, s.subject, COUNT(*) AS cnt, MAX(s.completed_at) AS last_at FROM session_logs s '
             + student_filter.format(col='s.user_id') + ' GROUP BY s.user_id, s.subject',
-            (school_id,)
+            params
         ).fetchall()
         topics = conn.execute(
             'SELECT t.user_id, AVG(t.understanding) AS avg_understanding, COUNT(*) AS cnt FROM topic_progress t '
             + student_filter.format(col='t.user_id') + ' GROUP BY t.user_id',
-            (school_id,)
+            params
         ).fetchall()
         gaps = conn.execute(
             'SELECT g.user_id, g.status, COUNT(*) AS cnt FROM knowledge_gaps g '
             + student_filter.format(col='g.user_id') + ' GROUP BY g.user_id, g.status',
-            (school_id,)
+            params
         ).fetchall()
         assignments = conn.execute(
             'SELECT a.student_id, a.status, COUNT(*) AS cnt FROM assignments a '
             + student_filter.format(col='a.student_id') + ' GROUP BY a.student_id, a.status',
-            (school_id,)
+            params
         ).fetchall()
 
     clears_by = {}
@@ -609,6 +654,8 @@ def build_students_csv_rows(school_id):
                '総クリア数'] + [f'{s}クリア数' for s in SUBJECTS]
               + ['理解度の平均(0-100)', '学習したテーマ数', '苦手（未解決）', '苦手（解決済み）',
                  '課題（未完了）', '課題（完了）'])
+    if with_school_name:
+        header = ['組織'] + header
     rows = [header]
     for st in students:
         sid = st['id']
@@ -619,7 +666,11 @@ def build_students_csv_rows(school_id):
         g = gaps_by.get(sid, {'open': 0, 'resolved': 0})
         a = assign_by.get(sid, {'open': 0, 'completed': 0})
         last = last_by.get(sid)
-        rows.append([
+        school_cells = []
+        if with_school_name:
+            school_cells = ['（どこにも入っていない）' if st['school_join_code'] == 'DEFAULT'
+                            else csv_safe(st['school_name'])]
+        rows.append(school_cells + [
             sid, csv_safe(st['name']), csv_safe(st['email']),
             '有料' if st['subscription_status'] == 'active' else '無料',
             to_jst_str(st['created_at']) or '', to_jst_str(st['last_login']) or '',

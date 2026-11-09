@@ -204,11 +204,24 @@ def start_server():
 # ========================================
 # デモデータ（アプリのAPIを通して作るので、本物と同じ形になる）
 # ========================================
-def _signup(client, email, name, teacher=False):
+# 先生は同じ塾・学校の生徒しか見られないので、デモの先生と生徒は「デモ塾」に入れる
+DEMO_SCHOOL = {}
+
+
+def _demo_school():
+    if not DEMO_SCHOOL:
+        import schools
+        DEMO_SCHOOL.update(schools.create_school('デモ塾'))
+    return DEMO_SCHOOL
+
+
+def _signup(client, email, name, teacher=False, join=True):
     body = {'email': email, 'name': name, 'password': PASSWORD,
             'security_question': core.SECURITY_QUESTIONS[0], 'security_answer': 'demo'}
     if teacher:
-        body['teacher_code'] = core.TEACHER_CODE
+        body['teacher_code'] = _demo_school()['teacher_code']
+    elif join:
+        body['join_code'] = _demo_school()['join_code']
     res = client.post('/api/signup', json=body)
     assert res.status_code == 200, res.get_json()
     with core.get_db() as conn:   # 初回の説明（オンボーディング）は撮影の邪魔なので済みにする
@@ -237,6 +250,11 @@ def seed():
     with core.get_db() as conn:
         student_b = conn.execute("SELECT id FROM users WHERE email = 'demo-b@example.com'").fetchone()['id']
     teacher.post('/api/dashboard/assignments', json={'student_id': student_b, 'subject': '物理', 'unit': '運動量'})
+    # どこにも入っていない生徒と、運営アカウント（運営の画面の確認用）
+    _signup(app_module.app.test_client(), 'demo-e@example.com', 'デモ生徒E', join=False)
+    _signup(app_module.app.test_client(), 'demo-operator@example.com', 'デモ運営', join=False)
+    import schools
+    schools.set_operator('demo-operator@example.com', True)
 
 
 # ========================================
@@ -507,6 +525,18 @@ def shoot_pages(out_dir, prefix=''):
                 if tab.count():
                     tab.click()
                 shot(page, 'student')
+                ctx.close()
+                # 運営アカウント: 全組織のダッシュボード（生徒の詳細を1つ開いてから、閲覧の記録が出るように）
+                ctx = browser.new_context(**base)
+                _login(ctx, 'demo-operator@example.com')
+                page = ctx.new_page()
+                page.goto(f'{BASE}/dashboard/student/{sid}')
+                page.wait_for_load_state('networkidle')
+                page.goto(BASE + '/dashboard')
+                page.wait_for_load_state('networkidle')
+                shot(page, 'dashboard-operator')
+                page.locator('#accessLogSection').scroll_into_view_if_needed()
+                shot(page, 'dashboard-operator-log')
                 ctx.close()
         browser.close()
 

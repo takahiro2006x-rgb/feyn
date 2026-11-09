@@ -4,7 +4,7 @@ import csv
 import io
 
 import core
-from conftest import FakeChatSession, _signup_payload
+from conftest import FakeChatSession, TEST_TEACHER_CODE, _signup_payload
 
 URL = '/api/dashboard/students.csv'
 
@@ -112,7 +112,7 @@ def test_works_through_the_postgres_code_path(pg_path, app):
     student = app.app.test_client()
     student.post('/api/signup', json=_signup_payload())
     teacher = app.app.test_client()
-    teacher.post('/api/signup', json=_signup_payload(email='t@example.com', teacher_code=core.TEACHER_CODE))
+    teacher.post('/api/signup', json=_signup_payload(email='t@example.com', teacher_code=TEST_TEACHER_CODE))
     core.save_analysis(_uid(student), '物理', {'topic': '慣性', 'understanding_score': 55, 'gaps': []}, '2026-10-25')
     rows = _rows(teacher.get(URL))
     assert len(rows) == 2

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """つまずきマップ（/api/dashboard/stumble-map）のテスト。"""
 import core
-from conftest import _signup_payload
+from conftest import TEST_TEACHER_CODE, _signup_payload
 
 URL = '/api/dashboard/stumble-map'
 
@@ -85,7 +85,7 @@ def test_only_the_top_topics_are_returned(app, teacher_client):
 
 def test_works_through_the_postgres_code_path(pg_path, app):
     teacher = app.app.test_client()
-    teacher.post('/api/signup', json=_signup_payload(email='t@example.com', teacher_code=core.TEACHER_CODE))
+    teacher.post('/api/signup', json=_signup_payload(email='t@example.com', teacher_code=TEST_TEACHER_CODE))
     sid = _student(app, 1)
     _gap(sid, '生物', '光合成')
     data = teacher.get(URL).get_json()

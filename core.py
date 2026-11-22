@@ -381,7 +381,7 @@ def log_api_call(model, endpoint, success):
 # user_id はアプリ内の番号で、アカウント削除のときに一緒に消す。
 EVENT_TYPES = {
     'signup',                  # 生徒の新規登録
-    'conversation_started',    # 会話を始めた（mode: normal / review / assignment / photo）
+    'conversation_started',    # 会話を始めた（mode: normal / review / assignment / photo / topic）
     'conversation_turn',       # 生徒が1回返信した（turn: 何往復目か）
     'conversation_completed',  # Feynが納得して会話が終わった（turn: 何往復で終わったか）
     'life_blocked',            # 無料プランのライフ切れで始められなかった

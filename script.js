@@ -453,6 +453,7 @@ function showUnitPicker(subject) {
   const categories = Object.keys(UNIT_CURRICULUM[subject] || {});
   const buttons = [
     { label: 'Feynにおまかせ', onClick: () => startSession() },
+    { label: '説明したいことを入力する', onClick: () => showTopicInput(subject) },
     { label: '今解いてる問題を写真で見せる', onClick: () => showPhotoUploadPrompt() },
     ...categories.map(cat => ({ label: cat, onClick: () => showUnitSubPicker(subject, cat) })),
   ];
@@ -470,8 +471,53 @@ function showUnitSubPicker(subject, category) {
 }
 
 
+// ===== テーマ指定（説明したいことを自分で入力して始める） =====
+const TOPIC_MAX_LENGTH = 50;   // サーバー（tutoring.TOPIC_MAX_LENGTH）と同じ
+const TOPIC_EXAMPLES = {
+  '物理': '運動量保存則', '数学': '三平方の定理', '英語': '仮定法過去', '化学': 'ルシャトリエの原理',
+  '生物': '光合成のしくみ', '国語': '係り結び', '歴史': '鎌倉幕府の成立',
+};
+
+function showTopicInput(subject) {
+  messagesEl.innerHTML = '';
+  const el = document.createElement('div');
+  el.classList.add('message', 'feyn', 'pop-in');
+  el.innerHTML = `
+    ${FEYN_AVATAR}
+    <div class="bubble">
+      今日は何を説明してくれる？公式・定理・用語・しくみなど、説明できるようになりたいことを書いてね。
+      <form class="topic-form" id="topicForm" novalidate>
+        <label class="visually-hidden" for="topicInput">説明したいこと</label>
+        <input id="topicInput" type="text" maxlength="${TOPIC_MAX_LENGTH}" autocomplete="off" enterkeyhint="go"
+               placeholder="例: ${escText(TOPIC_EXAMPLES[subject] || '説明したいこと')}">
+        <div class="topic-error" id="topicError" role="alert"></div>
+        <div class="quick-replies">
+          <button type="submit" class="quick-reply" id="topicStartBtn">これを説明する</button>
+          <button type="button" class="quick-reply" id="topicBackBtn">← 戻る</button>
+        </div>
+      </form>
+    </div>
+  `;
+  messagesEl.appendChild(el);
+  const input = el.querySelector('#topicInput');
+  const error = el.querySelector('#topicError');
+  el.querySelector('#topicForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const topic = input.value.trim();
+    if (!topic) { error.textContent = '説明したいことを入力してね。'; input.focus(); return; }
+    if (topic.length > TOPIC_MAX_LENGTH) { error.textContent = `${TOPIC_MAX_LENGTH}文字以内で入力してね。`; input.focus(); return; }
+    el.querySelectorAll('button, input').forEach(b => b.disabled = true);
+    startSession(undefined, { topic });
+  });
+  el.querySelector('#topicBackBtn').addEventListener('click', () => showUnitPicker(subject));
+  scrollToMessage(el);
+  input.focus({ preventScroll: true });
+}
+
+
 // ===== セッション開始 =====
-async function startSession(unit) {
+// topic: テーマ指定モードで、生徒が入力した「説明したいこと」
+async function startSession(unit, { topic = null } = {}) {
   // すでに /api/start が実行中なら無視する（無駄なGemini呼び出しを防ぐ）
   if (startInFlight) return;
   startInFlight = true;
@@ -484,10 +530,12 @@ async function startSession(unit) {
   sessionKey = null;
   resetXP();
   setExpression('normal');
+  if (topic) addMessage('user', `「${topic}」を説明したい`);
 
   const thinkingEl = addThinking();
   const settings   = getSettings();
   if (unit) settings.unit = unit;
+  if (topic) settings.topic = topic;
 
   try {
     const response = await fetch('/api/start', {

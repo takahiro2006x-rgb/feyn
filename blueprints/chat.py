@@ -29,6 +29,15 @@ def start():
     assignment_id = data.get('assignment_id')
     photo_b64     = data.get('photo')
     photo_mime    = data.get('photo_mime', 'image/jpeg')
+    raw_topic     = data.get('topic')
+
+    # テーマ指定モード: 生徒が「説明したいこと」を自分で入力して始める（写真・復習・課題とは同時に使わない）
+    topic = None
+    if raw_topic is not None and not (photo_b64 or gap_id or assignment_id):
+        topic = tutoring.clean_topic(raw_topic)
+        if topic is None:
+            return jsonify({'error': f'説明したいことを、{tutoring.TOPIC_MAX_LENGTH}文字以内で入力してください。'}), 400
+        unit = topic   # 会話ログの見出しに、何を説明したかが出るようにする
 
     # 写真モード: 自分が今解いている問題の写真をアップロードして、それについて質問してもらう
     photo_bytes = None
@@ -77,6 +86,9 @@ def start():
     elif gap:
         instruction = tutoring.build_review_instruction(subject, difficulty, teacher_name, gap)
         kickoff     = tutoring.build_review_kickoff(gap)
+    elif topic:
+        instruction = tutoring.build_topic_instruction(subject, difficulty, teacher_name, topic)
+        kickoff     = tutoring.build_topic_kickoff(topic)
     else:
         instruction = tutoring.build_instruction(subject, difficulty, teacher_name, unit=unit)
         kickoff     = tutoring.build_kickoff(subject, unit=unit)
@@ -155,7 +167,8 @@ def start():
         )
         conn.commit()
 
-    mode = 'photo' if photo_bytes else 'review' if gap else 'assignment' if assignment else 'normal'
+    mode = ('photo' if photo_bytes else 'review' if gap else 'assignment' if assignment
+            else 'topic' if topic else 'normal')
     core.log_event('conversation_started', session['user_id'], conv_id=conv_id, subject=subject, mode=mode)
     return jsonify({'reply': reply, 'session_key': session_key, 'subject': subject})
 

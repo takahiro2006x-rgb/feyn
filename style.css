@@ -443,6 +443,26 @@ a { color: inherit; }
 .quick-reply:hover { border-color: var(--ink); background: var(--paper-2); }
 .quick-reply:disabled { opacity: 0.5; cursor: default; }
 
+/* ===== テーマ指定（説明したいことの入力） ===== */
+.message .bubble:has(> .topic-form) { white-space: normal; }
+.topic-form { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.topic-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;   /* スマホで拡大されないよう16px以上 */
+}
+.topic-form input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px var(--grid-line); }
+.topic-form .quick-replies { margin-top: 0; }
+.topic-error { font-size: 14px; font-weight: 700; color: var(--red); }
+.topic-error:empty { display: none; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 /* ===== 写真 ===== */
 .photo-preview {
   margin-top: 8px;
